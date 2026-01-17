@@ -1,5 +1,5 @@
 {
-  "name": "10x-astro-starter",
+  "name": "shelterly",
   "type": "module",
   "version": "0.0.1",
   "scripts": {
@@ -19,7 +19,7 @@
     "@tailwindcss/vite": "^4.1.13",
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
-    "astro": "^5.13.7",
+    "astro": "5.15.9",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.487.0",
