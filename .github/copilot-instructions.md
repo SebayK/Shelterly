@@ -1,3 +1,7 @@
+---
+Rule Type: Always
+---
+
 # AI Rules for {{project-name}}
 
 {{project-description}}
@@ -60,7 +64,7 @@ When modifying the directory structure, always update this section.
 - Leverage the theme() function in CSS for accessing Tailwind theme values
 - Implement dark mode with the dark: variant
 - Use responsive variants (sm:, md:, lg:, etc.) for adaptive designs
-- Leverage state variants (hover:, focus-visible:, active:, etc.) for interactive elements
+- Leverage state variants (hover:, focus:, active:, etc.) for interactive elements
 
 ### Guidelines for Accessibility
 
@@ -76,22 +80,14 @@ When modifying the directory structure, always update this section.
 - Implement aria-current for indicating the current item in a set, navigation, or process
 - Avoid redundant ARIA that duplicates the semantics of native HTML elements
 
-### Guidelines for Astro
-
-- Leverage View Transitions API for smooth page transitions (use ClientRouter)
-- Use content collections with type safety for blog posts, documentation, etc.
-- Leverage Server Endpoints for API routes
-- Use POST, GET  - uppercase format for endpoint handlers
-- Use `export const prerender = false` for API routes
-- Use zod for input validation in API routes
-- Extract logic into services in `src/lib/services`
-- Implement middleware for request/response modification
-- Use image optimization with the Astro Image integration
-- Implement hybrid rendering with server-side rendering where needed
-- Use Astro.cookies for server-side cookie management
-- Leverage import.meta.env for environment variables
+---
+Rule Type: Auto Attached
+globs: '**/*.tsx, **/*.jsx'
+---
 
 ### Guidelines for React
+
+#### React Coding Standards
 
 - Use functional components with hooks instead of class components
 - Never use "use client" and other Next.js directives as we use React with Astro
