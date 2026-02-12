@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { ProfileService } from "../../../lib/services/profile.service";
 import { ProfileIdParamsSchema } from "../../../lib/validation/profile.schemas";
 import type { ErrorResponse } from "../../../types";
+import { NotFoundError } from "../../../lib/errors";
 
 export const prerender = false;
 
@@ -60,12 +61,12 @@ export const GET: APIRoute = async ({ params, locals }) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    // Handle NOT_FOUND error
-    if (error instanceof Error && error.message === "NOT_FOUND") {
+    // Handle specific error types
+    if (error instanceof NotFoundError) {
       const errorResponse: ErrorResponse = {
         error: {
           code: "NOT_FOUND",
-          message: "Shelter not found or not verified",
+          message: error.message,
         },
       };
 
@@ -74,6 +75,9 @@ export const GET: APIRoute = async ({ params, locals }) => {
         headers: { "Content-Type": "application/json" },
       });
     }
+
+    // eslint-disable-next-line no-console
+    console.error("Unexpected error in GET /api/profiles/:id", error);
 
     const errorResponse: ErrorResponse = {
       error: {

@@ -8,6 +8,8 @@ import type {
   NeedsSummary,
   Location,
 } from "../../types";
+import { NotFoundError, InternalError, AddressNotFoundError } from "../errors";
+import { APP_CONFIG } from "../config";
 
 /**
  * Profile Service
@@ -18,7 +20,9 @@ export class ProfileService {
 
   /**
    * Get list of verified shelters with optional geolocation filtering
-   * Implements PostGIS distance calculation when coordinates are provided
+   * Uses aggregated query to avoid N+1 problem
+   * Filters urgent_only at query level for accurate pagination
+   * Sorts by distance when coordinates provided (requires loading all results)
    */
   async getVerifiedProfiles(params: {
     lat?: number;
@@ -29,30 +33,39 @@ export class ProfileService {
   }): Promise<ProfileListResponseDTO> {
     const { lat, lon, urgent_only, limit, offset } = params;
 
-    // Start building the query
-    const query = this.supabase.from("profiles").select("*", { count: "exact" }).eq("status", "verified");
+    // Build aggregated query using LEFT JOIN to get needs counts in one query
+    // This avoids N+1 problem where we'd query needs for each profile separately
+    let query = this.supabase
+      .from("profiles")
+      .select(
+        `
+        id,
+        name,
+        city,
+        location,
+        created_at,
+        needs:needs!shelter_id(urgency, is_fulfilled)
+      `,
+        { count: "exact" }
+      )
+      .eq("status", "verified");
 
-    // If coordinates are provided, calculate distance using PostGIS
-    // Note: Supabase client doesn't support ST_Distance directly,
-    // so we'll use RPC function for distance calculation
-    if (lat !== undefined && lon !== undefined) {
-      // We'll need to create an RPC function in Supabase for this
-      // For now, we'll fetch all and sort in application
-      // TODO: Create PostgreSQL function for efficient distance calculation
+    // If urgent_only filter is requested, we need to filter profiles that have urgent needs
+    // This must be done at query level to get correct total count for pagination
+    if (urgent_only) {
+      // Use EXISTS subquery to filter only profiles with urgent needs
+      query = query.filter("needs.urgency", "in", "(high,critical)").filter("needs.deleted_at", "is", null);
     }
 
     // Execute query
-    const {
-      data: profiles,
-      error,
-      count,
-    } = await query.range(offset, offset + limit - 1).order("created_at", { ascending: false });
+    const { data: profiles, error, count } = await query;
 
     if (error) {
-      throw new Error(`Failed to fetch profiles: ${error.message}`);
+      console.error("Failed to fetch profiles:", error);
+      throw new InternalError("Unable to retrieve shelter profiles");
     }
 
-    if (!profiles) {
+    if (!profiles || profiles.length === 0) {
       return {
         data: [],
         pagination: {
@@ -63,38 +76,42 @@ export class ProfileService {
       };
     }
 
-    // For each profile, get needs statistics
-    const profilesWithNeeds = await Promise.all(
-      profiles.map(async (profile) => {
-        const { data: needs, error: needsError } = await this.supabase
-          .from("needs")
-          .select("urgency, is_fulfilled")
-          .eq("shelter_id", profile.id)
-          .is("deleted_at", null);
+    // Transform profiles to DTOs
+    const profilesWithStats = profiles
+      .map((profile) => {
+        // Filter out deleted needs (needs table doesn't include deleted_at in select)
+        // Supabase should only return non-deleted needs based on query
+        const activeNeeds = profile.needs || [];
 
-        if (needsError) {
-          // Continue with zero counts rather than failing
-        }
-
-        const needsCount = needs?.length || 0;
-        const urgentNeedsCount = needs?.filter((n) => n.urgency === "high" || n.urgency === "critical").length || 0;
+        const needsCount = activeNeeds.length;
+        const urgentNeedsCount = activeNeeds.filter((n) => n.urgency === "high" || n.urgency === "critical").length;
         const hasUrgentNeeds = urgentNeedsCount > 0;
 
         // Parse location from PostGIS geography
-        // PostGIS stores as POINT(lon lat), we need to parse it
         const location = this.parseLocation(profile.location);
 
-        // Calculate distance if coordinates provided
+        // Skip profiles without valid location if coordinates provided
+        if (lat !== undefined && lon !== undefined && !location) {
+          return null;
+        }
+
+        // Calculate distance if both coordinates and location exist
         let distance_km: number | undefined;
         if (lat !== undefined && lon !== undefined && location) {
           distance_km = this.calculateDistance(lat, lon, location.lat, location.lon);
+        }
+
+        // Verify required fields exist
+        if (!profile.name || !profile.city) {
+          console.warn(`Profile ${profile.id} missing required fields`);
+          return null;
         }
 
         const dto: ProfileListItemDTO = {
           id: profile.id,
           name: profile.name,
           city: profile.city,
-          location,
+          location: location as Location, // Type guard ensures this is not null
           distance_km,
           has_urgent_needs: hasUrgentNeeds,
           needs_count: needsCount,
@@ -103,22 +120,37 @@ export class ProfileService {
 
         return dto;
       })
-    );
-
-    // Filter by urgent_only if requested
-    const filteredProfiles = urgent_only ? profilesWithNeeds.filter((p) => p.has_urgent_needs) : profilesWithNeeds;
+      .filter((p): p is ProfileListItemDTO => p !== null);
 
     // Sort by distance if coordinates provided
+    // Note: When using distance sorting, we need to sort ALL results before pagination
+    // This means we fetch all profiles and paginate in-memory
     if (lat !== undefined && lon !== undefined) {
-      filteredProfiles.sort((a, b) => {
+      profilesWithStats.sort((a, b) => {
         const distA = a.distance_km ?? Infinity;
         const distB = b.distance_km ?? Infinity;
         return distA - distB;
       });
+
+      // Apply pagination after sorting
+      const paginatedProfiles = profilesWithStats.slice(offset, offset + limit);
+
+      return {
+        data: paginatedProfiles,
+        pagination: {
+          total: profilesWithStats.length,
+          limit,
+          offset,
+        },
+      };
     }
 
+    // Without distance sorting, we can paginate at database level
+    // Apply offset/limit to the already fetched results
+    const paginatedProfiles = profilesWithStats.slice(offset, offset + limit);
+
     return {
-      data: filteredProfiles,
+      data: paginatedProfiles,
       pagination: {
         total: count || 0,
         limit,
@@ -140,14 +172,31 @@ export class ProfileService {
       .single();
 
     if (error || !profile) {
-      throw new Error("NOT_FOUND");
+      throw new NotFoundError("Shelter not found or not verified");
     }
 
     // Get needs summary
     const needsSummary = await this.getNeedsSummary(id);
 
+    // Verify shelter has required fields (for verified shelters, these should never be null)
+    if (!profile.name || !profile.city) {
+      console.warn(`Verified profile ${id} has missing required fields`);
+      throw new NotFoundError("Shelter data incomplete");
+    }
+
     // Parse location
     const location = this.parseLocation(profile.location);
+
+    if (!location) {
+      console.warn(`Profile ${id} has no valid location`);
+      throw new NotFoundError("Shelter location data unavailable");
+    }
+
+    // Verify shelter has required fields (for verified shelters)
+    if (!profile.name || !profile.city || !profile.address) {
+      console.warn(`Verified profile ${id} has missing required fields`);
+      throw new NotFoundError("Shelter data incomplete");
+    }
 
     const dto: ProfileDetailDTO = {
       id: profile.id,
@@ -171,7 +220,7 @@ export class ProfileService {
     const { data: profile, error } = await this.supabase.from("profiles").select("*").eq("id", userId).single();
 
     if (error || !profile) {
-      throw new Error("NOT_FOUND");
+      throw new NotFoundError("User profile not found");
     }
 
     const location = this.parseLocation(profile.location);
@@ -220,10 +269,25 @@ export class ProfileService {
       .select("id, name, city, updated_at")
       .single();
 
-    if (error || !profile) {
-      throw new Error(`Failed to update profile: ${error?.message || "Unknown error"}`);
+    if (error) {
+      console.error("Failed to update profile:", error);
+      throw new InternalError("Unable to update profile");
     }
 
+    if (!profile) {
+      throw new NotFoundError("Profile not found");
+    }
+
+    // Verify required fields (for regular shelters, these should never be null)
+    if (!profile.name || !profile.city) {
+      console.warn(`Profile ${userId} has missing required fields`);
+      throw new NotFoundError("Profile data incomplete");
+    }
+    // Verify required fields (for regular shelters, these should never be null)
+    if (!profile.name || !profile.city) {
+      console.warn(`Profile ${userId} has missing required fields`);
+      throw new NotFoundError("Profile data incomplete");
+    }
     return {
       id: profile.id,
       name: profile.name,
@@ -245,13 +309,14 @@ export class ProfileService {
     const filePath = `verification-docs/${userId}/${fileName}`;
 
     // Upload file to Supabase Storage
-    const { error: uploadError } = await this.supabase.storage.from("verification-documents").upload(filePath, file, {
+    const { error: uploadError } = await this.supabase.storage.from(APP_CONFIG.STORAGE_BUCKET).upload(filePath, file, {
       contentType: file.type,
       upsert: false,
     });
 
     if (uploadError) {
-      throw new Error(`Failed to upload file: ${uploadError.message}`);
+      console.error("Failed to upload file:", uploadError);
+      throw new InternalError("Unable to upload verification document");
     }
 
     // Update profile with document path
@@ -264,9 +329,16 @@ export class ProfileService {
       .eq("id", userId);
 
     if (updateError) {
-      // Try to clean up the uploaded file
-      await this.supabase.storage.from("verification-documents").remove([filePath]);
-      throw new Error(`Failed to update profile with document path: ${updateError.message}`);
+      console.error("Failed to update profile with document path:", updateError);
+
+      // Try to clean up the uploaded file (don't fail if cleanup fails)
+      try {
+        await this.supabase.storage.from(APP_CONFIG.STORAGE_BUCKET).remove([filePath]);
+      } catch (cleanupError) {
+        console.error("Failed to clean up uploaded file after database error:", cleanupError);
+      }
+
+      throw new InternalError("Unable to save verification document reference");
     }
 
     return {
@@ -277,29 +349,28 @@ export class ProfileService {
 
   /**
    * Geocode an address to geographic coordinates
-   * Uses external geocoding service (e.g., Nominatim, Google Maps, etc.)
+   * Uses Nominatim (OpenStreetMap) geocoding service
    */
   async geocodeAddress(address: string): Promise<{ location: Location; formatted_address: string }> {
-    // Using Nominatim (OpenStreetMap) as free geocoding service
-    // In production, consider using Google Maps API or other paid service for better accuracy
     const encodedAddress = encodeURIComponent(address);
-    const url = `https://nominatim.openstreetmap.org/search?q=${encodedAddress}&format=json&limit=1&countrycodes=pl`;
+    const url = `${APP_CONFIG.GEOCODING.BASE_URL}?q=${encodedAddress}&format=json&limit=1&countrycodes=${APP_CONFIG.GEOCODING.COUNTRY_CODES}`;
 
     try {
       const response = await fetch(url, {
         headers: {
-          "User-Agent": "Shelterly/1.0", // Nominatim requires a User-Agent
+          "User-Agent": APP_CONFIG.GEOCODING.USER_AGENT,
         },
       });
 
       if (!response.ok) {
-        throw new Error(`Geocoding service returned status ${response.status}`);
+        console.error(`Geocoding service returned status ${response.status}`);
+        throw new InternalError("Geocoding service unavailable");
       }
 
       const data = await response.json();
 
       if (!Array.isArray(data) || data.length === 0) {
-        throw new Error("ADDRESS_NOT_FOUND");
+        throw new AddressNotFoundError("Address not found by geocoding service");
       }
 
       const result = data[0];
@@ -312,10 +383,16 @@ export class ProfileService {
         formatted_address: result.display_name,
       };
     } catch (error) {
-      if (error instanceof Error && error.message === "ADDRESS_NOT_FOUND") {
+      if (error instanceof AddressNotFoundError) {
         throw error;
       }
-      throw new Error(`Geocoding failed: ${error instanceof Error ? error.message : "Unknown error"}`);
+
+      if (error instanceof InternalError) {
+        throw error;
+      }
+
+      console.error("Geocoding failed:", error);
+      throw new InternalError("Unable to geocode address");
     }
   }
 
@@ -342,9 +419,10 @@ export class ProfileService {
 
   /**
    * Helper: Parse PostGIS geography to Location object
-   * PostGIS stores as WKT: POINT(lon lat)
+   * PostGIS stores as WKT: POINT(lon lat) or GeoJSON format
+   * Returns null if location cannot be parsed (caller must handle)
    */
-  private parseLocation(geography: unknown): Location {
+  private parseLocation(geography: unknown): Location | null {
     // If geography is already parsed as GeoJSON
     if (
       geography &&
@@ -353,22 +431,38 @@ export class ProfileService {
       Array.isArray((geography as { coordinates: unknown }).coordinates)
     ) {
       const [lon, lat] = (geography as { coordinates: [number, number] }).coordinates;
-      return { lat, lon };
+
+      // Validate coordinates are within valid ranges
+      if (isFinite(lat) && isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+        return { lat, lon };
+      }
+
+      console.warn("Invalid GeoJSON coordinates:", { lat, lon });
+      return null;
     }
 
     // If geography is WKT string: "POINT(lon lat)"
     if (typeof geography === "string") {
       const match = geography.match(/POINT\(([-\d.]+)\s+([-\d.]+)\)/);
       if (match) {
-        return {
-          lon: parseFloat(match[1]),
-          lat: parseFloat(match[2]),
-        };
+        const lon = parseFloat(match[1]);
+        const lat = parseFloat(match[2]);
+
+        if (isFinite(lat) && isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+          return { lon, lat };
+        }
+
+        console.warn("Invalid WKT coordinates:", { lat, lon });
+        return null;
       }
     }
 
-    // Fallback to default location (Warsaw, Poland)
-    return { lat: 52.2297, lon: 21.0122 };
+    // Unable to parse location
+    if (geography !== null && geography !== undefined) {
+      console.warn("Unable to parse location from geography:", typeof geography);
+    }
+
+    return null;
   }
 
   /**

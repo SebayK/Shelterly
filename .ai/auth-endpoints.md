@@ -1,9 +1,11 @@
 ### 2.1. Authentication Endpoints
 
 #### **POST /api/auth/signup**
+
 Register a new shelter account.
 
 **Request Body:**
+
 ```json
 {
   "email": "shelter@example.com",
@@ -20,6 +22,7 @@ Register a new shelter account.
 ```
 
 **Success Response (201 Created):**
+
 ```json
 {
   "message": "Registration successful. Please wait for verification.",
@@ -36,6 +39,7 @@ Register a new shelter account.
 ```
 
 **Error Responses:**
+
 - `400 Bad Request` - Invalid input data (missing fields, invalid NIP format)
 - `409 Conflict` - Email or NIP already exists
 - `500 Internal Server Error` - Server error
@@ -43,9 +47,11 @@ Register a new shelter account.
 ---
 
 #### **POST /api/auth/login**
+
 Authenticate an existing user.
 
 **Request Body:**
+
 ```json
 {
   "email": "shelter@example.com",
@@ -54,6 +60,7 @@ Authenticate an existing user.
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "user": {
@@ -74,6 +81,7 @@ Authenticate an existing user.
 ```
 
 **Error Responses:**
+
 - `400 Bad Request` - Missing credentials
 - `401 Unauthorized` - Invalid credentials
 - `403 Forbidden` - Account pending verification or suspended
@@ -82,14 +90,17 @@ Authenticate an existing user.
 ---
 
 #### **POST /api/auth/logout**
+
 End user session.
 
 **Headers:**
+
 ```
 Authorization: Bearer {access_token}
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "message": "Logout successful"
@@ -99,9 +110,11 @@ Authorization: Bearer {access_token}
 ---
 
 #### **POST /api/auth/refresh**
+
 Refresh access token.
 
 **Request Body:**
+
 ```json
 {
   "refresh_token": "refresh_token"
@@ -109,6 +122,7 @@ Refresh access token.
 ```
 
 **Success Response (200 OK):**
+
 ```json
 {
   "access_token": "new_jwt_token",
@@ -117,6 +131,7 @@ Refresh access token.
 ```
 
 **Error Responses:**
+
 - `401 Unauthorized` - Invalid or expired refresh token
 
 ---

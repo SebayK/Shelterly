@@ -72,7 +72,10 @@ export const GET: APIRoute = async ({ url, locals }) => {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
-  } catch {
+  } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error("Unexpected error in GET /api/profiles:", error);
+
     const errorResponse: ErrorResponse = {
       error: {
         code: "INTERNAL_ERROR",

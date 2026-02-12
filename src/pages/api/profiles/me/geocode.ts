@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { ProfileService } from "../../../../lib/services/profile.service";
 import { GeocodeCommandSchema } from "../../../../lib/validation/profile.schemas";
 import type { ErrorResponse } from "../../../../types";
+import { AddressNotFoundError } from "../../../../lib/errors";
 
 export const prerender = false;
 
@@ -98,12 +99,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    // Handle ADDRESS_NOT_FOUND error
-    if (error instanceof Error && error.message === "ADDRESS_NOT_FOUND") {
+    // Handle specific error types
+    if (error instanceof AddressNotFoundError) {
       const errorResponse: ErrorResponse = {
         error: {
           code: "NOT_FOUND",
-          message: "Address not found by geocoding service",
+          message: error.message,
         },
       };
 
@@ -113,10 +114,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
+    // eslint-disable-next-line no-console
+    console.error("Unexpected error in POST /api/profiles/me/geocode:", error);
+
     const errorResponse: ErrorResponse = {
       error: {
         code: "INTERNAL_ERROR",
-        message: error instanceof Error ? error.message : "An unexpected error occurred during geocoding",
+        message: "An unexpected error occurred during geocoding",
       },
     };
 

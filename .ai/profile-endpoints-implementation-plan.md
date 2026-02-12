@@ -140,7 +140,7 @@ Content-Type: application/json
 
 ```typescript
 {
-  address: string;  // Adres do geokodowania (1-500 znaków)
+  address: string; // Adres do geokodowania (1-500 znaków)
 }
 ```
 
@@ -283,7 +283,7 @@ interface ErrorResponse {
 Należy utworzyć plik `src/lib/validation/profile.schemas.ts`:
 
 ```typescript
-import { z } from 'zod';
+import { z } from "zod";
 
 export const ProfilesQueryParamsSchema = z.object({
   lat: z.coerce.number().min(-90).max(90).optional(),
@@ -294,15 +294,18 @@ export const ProfilesQueryParamsSchema = z.object({
 });
 
 export const ProfileIdParamsSchema = z.object({
-  id: z.string().uuid('Invalid profile ID format'),
+  id: z.string().uuid("Invalid profile ID format"),
 });
 
 export const UpdateProfileCommandSchema = z.object({
   name: z.string().min(1).max(255).optional(),
   city: z.string().min(1).max(100).optional(),
   address: z.string().min(1).max(500).optional(),
-  phone_number: z.string().regex(/^\+?[0-9\s\-()]+$/, 'Invalid phone number format').optional(),
-  website_url: z.string().url('Invalid URL format').optional(),
+  phone_number: z
+    .string()
+    .regex(/^\+?[0-9\s\-()]+$/, "Invalid phone number format")
+    .optional(),
+  website_url: z.string().url("Invalid URL format").optional(),
 });
 
 export const GeocodeCommandSchema = z.object({
@@ -310,8 +313,8 @@ export const GeocodeCommandSchema = z.object({
 });
 
 export const FileUploadSchema = z.object({
-  type: z.enum(['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']),
-  size: z.number().max(5 * 1024 * 1024, 'File size must not exceed 5MB'),
+  type: z.enum(["application/pdf", "image/jpeg", "image/jpg", "image/png"]),
+  size: z.number().max(5 * 1024 * 1024, "File size must not exceed 5MB"),
 });
 ```
 
@@ -519,7 +522,7 @@ Client Request (Query params: lat, lon, urgent_only, limit, offset)
 **PostGIS Query dla odległości:**
 
 ```sql
-SELECT 
+SELECT
   *,
   ST_Distance(
     location,
@@ -713,18 +716,24 @@ Client Request (Header: Authorization, Body: GeocodeCommand)
 
 ```typescript
 // W każdym chronionym endpoincie:
-const { data: { user }, error } = await context.locals.supabase.auth.getUser();
+const {
+  data: { user },
+  error,
+} = await context.locals.supabase.auth.getUser();
 
 if (error || !user) {
-  return new Response(JSON.stringify({
-    error: {
-      code: 'UNAUTHORIZED',
-      message: 'Authentication required'
+  return new Response(
+    JSON.stringify({
+      error: {
+        code: "UNAUTHORIZED",
+        message: "Authentication required",
+      },
+    }),
+    {
+      status: 401,
+      headers: { "Content-Type": "application/json" },
     }
-  }), {
-    status: 401,
-    headers: { 'Content-Type': 'application/json' }
-  });
+  );
 }
 ```
 
@@ -734,19 +743,18 @@ if (error || !user) {
 
 ```typescript
 // Weryfikacja właściciela:
-const profile = await supabase
-  .from('profiles')
-  .select('*')
-  .eq('id', user.id)
-  .single();
+const profile = await supabase.from("profiles").select("*").eq("id", user.id).single();
 
 if (!profile.data) {
-  return new Response(JSON.stringify({
-    error: {
-      code: 'NOT_FOUND',
-      message: 'Profile not found'
-    }
-  }), { status: 404 });
+  return new Response(
+    JSON.stringify({
+      error: {
+        code: "NOT_FOUND",
+        message: "Profile not found",
+      },
+    }),
+    { status: 404 }
+  );
 }
 ```
 
@@ -771,19 +779,22 @@ if (!profile.data) {
 const validation = ProfilesQueryParamsSchema.safeParse(queryParams);
 
 if (!validation.success) {
-  return new Response(JSON.stringify({
-    error: {
-      code: 'VALIDATION_ERROR',
-      message: 'Invalid query parameters',
-      details: validation.error.errors.map(err => ({
-        field: err.path.join('.'),
-        message: err.message
-      }))
+  return new Response(
+    JSON.stringify({
+      error: {
+        code: "VALIDATION_ERROR",
+        message: "Invalid query parameters",
+        details: validation.error.errors.map((err) => ({
+          field: err.path.join("."),
+          message: err.message,
+        })),
+      },
+    }),
+    {
+      status: 400,
+      headers: { "Content-Type": "application/json" },
     }
-  }), {
-    status: 400,
-    headers: { 'Content-Type': 'application/json' }
-  });
+  );
 }
 ```
 
@@ -975,55 +986,62 @@ interface ErrorDetail {
 ```typescript
 export const GET = async ({ request, url, locals }: APIContext) => {
   // Guard 1: Walidacja parametrów
-  const validation = ProfilesQueryParamsSchema.safeParse(
-    Object.fromEntries(url.searchParams)
-  );
-  
+  const validation = ProfilesQueryParamsSchema.safeParse(Object.fromEntries(url.searchParams));
+
   if (!validation.success) {
-    return new Response(JSON.stringify({
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: 'Invalid query parameters',
-        details: validation.error.errors.map(err => ({
-          field: err.path.join('.'),
-          message: err.message
-        }))
-      }
-    }), { status: 400 });
+    return new Response(
+      JSON.stringify({
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Invalid query parameters",
+          details: validation.error.errors.map((err) => ({
+            field: err.path.join("."),
+            message: err.message,
+          })),
+        },
+      }),
+      { status: 400 }
+    );
   }
 
   // Guard 2: Sprawdzenie kombinacji lat/lon
   const { lat, lon } = validation.data;
   if ((lat && !lon) || (!lat && lon)) {
-    return new Response(JSON.stringify({
-      error: {
-        code: 'VALIDATION_ERROR',
-        message: 'Both lat and lon are required for distance calculation'
-      }
-    }), { status: 400 });
+    return new Response(
+      JSON.stringify({
+        error: {
+          code: "VALIDATION_ERROR",
+          message: "Both lat and lon are required for distance calculation",
+        },
+      }),
+      { status: 400 }
+    );
   }
 
   try {
     const result = await ProfileService.getVerifiedProfiles(validation.data);
-    
+
     // Guard 3: Sprawdzenie czy query się powiodło
     if (!result) {
-      throw new Error('Failed to fetch profiles');
+      throw new Error("Failed to fetch profiles");
     }
 
     return new Response(JSON.stringify(result), {
       status: 200,
-      headers: { 'Content-Type': 'application/json' }
+      headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    console.error('Error fetching profiles:', error);
-    
-    return new Response(JSON.stringify({
-      error: {
-        code: 'INTERNAL_ERROR',
-        message: 'Failed to retrieve profiles'
-      }
-    }), { status: 500 });
+    console.error("Error fetching profiles:", error);
+
+    return new Response(
+      JSON.stringify({
+        error: {
+          code: "INTERNAL_ERROR",
+          message: "Failed to retrieve profiles",
+        },
+      }),
+      { status: 500 }
+    );
   }
 };
 ```
@@ -1053,7 +1071,7 @@ CREATE INDEX idx_needs_urgency ON needs(urgency);
 **Zoptymalizowane zapytanie:**
 
 ```sql
-SELECT 
+SELECT
   p.id,
   p.name,
   p.city,
@@ -1105,9 +1123,9 @@ LIMIT :limit OFFSET :offset;
 return new Response(JSON.stringify(data), {
   status: 200,
   headers: {
-    'Content-Type': 'application/json',
-    'Cache-Control': 'public, max-age=300, s-maxage=300', // 5 minut
-  }
+    "Content-Type": "application/json",
+    "Cache-Control": "public, max-age=300, s-maxage=300", // 5 minut
+  },
 });
 ```
 
@@ -1184,31 +1202,30 @@ export function createErrorResponse(
   details?: ErrorDetail[],
   status: number = 400
 ): Response {
-  return new Response(JSON.stringify({
-    error: { code, message, details }
-  }), {
-    status,
-    headers: { 'Content-Type': 'application/json' }
-  });
+  return new Response(
+    JSON.stringify({
+      error: { code, message, details },
+    }),
+    {
+      status,
+      headers: { "Content-Type": "application/json" },
+    }
+  );
 }
 ```
 
 **Plik: `src/lib/utils/response.ts`**
 
 ```typescript
-export function createSuccessResponse<T>(
-  data: T,
-  status: number = 200,
-  cacheSeconds?: number
-): Response {
+export function createSuccessResponse<T>(data: T, status: number = 200, cacheSeconds?: number): Response {
   const headers: Record<string, string> = {
-    'Content-Type': 'application/json'
+    "Content-Type": "application/json",
   };
-  
+
   if (cacheSeconds) {
-    headers['Cache-Control'] = `public, max-age=${cacheSeconds}, s-maxage=${cacheSeconds}`;
+    headers["Cache-Control"] = `public, max-age=${cacheSeconds}, s-maxage=${cacheSeconds}`;
   }
-  
+
   return new Response(JSON.stringify(data), { status, headers });
 }
 ```
@@ -1273,45 +1290,47 @@ export function createSuccessResponse<T>(
 Endpoint: **GET /api/profiles**
 
 ```typescript
-import type { APIRoute } from 'astro';
-import { ProfilesQueryParamsSchema } from '@/lib/validation/profile.schemas';
-import { ProfileService } from '@/lib/services/profile.service';
-import { createErrorResponse, createSuccessResponse } from '@/lib/utils/response';
+import type { APIRoute } from "astro";
+import { ProfilesQueryParamsSchema } from "@/lib/validation/profile.schemas";
+import { ProfileService } from "@/lib/services/profile.service";
+import { createErrorResponse, createSuccessResponse } from "@/lib/utils/response";
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ url, locals }) => {
   // Walidacja query params
-  const validation = ProfilesQueryParamsSchema.safeParse(
-    Object.fromEntries(url.searchParams)
-  );
-  
+  const validation = ProfilesQueryParamsSchema.safeParse(Object.fromEntries(url.searchParams));
+
   if (!validation.success) {
-    return createErrorResponse('VALIDATION_ERROR', 'Invalid query parameters', 
-      validation.error.errors.map(err => ({
-        field: err.path.join('.'),
-        message: err.message
-      })), 400);
+    return createErrorResponse(
+      "VALIDATION_ERROR",
+      "Invalid query parameters",
+      validation.error.errors.map((err) => ({
+        field: err.path.join("."),
+        message: err.message,
+      })),
+      400
+    );
   }
 
   // Guard: lat i lon muszą być razem
   const { lat, lon } = validation.data;
   if ((lat && !lon) || (!lat && lon)) {
-    return createErrorResponse('VALIDATION_ERROR', 
-      'Both lat and lon are required for distance calculation', undefined, 400);
+    return createErrorResponse(
+      "VALIDATION_ERROR",
+      "Both lat and lon are required for distance calculation",
+      undefined,
+      400
+    );
   }
 
   try {
-    const result = await ProfileService.getVerifiedProfiles(
-      locals.supabase,
-      validation.data
-    );
-    
+    const result = await ProfileService.getVerifiedProfiles(locals.supabase, validation.data);
+
     return createSuccessResponse(result, 200, 300); // Cache 5 minut
   } catch (error) {
-    console.error('Error fetching profiles:', error);
-    return createErrorResponse('INTERNAL_ERROR', 
-      'Failed to retrieve profiles', undefined, 500);
+    console.error("Error fetching profiles:", error);
+    return createErrorResponse("INTERNAL_ERROR", "Failed to retrieve profiles", undefined, 500);
   }
 };
 ```
@@ -1321,41 +1340,40 @@ export const GET: APIRoute = async ({ url, locals }) => {
 Endpoint: **GET /api/profiles/:id**
 
 ```typescript
-import type { APIRoute } from 'astro';
-import { ProfileIdParamsSchema } from '@/lib/validation/profile.schemas';
-import { ProfileService } from '@/lib/services/profile.service';
-import { createErrorResponse, createSuccessResponse } from '@/lib/utils/response';
+import type { APIRoute } from "astro";
+import { ProfileIdParamsSchema } from "@/lib/validation/profile.schemas";
+import { ProfileService } from "@/lib/services/profile.service";
+import { createErrorResponse, createSuccessResponse } from "@/lib/utils/response";
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ params, locals }) => {
   // Walidacja UUID
   const validation = ProfileIdParamsSchema.safeParse(params);
-  
+
   if (!validation.success) {
-    return createErrorResponse('VALIDATION_ERROR', 'Invalid profile ID', 
-      validation.error.errors.map(err => ({
-        field: err.path.join('.'),
-        message: err.message
-      })), 400);
+    return createErrorResponse(
+      "VALIDATION_ERROR",
+      "Invalid profile ID",
+      validation.error.errors.map((err) => ({
+        field: err.path.join("."),
+        message: err.message,
+      })),
+      400
+    );
   }
 
   try {
-    const profile = await ProfileService.getProfileById(
-      locals.supabase,
-      validation.data.id
-    );
-    
+    const profile = await ProfileService.getProfileById(locals.supabase, validation.data.id);
+
     if (!profile) {
-      return createErrorResponse('NOT_FOUND', 
-        'Profile not found or not verified', undefined, 404);
+      return createErrorResponse("NOT_FOUND", "Profile not found or not verified", undefined, 404);
     }
-    
+
     return createSuccessResponse(profile, 200, 600); // Cache 10 minut
   } catch (error) {
-    console.error('Error fetching profile:', error);
-    return createErrorResponse('INTERNAL_ERROR', 
-      'Failed to retrieve profile', undefined, 500);
+    console.error("Error fetching profile:", error);
+    return createErrorResponse("INTERNAL_ERROR", "Failed to retrieve profile", undefined, 500);
   }
 };
 ```
@@ -1365,48 +1383,47 @@ export const GET: APIRoute = async ({ params, locals }) => {
 Endpoints: **GET /api/profiles/me** i **PATCH /api/profiles/me**
 
 ```typescript
-import type { APIRoute } from 'astro';
-import { UpdateProfileCommandSchema } from '@/lib/validation/profile.schemas';
-import { ProfileService } from '@/lib/services/profile.service';
-import { createErrorResponse, createSuccessResponse } from '@/lib/utils/response';
+import type { APIRoute } from "astro";
+import { UpdateProfileCommandSchema } from "@/lib/validation/profile.schemas";
+import { ProfileService } from "@/lib/services/profile.service";
+import { createErrorResponse, createSuccessResponse } from "@/lib/utils/response";
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ locals }) => {
   // Auth guard
-  const { data: { user }, error } = await locals.supabase.auth.getUser();
-  
+  const {
+    data: { user },
+    error,
+  } = await locals.supabase.auth.getUser();
+
   if (error || !user) {
-    return createErrorResponse('UNAUTHORIZED', 
-      'Authentication required', undefined, 401);
+    return createErrorResponse("UNAUTHORIZED", "Authentication required", undefined, 401);
   }
 
   try {
-    const profile = await ProfileService.getAuthenticatedProfile(
-      locals.supabase,
-      user.id
-    );
-    
+    const profile = await ProfileService.getAuthenticatedProfile(locals.supabase, user.id);
+
     if (!profile) {
-      return createErrorResponse('NOT_FOUND', 
-        'Profile not found', undefined, 404);
+      return createErrorResponse("NOT_FOUND", "Profile not found", undefined, 404);
     }
-    
+
     return createSuccessResponse(profile, 200);
   } catch (error) {
-    console.error('Error fetching user profile:', error);
-    return createErrorResponse('INTERNAL_ERROR', 
-      'Failed to retrieve profile', undefined, 500);
+    console.error("Error fetching user profile:", error);
+    return createErrorResponse("INTERNAL_ERROR", "Failed to retrieve profile", undefined, 500);
   }
 };
 
 export const PATCH: APIRoute = async ({ request, locals }) => {
   // Auth guard
-  const { data: { user }, error: authError } = await locals.supabase.auth.getUser();
-  
+  const {
+    data: { user },
+    error: authError,
+  } = await locals.supabase.auth.getUser();
+
   if (authError || !user) {
-    return createErrorResponse('UNAUTHORIZED', 
-      'Authentication required', undefined, 401);
+    return createErrorResponse("UNAUTHORIZED", "Authentication required", undefined, 401);
   }
 
   // Parse request body
@@ -1414,50 +1431,43 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
   try {
     body = await request.json();
   } catch {
-    return createErrorResponse('VALIDATION_ERROR', 
-      'Invalid JSON body', undefined, 400);
+    return createErrorResponse("VALIDATION_ERROR", "Invalid JSON body", undefined, 400);
   }
 
   // Walidacja
   const validation = UpdateProfileCommandSchema.safeParse(body);
-  
+
   if (!validation.success) {
-    return createErrorResponse('VALIDATION_ERROR', 'Invalid input data', 
-      validation.error.errors.map(err => ({
-        field: err.path.join('.'),
-        message: err.message
-      })), 400);
+    return createErrorResponse(
+      "VALIDATION_ERROR",
+      "Invalid input data",
+      validation.error.errors.map((err) => ({
+        field: err.path.join("."),
+        message: err.message,
+      })),
+      400
+    );
   }
 
   // Guard: protected fields
-  const protectedFields = ['status', 'role', 'nip', 'location', 
-    'verification_doc_path', 'ai_usage_count'];
-  const hasProtectedFields = Object.keys(body).some(key => 
-    protectedFields.includes(key)
-  );
-  
+  const protectedFields = ["status", "role", "nip", "location", "verification_doc_path", "ai_usage_count"];
+  const hasProtectedFields = Object.keys(body).some((key) => protectedFields.includes(key));
+
   if (hasProtectedFields) {
-    return createErrorResponse('FORBIDDEN', 
-      'Cannot modify protected fields', undefined, 403);
+    return createErrorResponse("FORBIDDEN", "Cannot modify protected fields", undefined, 403);
   }
 
   try {
-    const updated = await ProfileService.updateProfile(
-      locals.supabase,
-      user.id,
-      validation.data
-    );
-    
+    const updated = await ProfileService.updateProfile(locals.supabase, user.id, validation.data);
+
     if (!updated) {
-      return createErrorResponse('NOT_FOUND', 
-        'Profile not found', undefined, 404);
+      return createErrorResponse("NOT_FOUND", "Profile not found", undefined, 404);
     }
-    
+
     return createSuccessResponse(updated, 200);
   } catch (error) {
-    console.error('Error updating profile:', error);
-    return createErrorResponse('INTERNAL_ERROR', 
-      'Failed to update profile', undefined, 500);
+    console.error("Error updating profile:", error);
+    return createErrorResponse("INTERNAL_ERROR", "Failed to update profile", undefined, 500);
   }
 };
 ```
@@ -1467,22 +1477,24 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
 Endpoint: **POST /api/profiles/me/verification-document**
 
 ```typescript
-import type { APIRoute } from 'astro';
-import { ProfileService } from '@/lib/services/profile.service';
-import { createErrorResponse, createSuccessResponse } from '@/lib/utils/response';
+import type { APIRoute } from "astro";
+import { ProfileService } from "@/lib/services/profile.service";
+import { createErrorResponse, createSuccessResponse } from "@/lib/utils/response";
 
 export const prerender = false;
 
-const ALLOWED_TYPES = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png'];
+const ALLOWED_TYPES = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Auth guard
-  const { data: { user }, error: authError } = await locals.supabase.auth.getUser();
-  
+  const {
+    data: { user },
+    error: authError,
+  } = await locals.supabase.auth.getUser();
+
   if (authError || !user) {
-    return createErrorResponse('UNAUTHORIZED', 
-      'Authentication required', undefined, 401);
+    return createErrorResponse("UNAUTHORIZED", "Authentication required", undefined, 401);
   }
 
   // Parse form data
@@ -1490,42 +1502,33 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     formData = await request.formData();
   } catch {
-    return createErrorResponse('VALIDATION_ERROR', 
-      'Invalid form data', undefined, 400);
+    return createErrorResponse("VALIDATION_ERROR", "Invalid form data", undefined, 400);
   }
 
-  const file = formData.get('file') as File;
-  
+  const file = formData.get("file") as File;
+
   // Guard: file exists
   if (!file) {
-    return createErrorResponse('VALIDATION_ERROR', 
-      'File is required', undefined, 400);
+    return createErrorResponse("VALIDATION_ERROR", "File is required", undefined, 400);
   }
 
   // Guard: file type
   if (!ALLOWED_TYPES.includes(file.type)) {
-    return createErrorResponse('VALIDATION_ERROR', 
-      'Invalid file type. Allowed: PDF, JPG, PNG', undefined, 400);
+    return createErrorResponse("VALIDATION_ERROR", "Invalid file type. Allowed: PDF, JPG, PNG", undefined, 400);
   }
 
   // Guard: file size
   if (file.size > MAX_FILE_SIZE) {
-    return createErrorResponse('VALIDATION_ERROR', 
-      'File size must not exceed 5MB', undefined, 400);
+    return createErrorResponse("VALIDATION_ERROR", "File size must not exceed 5MB", undefined, 400);
   }
 
   try {
-    const result = await ProfileService.uploadVerificationDocument(
-      locals.supabase,
-      user.id,
-      file
-    );
-    
+    const result = await ProfileService.uploadVerificationDocument(locals.supabase, user.id, file);
+
     return createSuccessResponse(result, 200);
   } catch (error) {
-    console.error('Error uploading verification document:', error);
-    return createErrorResponse('INTERNAL_ERROR', 
-      'Failed to upload document', undefined, 500);
+    console.error("Error uploading verification document:", error);
+    return createErrorResponse("INTERNAL_ERROR", "Failed to upload document", undefined, 500);
   }
 };
 ```
@@ -1535,20 +1538,22 @@ export const POST: APIRoute = async ({ request, locals }) => {
 Endpoint: **POST /api/profiles/me/geocode**
 
 ```typescript
-import type { APIRoute } from 'astro';
-import { GeocodeCommandSchema } from '@/lib/validation/profile.schemas';
-import { ProfileService } from '@/lib/services/profile.service';
-import { createErrorResponse, createSuccessResponse } from '@/lib/utils/response';
+import type { APIRoute } from "astro";
+import { GeocodeCommandSchema } from "@/lib/validation/profile.schemas";
+import { ProfileService } from "@/lib/services/profile.service";
+import { createErrorResponse, createSuccessResponse } from "@/lib/utils/response";
 
 export const prerender = false;
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // Auth guard
-  const { data: { user }, error: authError } = await locals.supabase.auth.getUser();
-  
+  const {
+    data: { user },
+    error: authError,
+  } = await locals.supabase.auth.getUser();
+
   if (authError || !user) {
-    return createErrorResponse('UNAUTHORIZED', 
-      'Authentication required', undefined, 401);
+    return createErrorResponse("UNAUTHORIZED", "Authentication required", undefined, 401);
   }
 
   // Parse request body
@@ -1556,39 +1561,38 @@ export const POST: APIRoute = async ({ request, locals }) => {
   try {
     body = await request.json();
   } catch {
-    return createErrorResponse('VALIDATION_ERROR', 
-      'Invalid JSON body', undefined, 400);
+    return createErrorResponse("VALIDATION_ERROR", "Invalid JSON body", undefined, 400);
   }
 
   // Walidacja
   const validation = GeocodeCommandSchema.safeParse(body);
-  
+
   if (!validation.success) {
-    return createErrorResponse('VALIDATION_ERROR', 'Invalid input data', 
-      validation.error.errors.map(err => ({
-        field: err.path.join('.'),
-        message: err.message
-      })), 400);
+    return createErrorResponse(
+      "VALIDATION_ERROR",
+      "Invalid input data",
+      validation.error.errors.map((err) => ({
+        field: err.path.join("."),
+        message: err.message,
+      })),
+      400
+    );
   }
 
   try {
-    const result = await ProfileService.geocodeAddress(
-      validation.data.address
-    );
-    
+    const result = await ProfileService.geocodeAddress(validation.data.address);
+
     if (!result) {
-      return createErrorResponse('VALIDATION_ERROR', 
-        'Address not found', undefined, 400);
+      return createErrorResponse("VALIDATION_ERROR", "Address not found", undefined, 400);
     }
-    
+
     // Opcjonalnie: zaktualizuj lokalizację w profilu
     // await ProfileService.updateLocation(locals.supabase, user.id, result.location);
-    
+
     return createSuccessResponse(result, 200);
   } catch (error) {
-    console.error('Error geocoding address:', error);
-    return createErrorResponse('INTERNAL_ERROR', 
-      'Geocoding service error', undefined, 500);
+    console.error("Error geocoding address:", error);
+    return createErrorResponse("INTERNAL_ERROR", "Geocoding service error", undefined, 500);
   }
 };
 ```
@@ -1762,7 +1766,7 @@ Ten plan implementacji obejmuje:
 ✅ **Wydajność** - indeksy, paginacja, caching  
 ✅ **Upload plików** - Supabase Storage z walidacją  
 ✅ **Geokodowanie** - integracja z zewnętrznym API  
-✅ **Testowanie** - unit, integration, E2E  
+✅ **Testowanie** - unit, integration, E2E
 
 **Kolejność implementacji:**
 

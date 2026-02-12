@@ -116,10 +116,13 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
+    // eslint-disable-next-line no-console
+    console.error("Unexpected error in POST /api/profiles/me/verification-document:", error);
+
     const errorResponse: ErrorResponse = {
       error: {
         code: "INTERNAL_ERROR",
-        message: error instanceof Error ? error.message : "An unexpected error occurred while uploading document",
+        message: "An unexpected error occurred while uploading verification document",
       },
     };
 

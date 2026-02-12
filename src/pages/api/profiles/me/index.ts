@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { ProfileService } from "../../../../lib/services/profile.service";
 import { UpdateProfileCommandSchema } from "../../../../lib/validation/profile.schemas";
 import type { ErrorResponse } from "../../../../types";
+import { NotFoundError } from "../../../../lib/errors";
 
 export const prerender = false;
 
@@ -57,12 +58,12 @@ export const GET: APIRoute = async ({ locals }) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    // Handle NOT_FOUND error
-    if (error instanceof Error && error.message === "NOT_FOUND") {
+    // Handle specific error types
+    if (error instanceof NotFoundError) {
       const errorResponse: ErrorResponse = {
         error: {
           code: "NOT_FOUND",
-          message: "Profile not found",
+          message: error.message,
         },
       };
 
@@ -71,6 +72,9 @@ export const GET: APIRoute = async ({ locals }) => {
         headers: { "Content-Type": "application/json" },
       });
     }
+
+    // eslint-disable-next-line no-console
+    console.error("Unexpected error in GET /api/profiles/me:", error);
 
     const errorResponse: ErrorResponse = {
       error: {
@@ -196,7 +200,25 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
-  } catch {
+  } catch (error) {
+    // Handle specific error types
+    if (error instanceof NotFoundError) {
+      const errorResponse: ErrorResponse = {
+        error: {
+          code: "NOT_FOUND",
+          message: error.message,
+        },
+      };
+
+      return new Response(JSON.stringify(errorResponse), {
+        status: 404,
+        headers: { "Content-Type": "application/json" },
+      });
+    }
+
+    // eslint-disable-next-line no-console
+    console.error("Unexpected error in PATCH /api/profiles/me:", error);
+
     const errorResponse: ErrorResponse = {
       error: {
         code: "INTERNAL_ERROR",

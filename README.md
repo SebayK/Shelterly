@@ -105,15 +105,15 @@ Shelterly provides a centralized platform where:
 
 ## Available Scripts
 
-| Script | Description |
-|--------|-------------|
-| `npm run dev` | Start the development server with hot reload |
-| `npm run build` | Build the project for production |
-| `npm run preview` | Preview the production build locally |
-| `npm run lint` | Run ESLint to check code quality |
-| `npm run lint:fix` | Automatically fix linting issues |
-| `npm run format` | Format code with Prettier |
-| `npm run astro` | Run Astro CLI commands directly |
+| Script             | Description                                  |
+| ------------------ | -------------------------------------------- |
+| `npm run dev`      | Start the development server with hot reload |
+| `npm run build`    | Build the project for production             |
+| `npm run preview`  | Preview the production build locally         |
+| `npm run lint`     | Run ESLint to check code quality             |
+| `npm run lint:fix` | Automatically fix linting issues             |
+| `npm run format`   | Format code with Prettier                    |
+| `npm run astro`    | Run Astro CLI commands directly              |
 
 ## Project Scope
 
@@ -214,7 +214,6 @@ MIT License - See LICENSE file for details
 ---
 
 **Made with ❤️ for animal shelters in Poland**
-
 
 ## AI Development Support
 

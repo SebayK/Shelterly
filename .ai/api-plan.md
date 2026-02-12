@@ -2,11 +2,11 @@
 
 ## 1. Resources
 
-| Resource | Database Table | Description |
-|----------|---------------|-------------|
-| **Profiles** | `profiles` | Represents shelter accounts with verification status, location, and contact details |
-| **Needs** | `needs` | Represents specific resource needs posted by verified shelters |
-| **Auth** | `auth.users` (Supabase) | Handles user authentication and session management |
+| Resource     | Database Table          | Description                                                                         |
+| ------------ | ----------------------- | ----------------------------------------------------------------------------------- |
+| **Profiles** | `profiles`              | Represents shelter accounts with verification status, location, and contact details |
+| **Needs**    | `needs`                 | Represents specific resource needs posted by verified shelters                      |
+| **Auth**     | `auth.users` (Supabase) | Handles user authentication and session management                                  |
 
 ---
 
@@ -278,8 +278,8 @@ Retrieve list of needs (optionally filtered by shelter).
       "title": "Karma mokra dla kotów",
       "description": "Pilnie potrzebujemy karmy mokrej dla naszych kotów...",
       "urgency": "urgent",
-      "target_quantity": 50.00,
-      "current_quantity": 12.00,
+      "target_quantity": 50.0,
+      "current_quantity": 12.0,
       "unit": "kg",
       "progress_percentage": 24,
       "is_fulfilled": false,
@@ -321,8 +321,8 @@ Retrieve details of a specific need.
   "description": "Pilnie potrzebujemy karmy mokrej dla naszych kotów. Preferujemy marki premium bez zbóż.",
   "shopping_url": "https://www.ceneo.pl/search?q=karma+mokra+koty",
   "urgency": "urgent",
-  "target_quantity": 50.00,
-  "current_quantity": 12.00,
+  "target_quantity": 50.0,
+  "current_quantity": 12.0,
   "unit": "kg",
   "progress_percentage": 24,
   "is_fulfilled": false,
@@ -355,7 +355,7 @@ Authorization: Bearer {access_token}
   "category": "food",
   "title": "Karma sucha dla psów",
   "urgency": "normal",
-  "target_quantity": 100.00,
+  "target_quantity": 100.0,
   "unit": "kg"
 }
 ```
@@ -371,8 +371,8 @@ Authorization: Bearer {access_token}
   "description": null,
   "shopping_url": null,
   "urgency": "normal",
-  "target_quantity": 100.00,
-  "current_quantity": 0.00,
+  "target_quantity": 100.0,
+  "current_quantity": 0.0,
   "unit": "kg",
   "is_fulfilled": false,
   "created_at": "2026-01-21T10:30:00Z"
@@ -405,7 +405,7 @@ Authorization: Bearer {access_token}
   "title": "Updated title",
   "description": "Updated description",
   "urgency": "high",
-  "current_quantity": 25.00
+  "current_quantity": 25.0
 }
 ```
 
@@ -417,7 +417,7 @@ Authorization: Bearer {access_token}
   "title": "Updated title",
   "description": "Updated description",
   "urgency": "high",
-  "current_quantity": 25.00,
+  "current_quantity": 25.0,
   "progress_percentage": 50,
   "updated_at": "2026-01-21T11:00:00Z"
 }
@@ -509,7 +509,7 @@ Authorization: Bearer {access_token}
   "need_id": "uuid",
   "category": "food",
   "title": "Karma mokra dla kotów",
-  "target_quantity": 50.00,
+  "target_quantity": 50.0,
   "unit": "kg"
 }
 ```
@@ -694,13 +694,13 @@ Returns the file with appropriate Content-Type header.
 
 ### 3.2. Authorization Levels
 
-| Role | Permissions |
-|------|-------------|
-| **Anonymous** | Read public shelter and needs data |
-| **Shelter (pending)** | Read own profile, cannot create/edit needs |
-| **Shelter (verified)** | Full CRUD on own profile and needs, AI generation |
-| **Shelter (suspended)** | Read-only access, cannot create/edit needs |
-| **Super Admin** | Full access to all resources, verification workflows |
+| Role                    | Permissions                                          |
+| ----------------------- | ---------------------------------------------------- |
+| **Anonymous**           | Read public shelter and needs data                   |
+| **Shelter (pending)**   | Read own profile, cannot create/edit needs           |
+| **Shelter (verified)**  | Full CRUD on own profile and needs, AI generation    |
+| **Shelter (suspended)** | Read-only access, cannot create/edit needs           |
+| **Super Admin**         | Full access to all resources, verification workflows |
 
 ### 3.3. Row Level Security (RLS)
 
@@ -725,27 +725,27 @@ All database operations are protected by Supabase RLS policies:
 
 ### 4.1. Profile Validation
 
-| Field | Validation Rules |
-|-------|-----------------|
-| `email` | Valid email format, unique |
-| `password` | Min 8 characters, must include uppercase, lowercase, number |
-| `name` | Required, min 3 characters, max 200 characters |
-| `nip` | Required, exactly 10 digits, unique, matches regex `^\d{10}$` |
-| `city` | Required, min 2 characters |
-| `address` | Required, min 5 characters |
-| `phone_number` | Optional, valid Polish phone format |
-| `website_url` | Optional, valid URL format |
+| Field          | Validation Rules                                              |
+| -------------- | ------------------------------------------------------------- |
+| `email`        | Valid email format, unique                                    |
+| `password`     | Min 8 characters, must include uppercase, lowercase, number   |
+| `name`         | Required, min 3 characters, max 200 characters                |
+| `nip`          | Required, exactly 10 digits, unique, matches regex `^\d{10}$` |
+| `city`         | Required, min 2 characters                                    |
+| `address`      | Required, min 5 characters                                    |
+| `phone_number` | Optional, valid Polish phone format                           |
+| `website_url`  | Optional, valid URL format                                    |
 
 ### 4.2. Needs Validation
 
-| Field | Validation Rules |
-|-------|-----------------|
-| `category` | Required, must be one of enum values |
-| `title` | Required, min 3 characters, max 200 characters |
-| `urgency` | Required, must be one of enum values |
-| `target_quantity` | Required, must be > 0 |
-| `current_quantity` | Must be >= 0 and <= target_quantity |
-| `unit` | Required, must be one of enum values |
+| Field              | Validation Rules                               |
+| ------------------ | ---------------------------------------------- |
+| `category`         | Required, must be one of enum values           |
+| `title`            | Required, min 3 characters, max 200 characters |
+| `urgency`          | Required, must be one of enum values           |
+| `target_quantity`  | Required, must be > 0                          |
+| `current_quantity` | Must be >= 0 and <= target_quantity            |
+| `unit`             | Required, must be one of enum values           |
 
 ### 4.3. Business Logic Implementation
 
@@ -829,19 +829,19 @@ All error responses follow a consistent structure:
 
 ### 5.2. Error Codes
 
-| HTTP Status | Error Code | Description |
-|-------------|------------|-------------|
-| 400 | `VALIDATION_ERROR` | Input validation failed |
-| 400 | `INVALID_REQUEST` | Malformed request |
-| 401 | `UNAUTHORIZED` | Missing or invalid token |
-| 403 | `FORBIDDEN` | Insufficient permissions |
-| 403 | `ACCOUNT_PENDING` | Account awaiting verification |
-| 403 | `ACCOUNT_SUSPENDED` | Account has been suspended |
-| 404 | `NOT_FOUND` | Resource not found |
-| 409 | `CONFLICT` | Resource already exists |
-| 429 | `RATE_LIMIT_EXCEEDED` | Too many requests |
-| 500 | `INTERNAL_ERROR` | Server error |
-| 503 | `SERVICE_UNAVAILABLE` | External service (AI, Storage) unavailable |
+| HTTP Status | Error Code            | Description                                |
+| ----------- | --------------------- | ------------------------------------------ |
+| 400         | `VALIDATION_ERROR`    | Input validation failed                    |
+| 400         | `INVALID_REQUEST`     | Malformed request                          |
+| 401         | `UNAUTHORIZED`        | Missing or invalid token                   |
+| 403         | `FORBIDDEN`           | Insufficient permissions                   |
+| 403         | `ACCOUNT_PENDING`     | Account awaiting verification              |
+| 403         | `ACCOUNT_SUSPENDED`   | Account has been suspended                 |
+| 404         | `NOT_FOUND`           | Resource not found                         |
+| 409         | `CONFLICT`            | Resource already exists                    |
+| 429         | `RATE_LIMIT_EXCEEDED` | Too many requests                          |
+| 500         | `INTERNAL_ERROR`      | Server error                               |
+| 503         | `SERVICE_UNAVAILABLE` | External service (AI, Storage) unavailable |
 
 ---
 
@@ -938,12 +938,9 @@ src/pages/api/
 // In Astro endpoints, use supabase from context.locals
 export const GET: APIRoute = async ({ locals }) => {
   const supabase = locals.supabase; // Pre-configured with auth context
-  
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('status', 'verified');
-    
+
+  const { data, error } = await supabase.from("profiles").select("*").eq("status", "verified");
+
   // ... handle response
 };
 ```
@@ -953,14 +950,14 @@ export const GET: APIRoute = async ({ locals }) => {
 All request bodies should be validated using Zod schemas:
 
 ```typescript
-import { z } from 'zod';
+import { z } from "zod";
 
 const createNeedSchema = z.object({
-  category: z.enum(['food', 'textiles', 'cleaning', 'medical', 'toys', 'other']),
+  category: z.enum(["food", "textiles", "cleaning", "medical", "toys", "other"]),
   title: z.string().min(3).max(200),
-  urgency: z.enum(['low', 'normal', 'high', 'urgent', 'critical']),
+  urgency: z.enum(["low", "normal", "high", "urgent", "critical"]),
   target_quantity: z.number().positive(),
-  unit: z.enum(['pcs', 'kg', 'g', 'l', 'ml', 'pack'])
+  unit: z.enum(["pcs", "kg", "g", "l", "ml", "pack"]),
 });
 ```
 

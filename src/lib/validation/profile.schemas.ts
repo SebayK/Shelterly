@@ -20,7 +20,7 @@ export const ProfilesQueryParamsSchema = z
       .min(-180, "Longitude must be between -180 and 180")
       .max(180, "Longitude must be between -180 and 180")
       .optional(),
-    urgent_only: z.coerce.boolean().optional().default(false),
+    urgent_only: z.coerce.boolean().optional(),
     limit: z
       .union([
         z.coerce
@@ -31,7 +31,7 @@ export const ProfilesQueryParamsSchema = z
         z.null(),
         z.undefined(),
       ])
-      .transform((val) => val ?? 20),
+      .transform((val) => val ?? 50),
     offset: z
       .union([
         z.coerce.number().int("Offset must be an integer").min(0, "Offset must be non-negative"),
@@ -49,7 +49,7 @@ export const ProfilesQueryParamsSchema = z
     },
     {
       message: "Both latitude and longitude must be provided together",
-      path: ["lat", "lon"],
+      path: ["lat"],
     }
   );
 
@@ -71,11 +71,11 @@ export const UpdateProfileCommandSchema = z
     address: z
       .string()
       .min(1, "Address must not be empty")
-      .max(255, "Address must not exceed 255 characters")
+      .max(500, "Address must not exceed 500 characters")
       .optional(),
     phone_number: z
       .string()
-      .regex(/^\+?[0-9\s\-()]+$/, "Invalid phone number format")
+      .regex(/^\+?[1-9]\d{1,14}$/, "Invalid phone number format (E.164)")
       .max(20, "Phone number must not exceed 20 characters")
       .nullable()
       .optional(),
@@ -88,6 +88,7 @@ export const UpdateProfileCommandSchema = z
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field must be provided for update",
+    path: ["_root"],
   });
 
 /**
