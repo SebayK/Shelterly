@@ -6,7 +6,7 @@
  * defined in src/db/database.types.ts
  */
 
-import type { Database, Tables, Enums } from "./db/database.types";
+import type { Tables, Enums } from "./db/database.types";
 
 // ============================================================================
 // Database Entity Types (Base types from database)
@@ -136,11 +136,12 @@ export interface ProfileMeDTO {
 
 /**
  * DTO 4: PATCH /api/profiles/me - Response after profile update
+ * Fields are nullable because super_admin role can have null values
  */
 export interface ProfileUpdateResponseDTO {
   id: string;
-  name: string | null;
-  city: string | null;
+  name: string;
+  city: string;
   updated_at: string;
 }
 

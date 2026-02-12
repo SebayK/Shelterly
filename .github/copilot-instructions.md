@@ -81,8 +81,10 @@ When modifying the directory structure, always update this section.
 - Avoid redundant ARIA that duplicates the semantics of native HTML elements
 
 ---
+
 Rule Type: Auto Attached
-globs: '**/*.tsx, **/*.jsx'
+globs: '**/\*.tsx, **/\*.jsx'
+
 ---
 
 ### Guidelines for React
