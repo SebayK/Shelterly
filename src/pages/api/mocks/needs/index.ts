@@ -16,8 +16,12 @@ export const GET: APIRoute = async ({ url }) => {
   const category = url.searchParams.get("category");
   const urgency = url.searchParams.get("urgency");
   const fulfilled = url.searchParams.get("fulfilled");
-  const limit = parseInt(url.searchParams.get("limit") || "20");
-  const offset = parseInt(url.searchParams.get("offset") || "0");
+  
+  // Parse and validate pagination parameters
+  const limitParam = url.searchParams.get("limit");
+  const offsetParam = url.searchParams.get("offset");
+  const limit = limitParam ? Math.max(1, Math.min(100, parseInt(limitParam) || 20)) : 20;
+  const offset = offsetParam ? Math.max(0, parseInt(offsetParam) || 0) : 0;
 
   let data = [...needsData.needs];
 
@@ -37,7 +41,7 @@ export const GET: APIRoute = async ({ url }) => {
   }
 
   // Filter by fulfilled status
-  if (fulfilled !== null) {
+  if (fulfilled) {
     const isFulfilled = fulfilled === "true";
     data = data.filter((need) => need.is_fulfilled === isFulfilled);
   }

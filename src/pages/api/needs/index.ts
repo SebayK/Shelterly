@@ -1,8 +1,7 @@
 import type { APIRoute } from "astro";
-import { ZodError } from "zod";
 import { NeedsService } from "@/lib/services/needs.service";
 import { needsQueryParamsSchema } from "@/lib/validation/needs.schemas";
-import type { ErrorResponse } from "@/types";
+import { createValidationErrorResponse, createErrorHttpResponse, logError } from "@/lib/errors";
 
 export const prerender = false;
 
@@ -32,21 +31,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
     });
 
     if (!validationResult.success) {
-      const errorResponse: ErrorResponse = {
-        error: {
-          code: "VALIDATION_ERROR",
-          message: "Invalid query parameters",
-          details: validationResult.error.errors.map((err) => ({
-            field: err.path.join("."),
-            message: err.message,
-          })),
-        },
-      };
-
-      return new Response(JSON.stringify(errorResponse), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
+      return createValidationErrorResponse(validationResult.error.errors);
     }
 
     const params = validationResult.data;
@@ -54,17 +39,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
     // Get Supabase client from locals (middleware injects it)
     const supabase = locals.supabase;
     if (!supabase) {
-      const errorResponse: ErrorResponse = {
-        error: {
-          code: "INTERNAL_ERROR",
-          message: "Database connection not available",
-        },
-      };
-
-      return new Response(JSON.stringify(errorResponse), {
-        status: 500,
-        headers: { "Content-Type": "application/json" },
-      });
+      return createErrorHttpResponse("INTERNAL_ERROR", "Database connection not available", 500);
     }
 
     // Execute business logic via service layer
@@ -73,39 +48,20 @@ export const GET: APIRoute = async ({ url, locals }) => {
 
     return new Response(JSON.stringify(result), {
       status: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "public, max-age=60, s-maxage=120",
+      },
     });
   } catch (error) {
-    // Distinguish between validation errors and other errors
-    if (error instanceof ZodError) {
-      const errorResponse: ErrorResponse = {
-        error: {
-          code: "VALIDATION_ERROR",
-          message: "Validation failed",
-          details: error.errors.map((err) => ({
-            field: err.path.join("."),
-            message: err.message,
-          })),
-        },
-      };
-
-      return new Response(JSON.stringify(errorResponse), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
+    // Log unexpected errors for monitoring
+    logError("[GET /api/needs]", error);
 
     // Generic error response for unexpected errors
-    const errorResponse: ErrorResponse = {
-      error: {
-        code: "INTERNAL_ERROR",
-        message: "An unexpected error occurred while fetching needs",
-      },
-    };
-
-    return new Response(JSON.stringify(errorResponse), {
-      status: 500,
-      headers: { "Content-Type": "application/json" },
-    });
+    return createErrorHttpResponse(
+      "INTERNAL_ERROR",
+      "An unexpected error occurred while fetching needs",
+      500
+    );
   }
 };

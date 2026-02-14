@@ -3,7 +3,6 @@
  */
 
 import { z } from "zod";
-import type { Enums } from "@/db/database.types";
 
 /**
  * Validation schema for GET /api/needs query parameters

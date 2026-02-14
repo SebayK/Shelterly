@@ -1,8 +1,8 @@
 # Mock API Endpoints
 
-Mock endpoints zwracające statyczne dane - użyj ich do testowania frontendu bez połączenia z bazą danych.
+Mock endpoints returning static data - use them for frontend testing without database connection.
 
-## Dostępne endpointy
+## Available Endpoints
 
 | Real API | Mock API | Status |
 |----------|----------|--------|
@@ -14,47 +14,47 @@ Mock endpoints zwracające statyczne dane - użyj ich do testowania frontendu be
 | `POST /api/profiles/me/verification-document` | `POST /api/mocks/profiles/me/verification-document` | ✅ |
 | `GET /api/needs` | `GET /api/mocks/needs` | ✅ |
 
-## Jak używać
+## How to Use
 
-### 1. Uruchom dev server
+### 1. Start dev server
 
 ```bash
 npm run dev
 ```
 
-### 2. Użyj mock endpoints zamiast prawdziwych
+### 2. Use mock endpoints instead of real ones
 
-**Zamiast:**
+**Instead of:**
 ```bash
 GET http://localhost:4321/api/profiles
 ```
 
-**Użyj:**
+**Use:**
 ```bash
 GET http://localhost:4321/api/mocks/profiles
 ```
 
-### 3. Testuj wszystkie funkcjonalności
+### 3. Test all functionalities
 
-Mock endpoints implementują:
-- ✅ Wszystkie parametry zapytania (lat, lon, urgent_only, limit, offset)
-- ✅ Walidację danych wejściowych
-- ✅ Obsługę błędów (400, 403, 404)
-- ✅ Symulację opóźnień sieciowych (200-800ms)
-- ✅ Filtrowanie i sortowanie danych
+Mock endpoints implement:
+- ✅ All query parameters (lat, lon, urgent_only, limit, offset)
+- ✅ Input data validation
+- ✅ Error handling (400, 403, 404)
+- ✅ Network delay simulation (200-800ms)
+- ✅ Data filtering and sorting
 
-## Przykłady użycia
+## Usage Examples
 
 ### GET /api/__mocks__/profiles
 
 ```bash
-# Podstawowe zapytanie
+# Basic query
 curl http://localhost:4321/api/__mocks__/profiles
 
-# Z geolokalizacją
+# With geolocation
 curl "http://localhost:4321/api/__mocks__/profiles?lat=52.2297&lon=21.0122"
 
-# Tylko pilne potrzeby
+# Only urgent needs
 curl "http://localhost:4321/api/__mocks__/profiles?urgent_only=true"
 ```
 
@@ -69,7 +69,7 @@ curl http://localhost:4321/api/__mocks__/profiles/550e8400-e29b-41d4-a716-446655
 ```bash
 curl -X PATCH http://localhost:4321/api/__mocks__/profiles/me \
   -H "Content-Type: application/json" \
-  -d '{"name": "Nowa nazwa", "city": "Warszawa"}'
+  -d '{"name": "New name", "city": "Warsaw"}'
 ```
 
 ### POST /api/__mocks__/profiles/me/geocode
@@ -87,26 +87,26 @@ curl -X POST http://localhost:4321/api/__mocks__/profiles/me/verification-docume
   -F "file=@document.pdf"
 ```
 
-## Specjalne zachowania
+## Special Behaviors
 
 ### Geocoding
-Mock endpoint rozpoznaje następujące adresy:
-- `ul. Marszałkowska 1, Warszawa` → Zwraca dokładne współrzędne
-- `ul. Floriańska 1, 31-019 Kraków` → Zwraca dokładne współrzędne
-- `ul. Długa 1, Gdańsk` → Zwraca dokładne współrzędne
-- Inne adresy → Zwraca centrum Warszawy
-- Adresy zawierające "nieistniejąc" → Błąd 400 NOT_FOUND
+Mock endpoint recognizes the following addresses:
+- `ul. Marszałkowska 1, Warszawa` → Returns exact coordinates
+- `ul. Floriańska 1, 31-019 Kraków` → Returns exact coordinates
+- `ul. Długa 1, Gdańsk` → Returns exact coordinates
+- Other addresses → Returns Warsaw city center
+- Addresses containing "nieistniejąc" → Error 400 NOT_FOUND
 
-### Walidacja
-Wszystkie endpointy implementują pełną walidację:
-- Sprawdzanie typów plików (tylko PDF, JPEG, PNG)
-- Limit rozmiaru pliku (max 5MB)
-- Walidacja JSON
-- Ochrona chronionych pól w PATCH
+### Validation
+All endpoints implement full validation:
+- File type checking (PDF, JPEG, PNG only)
+- File size limit (max 5MB)
+- JSON validation
+- Protected fields protection in PATCH
 
 ## REST Client (VS Code)
 
-Użyj pliku `__mocks__/api-tests.http` i zmień URL na mock endpoints:
+Use `__mocks__/api-tests.http` file and change URL to mock endpoints:
 
 ```http
 @baseUrl = http://localhost:4321/api/__mocks__
@@ -114,48 +114,48 @@ Użyj pliku `__mocks__/api-tests.http` i zmień URL na mock endpoints:
 GET {{baseUrl}}/profiles
 ```
 
-## Przełączanie między mock a real API
+## Switching Between Mock and Real API
 
-W frontendzie użyj zmiennej środowiskowej:
+In frontend use environment variable:
 
 ```typescript
 const API_BASE = import.meta.env.DEV 
-  ? '/api/mocks'  // Development - mocki
-  : '/api';       // Production - prawdziwe API
+  ? '/api/mocks'  // Development - mocks
+  : '/api';       // Production - real API
 ```
 
-## Dane źródłowe
+## Data Sources
 
-Mock endpoints używają danych z:
-- `__mocks__/data/profiles.json` - Profile schronisk
-- `__mocks__/data/needs.json` - Potrzeby schronisk
+Mock endpoints use data from:
+- `__mocks__/data/profiles.json` - Shelter profiles
+- `__mocks__/data/needs.json` - Shelter needs
 
-Możesz edytować te pliki aby dostosować dane testowe.
+You can edit these files to customize test data.
 
-## Przykłady użycia - GET /api/mocks/needs
+## Usage Examples - GET /api/mocks/needs
 
 ```bash
-# Wszystkie potrzeby (domyślnie 20 na stronę)
+# All needs (default 20 per page)
 curl "http://localhost:3000/api/mocks/needs"
 
-# Filtrowanie po kategorii
+# Filter by category
 curl "http://localhost:3000/api/mocks/needs?category=food"
 curl "http://localhost:3000/api/mocks/needs?category=medical"
 
-# Filtrowanie po pilności
+# Filter by urgency
 curl "http://localhost:3000/api/mocks/needs?urgency=critical"
 curl "http://localhost:3000/api/mocks/needs?urgency=urgent"
 
-# Tylko zrealizowane/niezrealizowane
+# Only fulfilled/unfulfilled
 curl "http://localhost:3000/api/mocks/needs?fulfilled=true"
 curl "http://localhost:3000/api/mocks/needs?fulfilled=false"
 
-# Filtrowanie po ID schroniska
+# Filter by shelter ID
 curl "http://localhost:3000/api/mocks/needs?shelter_id=650e8400-e29b-41d4-a716-446655440002"
 
-# Paginacja
+# Pagination
 curl "http://localhost:3000/api/mocks/needs?limit=5&offset=10"
 
-# Kombinacja filtrów
+# Combined filters
 curl "http://localhost:3000/api/mocks/needs?category=food&urgency=critical&fulfilled=false&limit=10"
 ```

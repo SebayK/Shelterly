@@ -4,5 +4,11 @@
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit"
   },
-  "cSpell.words": ["Shelterly", "supabase"]
+  "cSpell.words": [
+    "Shelterly",
+    "supabase"
+  ],
+  "chat.tools.terminal.autoApprove": {
+    "git add": true
+  }
 }

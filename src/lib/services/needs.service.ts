@@ -31,10 +31,11 @@ export class NeedsService {
         unit,
         is_fulfilled,
         created_at,
-        shelter:profiles!shelter_id (
+        profiles!inner (
           id,
           name,
-          city
+          city,
+          status
         )
       `,
         { count: "exact" }
@@ -66,16 +67,18 @@ export class NeedsService {
     const { data, error, count } = await query;
 
     if (error) {
-      throw new Error("Failed to fetch needs from database");
+      console.error("Database error fetching needs:", error);
+      throw new Error(`Failed to fetch needs from database: ${error.message}`);
     }
 
     // Transform database results to DTO format
     const needs: NeedListItemDTO[] = (data ?? []).map((need) => {
-      // Calculate progress percentage
-      const progress_percentage = Math.round((need.current_quantity / need.target_quantity) * 100);
+      // Calculate progress percentage with safety check for division by zero
+      const progress_percentage =
+        need.target_quantity > 0 ? Math.round((need.current_quantity / need.target_quantity) * 100) : 0;
 
       // Extract shelter info (Supabase returns nested object or array)
-      const shelterData = Array.isArray(need.shelter) ? need.shelter[0] : need.shelter;
+      const shelterData = Array.isArray(need.profiles) ? need.profiles[0] : need.profiles;
       const shelter: ShelterInfo = {
         id: shelterData?.id ?? "",
         name: shelterData?.name ?? "",

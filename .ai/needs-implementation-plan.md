@@ -215,7 +215,7 @@ PostgreSQL Database (needs + profiles tables)
 
 4. **Zapytanie do bazy danych**
    - SELECT z tabeli `needs`
-   - LEFT JOIN z tabelą `profiles` dla informacji o schronisku
+   - INNER JOIN z tabelą `profiles` dla informacji o schronisku
    - Filtrowanie:
      - `deleted_at IS NULL` (wykluczenie soft-deleted)
      - `profiles.status = 'verified'` (tylko zweryfikowane schroniska)
@@ -229,7 +229,7 @@ PostgreSQL Database (needs + profiles tables)
 
 6. **Transformacja danych**
    - Mapowanie wyników bazy danych na `NeedListItemDTO[]`
-   - Kalkulacja `progress_percentage = (current_quantity / target_quantity) * 100`
+   - Kalkulacja `progress_percentage = target_quantity > 0 ? (current_quantity / target_quantity) * 100 : 0` (z zabezpieczeniem przed dzieleniem przez zero)
    - Formatowanie zagnieżdżonego obiektu `ShelterInfo`
 
 7. **Konstruowanie odpowiedzi**
@@ -382,7 +382,9 @@ try {
 **Strategie cache:**
 
 1. **CDN/Edge Caching**
-   - Cache-Control header: `public, max-age=60` (1 minuta)
+   - Cache-Control header: `public, max-age=60, s-maxage=120`
+   - Max-age: 60 sekund dla przeglądarek (1 minuta)
+   - S-maxage: 120 sekund dla shared cache/CDN (2 minuty)
    - Uzasadnienie: Dane zmieniają się rzadko, ale muszą być relatywnie aktualne
 
 2. **Application-level Caching**
@@ -461,8 +463,9 @@ try {
 
 1. Utworzyć plik `needs.service.ts`
 2. Zaimportować typy i Supabase client type
-3. Zaimplementować funkcję `getNeeds()`:
-   - Parametry: `(params: NeedsQueryParams, supabase: SupabaseClient)`
+3. Zaimplementować klasę `NeedsService` z metodą `getNeeds()`:
+   - Konstruktor przyjmuje: `(supabase: SupabaseClient)`
+   - Metoda `getNeeds()` przyjmuje: `(params: NeedsQueryParams)`
    - Zwraca: `Promise<NeedListResponseDTO>`
 4. Budowanie query z filtrami:
 
@@ -480,16 +483,22 @@ try {
        unit,
        is_fulfilled,
        created_at,
-       shelter:profiles!shelter_id (
+       profiles!inner (
          id,
          name,
-         city
+         city,
+         status
        )
      `, { count: 'exact' })
      .is('deleted_at', null)
      .eq('profiles.status', 'verified')
      .order('created_at', { ascending: false });
    ```
+
+   **Uwaga:** 
+   - Użycie `profiles!inner` zamiast `shelter:profiles!shelter_id` - INNER JOIN automatycznie przez foreign key
+   - Dodanie pola `status` do select jest konieczne, aby móc filtrować po `profiles.status`
+   - INNER JOIN zapewnia, że zwracane są tylko needs z powiązanymi profilami schronisk
 
 5. Aplikowanie opcjonalnych filtrów (if statements)
 6. Aplikowanie paginacji (range)
@@ -518,79 +527,83 @@ try {
 2. Dodać `export const prerender = false`
 3. Zaimplementować handler GET:
    - Ekstrakcja query parameters z `Astro.url.searchParams`
-   - Konwersja do obiektu dla walidacji
-   - Walidacja przez Zod schema
+   - Walidacja przez Zod schema z użyciem `.safeParse()`
+   - Obsługa błędów walidacji przez `createValidationErrorResponse()`
    - Pobranie Supabase client z `context.locals.supabase`
-   - Wywołanie `getNeeds()` service
+   - Utworzenie instancji `NeedsService` z Supabase client
+   - Wywołanie `needsService.getNeeds()` 
    - Zwrócenie odpowiedzi JSON
 4. Implementacja obsługi błędów:
    - Try-catch block
-   - Rozróżnienie Zod errors vs inne błędy
-   - Formatowanie error response zgodnie z `ErrorResponse` type
-   - Odpowiednie kody HTTP
+   - Użycie helper functions z `src/lib/errors.ts`:
+     - `createValidationErrorResponse()` dla błędów walidacji
+     - `createErrorHttpResponse()` dla błędów ogólnych
+     - `logError()` dla logowania z kontekstem
+   - Odpowiednie kody HTTP (400, 500)
 5. Ustawienie headers:
    - `Content-Type: application/json`
-   - `Cache-Control: public, max-age=60` (opcjonalnie)
+   - `Cache-Control: public, max-age=60, s-maxage=120`
 
 **Struktura pliku:**
 
 ```typescript
 import type { APIRoute } from 'astro';
-import { z } from 'zod';
+import { NeedsService } from '../../../lib/services/needs.service';
 import { needsQuerySchema } from '../../../lib/validation/needs.schemas';
-import { getNeeds } from '../../../lib/services/needs.service';
-import type { ErrorResponse } from '../../../types';
+import { createValidationErrorResponse, createErrorHttpResponse, logError } from '../../../lib/errors';
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ url, locals }) => {
   try {
     // Extract and validate query parameters
-    const rawParams = Object.fromEntries(url.searchParams);
-    const validatedParams = needsQuerySchema.parse(rawParams);
+    const shelter_id = url.searchParams.get('shelter_id');
+    const category = url.searchParams.get('category');
+    const urgency = url.searchParams.get('urgency');
+    const fulfilled = url.searchParams.get('fulfilled');
+    const limit = url.searchParams.get('limit');
+    const offset = url.searchParams.get('offset');
+
+    const validationResult = needsQuerySchema.safeParse({
+      shelter_id,
+      category,
+      urgency,
+      fulfilled,
+      limit,
+      offset,
+    });
+
+    if (!validationResult.success) {
+      return createValidationErrorResponse(validationResult.error.errors);
+    }
+
+    const params = validationResult.data;
     
     // Get Supabase client
     const supabase = locals.supabase;
+    if (!supabase) {
+      return createErrorHttpResponse('INTERNAL_ERROR', 'Database connection not available', 500);
+    }
     
     // Fetch needs
-    const result = await getNeeds(validatedParams, supabase);
+    const needsService = new NeedsService(supabase);
+    const result = await needsService.getNeeds(params);
     
     return new Response(JSON.stringify(result), {
       status: 200,
       headers: { 
         'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=60'
+        'Cache-Control': 'public, max-age=60, s-maxage=120'
       }
     });
   } catch (error) {
-    // Error handling
-    if (error instanceof z.ZodError) {
-      const errorResponse: ErrorResponse = {
-        code: 'VALIDATION_ERROR',
-        message: 'Invalid query parameters',
-        details: error.errors.map(e => ({
-          field: e.path.join('.'),
-          message: e.message
-        }))
-      };
-      
-      return new Response(JSON.stringify(errorResponse), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-    
-    console.error('Error fetching needs:', error);
-    
-    const errorResponse: ErrorResponse = {
-      code: 'INTERNAL_ERROR',
-      message: 'An unexpected error occurred'
-    };
-    
-    return new Response(JSON.stringify(errorResponse), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    // Log and handle unexpected errors
+    logError('[GET /api/needs]', error);
+    return createErrorHttpResponse(
+      'INTERNAL_ERROR',
+      'An unexpected error occurred while fetching needs',
+      500
+    );
   }
 };
 ```
@@ -674,20 +687,33 @@ export const GET: APIRoute = async ({ url, locals }) => {
 
 ## 10. Checklist wdrożenia
 
-- [ ] Utworzono `src/lib/validation/needs.schemas.ts` z Zod schemas
-- [ ] Utworzono `src/lib/services/needs.service.ts` z funkcją getNeeds()
-- [ ] Utworzono `src/pages/api/needs/index.ts` z handlerem GET
-- [ ] Dodano `export const prerender = false` w API route
-- [ ] Zaimplementowano walidację wszystkich query parameters
-- [ ] Zaimplementowano obsługę błędów (400, 500)
-- [ ] Zaimplementowano kalkulację progress_percentage
-- [ ] Dodano odpowiednie headers (Content-Type, Cache-Control)
+### Implementacja kodu
+- [x] Utworzono `src/lib/validation/needs.schemas.ts` z Zod schemas
+- [x] Utworzono `src/lib/services/needs.service.ts` z klasą NeedsService
+- [x] Rozszerzono `src/lib/errors.ts` o helper functions (createErrorResponse, createErrorHttpResponse, createValidationErrorResponse, logError)
+- [x] Utworzono `src/pages/api/needs/index.ts` z handlerem GET
+- [x] Dodano `export const prerender = false` w API route
+- [x] Zaimplementowano walidację wszystkich query parameters
+- [x] Zaimplementowano obsługę błędów (400, 500) z użyciem helper functions
+- [x] Zaimplementowano kalkulację progress_percentage z zabezpieczeniem przed dzieleniem przez zero
+- [x] Dodano odpowiednie headers (Content-Type, Cache-Control: public, max-age=60, s-maxage=120)
+
+### Mock endpoints i dane testowe
+- [x] Utworzono mock endpoint `src/pages/api/mocks/needs/index.ts`
+- [x] Utworzono dane testowe `__mocks__/data/needs.json`
+- [x] Zaktualizowano README.md w `src/pages/api/mocks/` z przykładami użycia
+
+### Testy
 - [ ] Napisano testy jednostkowe dla schema validation
 - [ ] Napisano testy jednostkowe dla needs service
 - [ ] Napisano testy integracyjne dla endpoint
-- [ ] Zweryfikowano zgodność z TypeScript types
-- [ ] Przeprowadzono code review
-- [ ] Zaktualizowano dokumentację API
+
+### Przegląd i dokumentacja
+- [x] Zweryfikowano zgodność z TypeScript types
+- [x] Przeprowadzono code review
+- [x] Zaktualizowano dokumentację API (plan implementacji + Changelog)
+
+### Testowanie i deployment
 - [ ] Przetestowano manualnie w środowisku dev
 - [ ] Skonfigurowano monitoring i alerty
 - [ ] Wdrożono na staging
@@ -734,3 +760,50 @@ PostgreSQL Database
 6. **Webhook notifications**
    - Powiadomienia o nowych pilnych potrzebach
    - Integracja z systemami zewnętrznymi
+
+## 13. Poprawki względem pierwotnego planu (Changelog)
+
+**Data aktualizacji:** 12.02.2026
+
+### Poprawki techniczne:
+
+1. **Składnia Supabase Query (Etap 2, punkt 4)**
+   - ❌ **Poprzednio:** `shelter:profiles!shelter_id (...)`
+   - ✅ **Poprawiono na:** `profiles!inner (..., status)`
+   - **Uzasadnienie:** Poprawna składnia INNER JOIN w Supabase. Dodano pole `status` do select, aby umożliwić filtrowanie `.eq('profiles.status', 'verified')`
+
+2. **Typ JOIN (Sekcja 5.4)**
+   - ❌ **Poprzednio:** LEFT JOIN
+   - ✅ **Poprawiono na:** INNER JOIN
+   - **Uzasadnienie:** INNER JOIN zapewnia, że zwracane są tylko needs z istniejącymi profilami schronisk
+
+3. **Kalkulacja progress_percentage (Sekcja 5.6)**
+   - ❌ **Poprzednio:** `(current_quantity / target_quantity) * 100`
+   - ✅ **Poprawiono na:** `target_quantity > 0 ? (current_quantity / target_quantity) * 100 : 0`
+   - **Uzasadnienie:** Zabezpieczenie przed dzieleniem przez zero
+
+### Usprawnienia:
+
+4. **Error Handling**
+   - ✅ **Dodano:** Helper functions w `src/lib/errors.ts`
+     - `createErrorResponse()` - Standaryzacja obiektów błędów
+     - `createErrorHttpResponse()` - Tworzenie HTTP Response z błędem
+     - `createValidationErrorResponse()` - Specjalna funkcja dla błędów Zod
+     - `logError()` - Ujednolicone logowanie
+   - **Uzasadnienie:** DRY principle, eliminacja duplikacji kodu
+
+5. **Cache Headers (Sekcja 8.1 i Etap 3)**
+   - ❌ **Poprzednio:** `Cache-Control: public, max-age=60`
+   - ✅ **Poprawiono na:** `Cache-Control: public, max-age=60, s-maxage=120`
+   - **Uzasadnienie:** Osobne TTL dla shared cache (CDN) - lepsza optymalizacja
+
+6. **Struktura kodu (Etap 2)**
+   - ❌ **Poprzednio:** Funkcja `getNeeds()`
+   - ✅ **Poprawiono na:** Klasa `NeedsService` z metodą `getNeeds()`
+   - **Uzasadnienie:** Lepsza organizacja kodu, zgodność z OOP principles
+
+7. **Walidacja parametrów (Etap 3)**
+   - ✅ **Dodano:** Użycie `.safeParse()` zamiast `.parse()`
+   - **Uzasadnienie:** Lepsze zarządzanie błędami, brak zbędnego try-catch dla ZodError
+
+Wszystkie poprawki są zgodne z best practices i dokumentacją Supabase.
