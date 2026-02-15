@@ -3,11 +3,16 @@ import type { APIRoute } from "astro";
 export const prerender = false;
 
 /**
- * MOCK ENDPOINT: POST /api/__mocks__/profiles/me/geocode
- * Symuluje geokodowanie adresu
+ * MOCK ENDPOINT: POST /api/mocks/profiles/me/geocode
+ * Simulates address geocoding
  */
 export const POST: APIRoute = async ({ request }) => {
-  // Symuluj delay API
+  // Disable in production
+  if (!import.meta.env.DEV) {
+    return new Response(null, { status: 404 });
+  }
+
+  // Simulate API delay
   await new Promise((resolve) => setTimeout(resolve, 500));
 
   let body;

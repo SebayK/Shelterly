@@ -1,0 +1,220 @@
+{
+  "needs": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "shelter": {
+        "id": "650e8400-e29b-41d4-a716-446655440001",
+        "name": "Schronisko Pod Tęczą",
+        "city": "Warszawa"
+      },
+      "category": "food",
+      "title": "Karma dla psów - duże rasy",
+      "description": "Pilnie potrzebujemy karmy dla dużych psów. Mamy 15 owczarków niemieckich i labradorów.",
+      "urgency": "urgent",
+      "target_quantity": 50,
+      "current_quantity": 12,
+      "unit": "kg",
+      "progress_percentage": 24,
+      "is_fulfilled": false,
+      "created_at": "2026-01-28T10:30:00Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440002",
+      "shelter": {
+        "id": "650e8400-e29b-41d4-a716-446655440001",
+        "name": "Schronisko Pod Tęczą",
+        "city": "Warszawa"
+      },
+      "category": "cleaning",
+      "title": "Środki czystości",
+      "description": "Płyny do mycia podłóg i dezynfekcji boksów",
+      "urgency": "normal",
+      "target_quantity": 20,
+      "current_quantity": 5,
+      "unit": "l",
+      "progress_percentage": 25,
+      "is_fulfilled": false,
+      "created_at": "2026-01-27T14:20:00Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440003",
+      "shelter": {
+        "id": "650e8400-e29b-41d4-a716-446655440002",
+        "name": "Azyl dla Kotów",
+        "city": "Kraków"
+      },
+      "category": "food",
+      "title": "Mokra karma dla kotów",
+      "description": "Puszki z mokrą karmą dla kotów, różne smaki",
+      "urgency": "critical",
+      "target_quantity": 200,
+      "current_quantity": 30,
+      "unit": "pcs",
+      "progress_percentage": 15,
+      "is_fulfilled": false,
+      "created_at": "2026-01-29T08:15:00Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440004",
+      "shelter": {
+        "id": "650e8400-e29b-41d4-a716-446655440002",
+        "name": "Azyl dla Kotów",
+        "city": "Kraków"
+      },
+      "category": "medical",
+      "title": "Antybiotyki dla kotów",
+      "description": "Amoksycylina w formie zawiesiny dla kotów",
+      "urgency": "critical",
+      "target_quantity": 10,
+      "current_quantity": 2,
+      "unit": "pcs",
+      "progress_percentage": 20,
+      "is_fulfilled": false,
+      "created_at": "2026-01-30T12:00:00Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440005",
+      "shelter": {
+        "id": "650e8400-e29b-41d4-a716-446655440003",
+        "name": "Przytulisko dla Zwierząt",
+        "city": "Gdańsk"
+      },
+      "category": "textiles",
+      "title": "Koce i kocyki",
+      "description": "Koce polarowe i kocyki dla zwierząt w różnych rozmiarach",
+      "urgency": "high",
+      "target_quantity": 30,
+      "current_quantity": 8,
+      "unit": "pcs",
+      "progress_percentage": 27,
+      "is_fulfilled": false,
+      "created_at": "2026-01-26T16:45:00Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440006",
+      "shelter": {
+        "id": "650e8400-e29b-41d4-a716-446655440003",
+        "name": "Przytulisko dla Zwierząt",
+        "city": "Gdańsk"
+      },
+      "category": "toys",
+      "title": "Zabawki dla psów",
+      "description": "Piłki, gryzaki i zabawki interaktywne",
+      "urgency": "low",
+      "target_quantity": 50,
+      "current_quantity": 45,
+      "unit": "pcs",
+      "progress_percentage": 90,
+      "is_fulfilled": false,
+      "created_at": "2026-01-25T09:30:00Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440007",
+      "shelter": {
+        "id": "650e8400-e29b-41d4-a716-446655440004",
+        "name": "Schronisko Cztery Łapy",
+        "city": "Wrocław"
+      },
+      "category": "food",
+      "title": "Karma dla małych psów",
+      "description": null,
+      "urgency": "normal",
+      "target_quantity": 25,
+      "current_quantity": 10,
+      "unit": "kg",
+      "progress_percentage": 40,
+      "is_fulfilled": false,
+      "created_at": "2026-01-24T11:00:00Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440008",
+      "shelter": {
+        "id": "650e8400-e29b-41d4-a716-446655440004",
+        "name": "Schronisko Cztery Łapy",
+        "city": "Wrocław"
+      },
+      "category": "medical",
+      "title": "Witaminy dla szczeniąt",
+      "description": "Preparaty witaminowe wspierające rozwój szczeniąt",
+      "urgency": "high",
+      "target_quantity": 15,
+      "current_quantity": 15,
+      "unit": "pcs",
+      "progress_percentage": 100,
+      "is_fulfilled": true,
+      "created_at": "2026-01-23T13:20:00Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440009",
+      "shelter": {
+        "id": "650e8400-e29b-41d4-a716-446655440005",
+        "name": "Dom dla Bezdomnych Zwierząt",
+        "city": "Poznań"
+      },
+      "category": "cleaning",
+      "title": "Worki na śmieci 120L",
+      "description": "Worki wytrzymałe na odpady zwierzęce",
+      "urgency": "normal",
+      "target_quantity": 100,
+      "current_quantity": 20,
+      "unit": "pcs",
+      "progress_percentage": 20,
+      "is_fulfilled": false,
+      "created_at": "2026-01-22T10:10:00Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440010",
+      "shelter": {
+        "id": "650e8400-e29b-41d4-a716-446655440005",
+        "name": "Dom dla Bezdomnych Zwierząt",
+        "city": "Poznań"
+      },
+      "category": "other",
+      "title": "Miski metalowe",
+      "description": "Miski stalowe dla psów, średnie i duże rozmiary",
+      "urgency": "low",
+      "target_quantity": 40,
+      "current_quantity": 12,
+      "unit": "pcs",
+      "progress_percentage": 30,
+      "is_fulfilled": false,
+      "created_at": "2026-01-21T15:30:00Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440011",
+      "shelter": {
+        "id": "650e8400-e29b-41d4-a716-446655440001",
+        "name": "Schronisko Pod Tęczą",
+        "city": "Warszawa"
+      },
+      "category": "textiles",
+      "title": "Ręczniki",
+      "description": "Ręczniki frotte do osuszania zwierząt po kąpieli",
+      "urgency": "normal",
+      "target_quantity": 20,
+      "current_quantity": 20,
+      "unit": "pcs",
+      "progress_percentage": 100,
+      "is_fulfilled": true,
+      "created_at": "2026-01-20T09:00:00Z"
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440012",
+      "shelter": {
+        "id": "650e8400-e29b-41d4-a716-446655440002",
+        "name": "Azyl dla Kotów",
+        "city": "Kraków"
+      },
+      "category": "toys",
+      "title": "Drapaki dla kotów",
+      "description": "Drapaki słupki z sizalu",
+      "urgency": "normal",
+      "target_quantity": 8,
+      "current_quantity": 3,
+      "unit": "pcs",
+      "progress_percentage": 38,
+      "is_fulfilled": false,
+      "created_at": "2026-01-19T14:45:00Z"
+    }
+  ]
+}

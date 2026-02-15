@@ -4,12 +4,17 @@ import profilesData from "../../../../../__mocks__/data/profiles.json";
 export const prerender = false;
 
 /**
- * MOCK ENDPOINT: GET /api/__mocks__/profiles
- * Zwraca statyczne dane bez połączenia z bazą
- * Użyj tego endpointa do testowania frontendu
+ * MOCK ENDPOINT: GET /api/mocks/profiles
+ * Returns static data without database connection
+ * Use this endpoint for frontend testing
  */
 export const GET: APIRoute = async ({ url }) => {
-  // Symuluj delay sieciowy (opcjonalnie)
+  // Disable in production
+  if (!import.meta.env.DEV) {
+    return new Response(null, { status: 404 });
+  }
+
+  // Simulate network delay (optional)
   await new Promise((resolve) => setTimeout(resolve, 300));
 
   const lat = url.searchParams.get("lat");
