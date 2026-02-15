@@ -4,11 +4,16 @@ import profilesData from "../../../../../__mocks__/data/profiles.json";
 export const prerender = false;
 
 /**
- * MOCK ENDPOINT: GET /api/__mocks__/profiles/:id
- * Zwraca statyczne dane szczegółów schroniska
+ * MOCK ENDPOINT: GET /api/mocks/profiles/:id
+ * Returns static shelter details data
  */
 export const GET: APIRoute = async ({ params }) => {
-  // Symuluj delay sieciowy
+  // Disable in production
+  if (!import.meta.env.DEV) {
+    return new Response(null, { status: 404 });
+  }
+
+  // Simulate network delay
   await new Promise((resolve) => setTimeout(resolve, 200));
 
   const { id } = params;

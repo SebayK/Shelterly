@@ -5,6 +5,7 @@
 
 import type { SupabaseClient } from "@/db/supabase.client";
 import type { NeedListResponseDTO, NeedListItemDTO, ShelterInfo, Pagination, NeedsQueryParams } from "@/types";
+import { InternalError, logError } from "@/lib/errors";
 
 export class NeedsService {
   constructor(private supabase: SupabaseClient) {}
@@ -67,8 +68,8 @@ export class NeedsService {
     const { data, error, count } = await query;
 
     if (error) {
-      console.error("Failed to fetch needs:", error);
-      throw new Error(`Failed to fetch needs from database: ${error.message}`);
+      logError("[NeedsService.getNeeds]", error);
+      throw new InternalError("Unable to retrieve shelter needs");
     }
 
     // Transform database results to DTO format
@@ -79,10 +80,21 @@ export class NeedsService {
 
       // Extract shelter info (Supabase returns nested object or array)
       const shelterData = Array.isArray(need.profiles) ? need.profiles[0] : need.profiles;
+
+      // Validate shelter data integrity
+      if (!shelterData || !shelterData.id || !shelterData.name || !shelterData.city) {
+        logError("[NeedsService.getNeeds] Inconsistent data", {
+          message: "Missing or incomplete shelter profile for need",
+          needId: need.id,
+          profiles: need.profiles,
+        });
+        throw new InternalError("Failed to fetch needs: missing shelter profile data for one or more needs");
+      }
+
       const shelter: ShelterInfo = {
-        id: shelterData?.id ?? "",
-        name: shelterData?.name ?? "",
-        city: shelterData?.city ?? "",
+        id: shelterData.id,
+        name: shelterData.name,
+        city: shelterData.city,
       };
 
       return {

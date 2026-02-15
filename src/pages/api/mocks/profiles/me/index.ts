@@ -4,15 +4,20 @@ import profilesData from "../../../../../../__mocks__/data/profiles.json";
 export const prerender = false;
 
 /**
- * MOCK ENDPOINT: GET /api/__mocks__/profiles/me
- * Zwraca mockowany profil użytkownika (zawsze pierwszy verified profile)
+ * MOCK ENDPOINT: GET /api/mocks/profiles/me
+ * Returns mocked user profile (always first verified profile)
  */
 export const GET: APIRoute = async () => {
-  // Symuluj delay
+  // Disable in production
+  if (!import.meta.env.DEV) {
+    return new Response(null, { status: 404 });
+  }
+
+  // Simulate delay
   await new Promise((resolve) => setTimeout(resolve, 200));
 
-  // Sprawdź header Authorization (opcjonalnie)
-  // W mocku zawsze zwracamy dane pierwszego zweryfikowanego schroniska
+  // Check Authorization header (optional)
+  // In mock always return first verified shelter data
 
   const profile = profilesData.profiles.find((p) => p.status === "verified");
 
@@ -38,11 +43,16 @@ export const GET: APIRoute = async () => {
 };
 
 /**
- * MOCK ENDPOINT: PATCH /api/__mocks__/profiles/me
- * Symuluje aktualizację profilu
+ * MOCK ENDPOINT: PATCH /api/mocks/profiles/me
+ * Simulates profile update
  */
 export const PATCH: APIRoute = async ({ request }) => {
-  // Symuluj delay
+  // Disable in production
+  if (!import.meta.env.DEV) {
+    return new Response(null, { status: 404 });
+  }
+
+  // Simulate delay
   await new Promise((resolve) => setTimeout(resolve, 300));
 
   let body;

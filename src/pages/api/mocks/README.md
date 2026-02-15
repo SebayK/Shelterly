@@ -36,54 +36,54 @@ GET http://localhost:4321/api/mocks/profiles
 
 ### 3. Test all functionalities
 
-Mock endpoints implement:
-- ✅ All query parameters (lat, lon, urgent_only, limit, offset)
-- ✅ Input data validation
-- ✅ Error handling (400, 403, 404)
+Mock endpoints provide:
+- ✅ Support for common query parameters (lat, lon, urgent_only, limit, offset, category, urgency, fulfilled)
+- ✅ Basic input data validation (aims to be similar to the real API but may not enforce every rule)
+- ✅ Error handling (400, 403, 404) for common scenarios
 - ✅ Network delay simulation (200-800ms)
 - ✅ Data filtering and sorting
 
 ## Usage Examples
 
-### GET /api/__mocks__/profiles
+### GET /api/mocks/profiles
 
 ```bash
 # Basic query
-curl http://localhost:4321/api/__mocks__/profiles
+curl http://localhost:4321/api/mocks/profiles
 
 # With geolocation
-curl "http://localhost:4321/api/__mocks__/profiles?lat=52.2297&lon=21.0122"
+curl "http://localhost:4321/api/mocks/profiles?lat=52.2297&lon=21.0122"
 
 # Only urgent needs
-curl "http://localhost:4321/api/__mocks__/profiles?urgent_only=true"
+curl "http://localhost:4321/api/mocks/profiles?urgent_only=true"
 ```
 
-### GET /api/__mocks__/profiles/:id
+### GET /api/mocks/profiles/:id
 
 ```bash
-curl http://localhost:4321/api/__mocks__/profiles/550e8400-e29b-41d4-a716-446655440000
+curl http://localhost:4321/api/mocks/profiles/550e8400-e29b-41d4-a716-446655440000
 ```
 
-### PATCH /api/__mocks__/profiles/me
+### PATCH /api/mocks/profiles/me
 
 ```bash
-curl -X PATCH http://localhost:4321/api/__mocks__/profiles/me \
+curl -X PATCH http://localhost:4321/api/mocks/profiles/me \
   -H "Content-Type: application/json" \
   -d '{"name": "New name", "city": "Warsaw"}'
 ```
 
-### POST /api/__mocks__/profiles/me/geocode
+### POST /api/mocks/profiles/me/geocode
 
 ```bash
-curl -X POST http://localhost:4321/api/__mocks__/profiles/me/geocode \
+curl -X POST http://localhost:4321/api/mocks/profiles/me/geocode \
   -H "Content-Type: application/json" \
   -d '{"address": "ul. Marszałkowska 1, Warszawa"}'
 ```
 
-### POST /api/__mocks__/profiles/me/verification-document
+### POST /api/mocks/profiles/me/verification-document
 
 ```bash
-curl -X POST http://localhost:4321/api/__mocks__/profiles/me/verification-document \
+curl -X POST http://localhost:4321/api/mocks/profiles/me/verification-document \
   -F "file=@document.pdf"
 ```
 
@@ -98,18 +98,19 @@ Mock endpoint recognizes the following addresses:
 - Addresses containing "nieistniejąc" → Error 400 NOT_FOUND
 
 ### Validation
-All endpoints implement full validation:
+Mock endpoints implement validation for common scenarios:
 - File type checking (PDF, JPEG, PNG only)
 - File size limit (max 5MB)
 - JSON validation
 - Protected fields protection in PATCH
+- Query parameter validation (using the same Zod schemas as real API where applicable)
 
 ## REST Client (VS Code)
 
-Use `__mocks__/api-tests.http` file and change URL to mock endpoints:
+You can use an HTTP REST client (for example, the VS Code REST Client extension) with a `.http` file pointing to these mock endpoints:
 
 ```http
-@baseUrl = http://localhost:4321/api/__mocks__
+@baseUrl = http://localhost:4321/api/mocks
 
 GET {{baseUrl}}/profiles
 ```

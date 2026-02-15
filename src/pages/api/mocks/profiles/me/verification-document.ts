@@ -3,11 +3,16 @@ import type { APIRoute } from "astro";
 export const prerender = false;
 
 /**
- * MOCK ENDPOINT: POST /api/__mocks__/profiles/me/verification-document
- * Symuluje upload dokumentu weryfikacyjnego
+ * MOCK ENDPOINT: POST /api/mocks/profiles/me/verification-document
+ * Simulates verification document upload
  */
 export const POST: APIRoute = async ({ request }) => {
-  // Symuluj delay uploadu
+  // Disable in production
+  if (!import.meta.env.DEV) {
+    return new Response(null, { status: 404 });
+  }
+
+  // Simulate upload delay
   await new Promise((resolve) => setTimeout(resolve, 800));
 
   let formData: FormData;

@@ -7,8 +7,5 @@
   "cSpell.words": [
     "Shelterly",
     "supabase"
-  ],
-  "chat.tools.terminal.autoApprove": {
-    "git add": true
-  }
+  ]
 }

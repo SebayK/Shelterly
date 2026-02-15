@@ -11,6 +11,10 @@ export const prerender = false;
  * Use this endpoint for frontend testing
  */
 export const GET: APIRoute = async ({ url }) => {
+  // Disable in production
+  if (!import.meta.env.DEV) {
+    return new Response(null, { status: 404 });
+  }
   // Simulate network delay (optional)
   await new Promise((resolve) => setTimeout(resolve, 300));
 
