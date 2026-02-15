@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { NeedsService } from "@/lib/services/needs.service";
-import { needsQueryParamsSchema } from "@/lib/validation/needs.schemas";
+import { NeedsQueryParamsSchema } from "@/lib/validation/needs.schemas";
 import { createValidationErrorResponse, createErrorHttpResponse, logError } from "@/lib/errors";
 
 export const prerender = false;
@@ -21,7 +21,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
     const offset = url.searchParams.get("offset");
 
     // Validate query parameters using Zod schema
-    const validationResult = needsQueryParamsSchema.safeParse({
+    const validationResult = NeedsQueryParamsSchema.safeParse({
       shelter_id,
       category,
       urgency,

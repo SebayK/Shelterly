@@ -41,7 +41,7 @@ export class NeedsService {
         { count: "exact" }
       )
       .is("deleted_at", null) // Exclude soft-deleted needs
-      .eq("profiles.status", "verified"); // Only verified shelters
+      .filter("profiles.status", "eq", "verified"); // Only verified shelters
 
     // Apply optional filters
     if (shelter_id) {
@@ -67,7 +67,7 @@ export class NeedsService {
     const { data, error, count } = await query;
 
     if (error) {
-      console.error("Database error fetching needs:", error);
+      console.error("Failed to fetch needs:", error);
       throw new Error(`Failed to fetch needs from database: ${error.message}`);
     }
 
