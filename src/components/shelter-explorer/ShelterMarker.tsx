@@ -105,7 +105,7 @@ function ShelterMarkerComponent({ shelter, isSelected, onSelect }: ShelterMarker
             )}
           </div>
           <a
-            href={`/shelters/${shelter.id}`}
+            href={`/shelter/${shelter.id}`}
             className="inline-block mt-3 text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
           >
             Zobacz szczegóły →

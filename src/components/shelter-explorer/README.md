@@ -159,7 +159,7 @@ Query params:
 
 ## Znane ograniczenia
 
-1. **Link "Zobacz szczegóły"** - prowadzi do `/shelters/{id}`, który nie jest jeszcze zaimplementowany
+1. **Link "Zobacz szczegóły"** - prowadzi do `/shelter/{id}` (widok szczegółów schroniska)
 2. **Geolokalizacja** - wymaga HTTPS w produkcji
 3. **Leaflet CSS** - obecnie ładowany z CDN (można przenieść do buildu)
 

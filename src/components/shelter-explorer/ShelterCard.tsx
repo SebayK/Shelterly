@@ -128,7 +128,7 @@ function ShelterCardComponent({ shelter, isSelected, onSelect }: ShelterCardProp
 
         {/* Link do szczegółów */}
         <a
-          href={`/shelters/${shelter.id}`}
+          href={`/shelter/${shelter.id}`}
           className="inline-block mt-4 text-sm font-medium text-blue-600 hover:text-blue-800 hover:underline"
           onClick={(e) => e.stopPropagation()}
         >
