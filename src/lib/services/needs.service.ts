@@ -4,8 +4,16 @@
  */
 
 import type { SupabaseClient } from "@/db/supabase.client";
-import type { NeedListResponseDTO, NeedListItemDTO, ShelterInfo, Pagination, NeedsQueryParams } from "@/types";
-import { InternalError, logError } from "@/lib/errors";
+import type {
+  NeedListResponseDTO,
+  NeedListItemDTO,
+  NeedDetailDTO,
+  ShelterInfo,
+  ShelterDetailInfo,
+  Pagination,
+  NeedsQueryParams,
+} from "@/types";
+import { InternalError, NotFoundError, logError } from "@/lib/errors";
 
 export class NeedsService {
   constructor(private supabase: SupabaseClient) {}
@@ -123,6 +131,92 @@ export class NeedsService {
     return {
       data: needs,
       pagination,
+    };
+  }
+
+  /**
+   * Get a single need by ID
+   * Returns need detail only if active (not soft-deleted) and belonging to a verified shelter
+   * @throws NotFoundError when the need does not exist, is deleted, or shelter is not verified
+   * @throws InternalError on database errors or inconsistent relational data
+   */
+  async getNeedById(id: string): Promise<NeedDetailDTO> {
+    const { data, error } = await this.supabase
+      .from("needs")
+      .select(
+        `
+        id,
+        category,
+        title,
+        description,
+        shopping_url,
+        urgency,
+        target_quantity,
+        current_quantity,
+        unit,
+        is_fulfilled,
+        created_at,
+        updated_at,
+        profiles!inner (
+          id,
+          name,
+          city,
+          phone_number,
+          status
+        )
+      `
+      )
+      .eq("id", id)
+      .is("deleted_at", null)
+      .filter("profiles.status", "eq", "verified")
+      .maybeSingle();
+
+    if (error) {
+      logError("[NeedsService.getNeedById]", error);
+      throw new InternalError("Unable to retrieve need details");
+    }
+
+    if (!data) {
+      throw new NotFoundError("Need not found or deleted");
+    }
+
+    // Extract shelter info from potentially nested Supabase response
+    const shelterData = Array.isArray(data.profiles) ? data.profiles[0] : data.profiles;
+
+    if (!shelterData || !shelterData.id || !shelterData.name || !shelterData.city) {
+      logError("[NeedsService.getNeedById] Inconsistent data", {
+        message: "Missing or incomplete shelter profile for need",
+        needId: data.id,
+        profiles: data.profiles,
+      });
+      throw new InternalError("Failed to fetch need: missing shelter profile data");
+    }
+
+    const shelter: ShelterDetailInfo = {
+      id: shelterData.id,
+      name: shelterData.name,
+      city: shelterData.city,
+      phone_number: shelterData.phone_number ?? null,
+    };
+
+    const progress_percentage =
+      data.target_quantity > 0 ? Math.round((data.current_quantity / data.target_quantity) * 100) : 0;
+
+    return {
+      id: data.id,
+      shelter,
+      category: data.category,
+      title: data.title,
+      description: data.description,
+      shopping_url: data.shopping_url ?? null,
+      urgency: data.urgency,
+      target_quantity: data.target_quantity,
+      current_quantity: data.current_quantity,
+      unit: data.unit,
+      progress_percentage,
+      is_fulfilled: data.is_fulfilled,
+      created_at: data.created_at,
+      updated_at: data.updated_at ?? null,
     };
   }
 }

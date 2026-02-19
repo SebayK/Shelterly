@@ -16,18 +16,21 @@ export const NeedsQueryParamsSchema = z.object({
     .transform((val) => val ?? undefined),
   category: z
     .union([
-      z.enum(
-        ["food", "textiles", "cleaning", "medical", "toys", "other"] as const satisfies readonly Enums<"need_category">[]
-      ),
+      z.enum([
+        "food",
+        "textiles",
+        "cleaning",
+        "medical",
+        "toys",
+        "other",
+      ] as const satisfies readonly Enums<"need_category">[]),
       z.null(),
       z.undefined(),
     ])
     .transform((val) => val ?? undefined),
   urgency: z
     .union([
-      z.enum(
-        ["low", "normal", "high", "urgent", "critical"] as const satisfies readonly Enums<"urgency_level">[]
-      ),
+      z.enum(["low", "normal", "high", "urgent", "critical"] as const satisfies readonly Enums<"urgency_level">[]),
       z.null(),
       z.undefined(),
     ])
@@ -62,3 +65,14 @@ export const NeedsQueryParamsSchema = z.object({
  */
 export type NeedsQueryParamsInput = z.input<typeof NeedsQueryParamsSchema>;
 export type NeedsQueryParamsOutput = z.output<typeof NeedsQueryParamsSchema>;
+
+/**
+ * Validation schema for GET /api/needs/:id path parameters
+ * Validates that the id is a valid UUID
+ */
+export const NeedIdParamsSchema = z.object({
+  id: z.string().uuid("Invalid need ID format"),
+});
+
+export type NeedIdParamsInput = z.input<typeof NeedIdParamsSchema>;
+export type NeedIdParamsOutput = z.output<typeof NeedIdParamsSchema>;
