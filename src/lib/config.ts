@@ -39,4 +39,17 @@ export const APP_CONFIG = {
     lon: 21.0122,
     name: "Warsaw, Poland",
   },
+
+  /**
+   * Rate limiting configuration for write endpoints
+   */
+  RATE_LIMITING: {
+    /**
+     * POST /api/needs — max 20 needs per shelter per 15 minutes
+     */
+    CREATE_NEED: {
+      windowMs: 15 * 60 * 1000, // 15 minutes
+      maxRequests: 20,
+    },
+  },
 } as const;

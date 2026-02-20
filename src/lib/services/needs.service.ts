@@ -8,12 +8,14 @@ import type {
   NeedListResponseDTO,
   NeedListItemDTO,
   NeedDetailDTO,
+  NeedCreateResponseDTO,
+  CreateNeedCommand,
   ShelterInfo,
   ShelterDetailInfo,
   Pagination,
   NeedsQueryParams,
 } from "@/types";
-import { InternalError, NotFoundError, logError } from "@/lib/errors";
+import { InternalError, NotFoundError, logError, logErrorWithContext } from "@/lib/errors";
 
 export class NeedsService {
   constructor(private supabase: SupabaseClient) {}
@@ -217,6 +219,68 @@ export class NeedsService {
       is_fulfilled: data.is_fulfilled,
       created_at: data.created_at,
       updated_at: data.updated_at ?? null,
+    };
+  }
+
+  /**
+   * Create a new need for a shelter
+   * Only verified shelters can create needs
+   * @param shelterId - UUID of the authenticated shelter's profile
+   * @param command - Validated need creation data
+   * @returns Created need with all persisted fields
+   * @throws InternalError on database errors
+   */
+  async createNeed(shelterId: string, command: CreateNeedCommand): Promise<NeedCreateResponseDTO> {
+    const { data, error } = await this.supabase
+      .from("needs")
+      .insert({
+        shelter_id: shelterId,
+        category: command.category,
+        title: command.title,
+        description: command.description ?? null,
+        shopping_url: command.shopping_url ?? null,
+        urgency: command.urgency,
+        target_quantity: command.target_quantity,
+        unit: command.unit,
+        // current_quantity defaults to 0, is_fulfilled defaults to false in DB
+      })
+      .select(
+        "id, shelter_id, category, title, description, shopping_url, urgency, target_quantity, current_quantity, unit, is_fulfilled, created_at"
+      )
+      .single();
+
+    if (error) {
+      logErrorWithContext(
+        {
+          endpoint: "POST /api/needs",
+          shelter_id: shelterId,
+          // Log only safe, non-sensitive fields from the command
+          request_body: {
+            category: command.category,
+            urgency: command.urgency,
+            unit: command.unit,
+            target_quantity: command.target_quantity,
+          },
+          constraint: (error as { code?: string }).code,
+        },
+        error
+      );
+      throw new InternalError("Unable to create need");
+    }
+
+    return {
+      id: data.id,
+      shelter_id: data.shelter_id,
+      category: data.category,
+      title: data.title,
+      description: data.description,
+      shopping_url: data.shopping_url ?? null,
+      urgency: data.urgency,
+      target_quantity: data.target_quantity,
+      current_quantity: data.current_quantity,
+      unit: data.unit,
+      is_fulfilled: data.is_fulfilled,
+      created_at: data.created_at,
     };
   }
 }

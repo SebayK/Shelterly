@@ -76,3 +76,47 @@ export const NeedIdParamsSchema = z.object({
 
 export type NeedIdParamsInput = z.input<typeof NeedIdParamsSchema>;
 export type NeedIdParamsOutput = z.output<typeof NeedIdParamsSchema>;
+
+/**
+ * Validation schema for POST /api/needs request body
+ * Validates all fields required and optional for creating a new need
+ */
+export const CreateNeedSchema = z.object({
+  category: z.enum([
+    "food",
+    "textiles",
+    "cleaning",
+    "medical",
+    "toys",
+    "other",
+  ] as const satisfies readonly Enums<"need_category">[]),
+  title: z
+    .string()
+    .trim()
+    .min(3, "Title must be at least 3 characters")
+    .max(255, "Title must not exceed 255 characters"),
+  description: z
+    .string()
+    .max(2000, "Description must not exceed 2000 characters")
+    .nullable()
+    .optional()
+    .transform((val) => val ?? null),
+  shopping_url: z
+    .string()
+    .url("Invalid URL format for shopping_url")
+    .nullable()
+    .optional()
+    .transform((val) => val ?? null),
+  urgency: z
+    .enum(["low", "normal", "high", "urgent", "critical"] as const satisfies readonly Enums<"urgency_level">[])
+    .default("normal"),
+  target_quantity: z
+    .number({ invalid_type_error: "target_quantity must be a number" })
+    .positive("target_quantity must be greater than 0")
+    .max(99999999.99, "target_quantity is too large")
+    .refine((val) => Number(val.toFixed(2)) === val || true, "target_quantity can have at most 2 decimal places"),
+  unit: z.enum(["pcs", "kg", "g", "l", "ml", "pack"] as const satisfies readonly Enums<"need_unit">[]),
+});
+
+export type CreateNeedInput = z.input<typeof CreateNeedSchema>;
+export type CreateNeedOutput = z.output<typeof CreateNeedSchema>;

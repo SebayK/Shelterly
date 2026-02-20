@@ -114,6 +114,67 @@ Shelterly provides a centralized platform where:
 | `npm run lint:fix` | Automatically fix linting issues             |
 | `npm run format`   | Format code with Prettier                    |
 | `npm run astro`    | Run Astro CLI commands directly              |
+| `npm run test`     | Run all unit tests (Vitest)                  |
+| `npm run test:watch` | Run tests in watch mode                    |
+| `npm run test:coverage` | Run tests with coverage report          |
+
+## Project Scope
+
+### API Endpoints
+
+#### `POST /api/needs`
+
+Creates a new resource need for the authenticated, verified shelter.
+
+**Authentication:** Required — `Authorization: Bearer <access_token>`
+
+**Request body (JSON):**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `category` | `food` \| `textiles` \| `cleaning` \| `medical` \| `toys` \| `other` | ✅ | Need category |
+| `title` | string (3–255 chars) | ✅ | Short descriptive title |
+| `urgency` | `low` \| `normal` \| `high` \| `urgent` \| `critical` | ✅ (default: `normal`) | Urgency level |
+| `target_quantity` | number > 0 | ✅ | Target donation amount |
+| `unit` | `pcs` \| `kg` \| `g` \| `l` \| `ml` \| `pack` | ✅ | Unit of measurement |
+| `description` | string (max 2000) \| null | ❌ | Detailed description |
+| `shopping_url` | valid URL \| null | ❌ | Direct purchase link |
+
+**Response `201 Created`:**
+
+```json
+{
+  "id": "uuid",
+  "shelter_id": "uuid",
+  "category": "food",
+  "title": "Karma sucha dla psów",
+  "description": null,
+  "shopping_url": null,
+  "urgency": "normal",
+  "target_quantity": 100.0,
+  "current_quantity": 0.0,
+  "unit": "kg",
+  "is_fulfilled": false,
+  "created_at": "2026-01-21T10:30:00Z"
+}
+```
+
+**Error responses:**
+
+| Status | Code | Reason |
+|--------|------|--------|
+| `400` | `VALIDATION_ERROR` | Missing or invalid fields |
+| `400` | `INVALID_REQUEST` | Body is not valid JSON |
+| `401` | `UNAUTHORIZED` | Missing or invalid token |
+| `403` | `ACCOUNT_PENDING` | Shelter awaiting verification |
+| `403` | `FORBIDDEN` | Account suspended or rejected |
+| `404` | `NOT_FOUND` | Shelter profile not found |
+| `429` | `RATE_LIMIT_EXCEEDED` | Max 20 requests per 15 minutes per shelter |
+| `500` | `INTERNAL_ERROR` | Unexpected server error |
+
+**Rate limiting:** 20 requests per 15-minute sliding window per shelter. Responses include `Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers.
+
+---
 
 ## Project Scope
 

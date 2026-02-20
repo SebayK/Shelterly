@@ -121,3 +121,61 @@ export function logError(context: string, error: unknown): void {
     console.error(`${context} Error:`, error);
   }
 }
+
+/**
+ * Structured context for enriched error logging.
+ * Sensitive fields (tokens, passwords) must never be included.
+ */
+export interface ErrorLogContext {
+  endpoint: string;
+  user_id?: string;
+  shelter_id?: string;
+  /** Partial request body — omit sensitive fields before passing */
+  request_body?: Record<string, unknown>;
+  constraint?: string;
+}
+
+/**
+ * Logs an error with structured context for monitoring and debugging.
+ * Includes timestamp, endpoint, optional user/shelter IDs and a partial
+ * (non-sensitive) request body snapshot.
+ *
+ * @param context - Structured context metadata
+ * @param error - Error object or unknown value
+ */
+export function logErrorWithContext(context: ErrorLogContext, error: unknown): void {
+  const payload: Record<string, unknown> = {
+    timestamp: new Date().toISOString(),
+    endpoint: context.endpoint,
+  };
+
+  if (context.user_id) payload.user_id = context.user_id;
+  if (context.shelter_id) payload.shelter_id = context.shelter_id;
+  if (context.request_body) payload.request_body = context.request_body;
+  if (context.constraint) payload.constraint = context.constraint;
+
+  if (error instanceof Error) {
+    payload.error_message = error.message;
+    payload.stack_trace = error.stack;
+    console.error("[ERROR]", JSON.stringify(payload));
+  } else {
+    payload.error_message = String(error);
+    console.error("[ERROR]", JSON.stringify(payload));
+  }
+}
+
+/**
+ * Logs a successful operation for monitoring / success metrics.
+ * Use to track creation counts and other business-significant events.
+ *
+ * @param endpoint - Endpoint identifier (e.g. "POST /api/needs")
+ * @param meta - Additional non-sensitive metadata (e.g. resource id, shelter_id)
+ */
+export function logSuccess(endpoint: string, meta?: Record<string, unknown>): void {
+  const payload: Record<string, unknown> = {
+    timestamp: new Date().toISOString(),
+    endpoint,
+    ...meta,
+  };
+  console.info("[SUCCESS]", JSON.stringify(payload));
+}
