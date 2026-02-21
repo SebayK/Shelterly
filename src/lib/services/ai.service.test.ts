@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { AIService } from "./ai.service";
 import { ForbiddenError, InternalError, NotFoundError } from "@/lib/errors";
-import type { GenerateDescriptionCommand } from "@/types";
+import type { GenerateDescriptionCommand, GenerateShoppingLinkCommand } from "@/types";
 
 const USER_ID = "00000000-0000-0000-0000-000000000001";
 const OTHER_USER_ID = "00000000-0000-0000-0000-000000000002";
@@ -153,6 +153,117 @@ describe("AIService.generateNeedDescription()", () => {
 
     expect(result).toEqual({
       description: "Brakuje karmy, prosimy o wsparcie.",
+      ai_usage_incremented: false,
+    });
+  });
+});
+
+const SHOPPING_LINK_COMMAND: GenerateShoppingLinkCommand = {
+  need_id: NEED_ID,
+  category: "food",
+  title: "Karma mokra dla kotów",
+};
+
+describe("AIService.generateShoppingLink()", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.stubGlobal("fetch", vi.fn());
+  });
+
+  it("returns shopping_url and ai_usage_incremented=true on success", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: "https://www.ceneo.pl/search?q=karma+mokra+koty" } }],
+        }),
+        { status: 200 }
+      )
+    );
+
+    const service = new AIService(buildSupabaseMock());
+    const result = await service.generateShoppingLink(SHOPPING_LINK_COMMAND, USER_ID);
+
+    expect(result).toEqual({
+      shopping_url: "https://www.ceneo.pl/search?q=karma+mokra+koty",
+      ai_usage_incremented: true,
+    });
+  });
+
+  it("throws NotFoundError when need does not exist", async () => {
+    const service = new AIService(buildSupabaseMock({ needData: null }));
+
+    await expect(service.generateShoppingLink(SHOPPING_LINK_COMMAND, USER_ID)).rejects.toThrow(NotFoundError);
+  });
+
+  it("throws ForbiddenError when user is not owner of need", async () => {
+    const service = new AIService(buildSupabaseMock({ needData: { id: NEED_ID, shelter_id: OTHER_USER_ID } }));
+
+    await expect(service.generateShoppingLink(SHOPPING_LINK_COMMAND, USER_ID)).rejects.toThrow(ForbiddenError);
+  });
+
+  it("throws NotFoundError when profile does not exist", async () => {
+    const service = new AIService(buildSupabaseMock({ profileData: null }));
+
+    await expect(service.generateShoppingLink(SHOPPING_LINK_COMMAND, USER_ID)).rejects.toThrow(NotFoundError);
+  });
+
+  it("throws ForbiddenError when AI usage limit is exceeded", async () => {
+    const service = new AIService(buildSupabaseMock({ profileData: { ai_usage_count: 100 } }));
+
+    await expect(service.generateShoppingLink(SHOPPING_LINK_COMMAND, USER_ID)).rejects.toThrow(ForbiddenError);
+  });
+
+  it("throws InternalError when AI returns a URL not starting with https://", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: "http://ceneo.pl/search?q=karma" } }],
+        }),
+        { status: 200 }
+      )
+    );
+
+    const service = new AIService(buildSupabaseMock());
+
+    await expect(service.generateShoppingLink(SHOPPING_LINK_COMMAND, USER_ID)).rejects.toThrow(InternalError);
+  });
+
+  it("throws InternalError when OpenRouter returns non-2xx status", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(new Response(JSON.stringify({ error: "upstream" }), { status: 500 }));
+
+    const service = new AIService(buildSupabaseMock());
+
+    await expect(service.generateShoppingLink(SHOPPING_LINK_COMMAND, USER_ID)).rejects.toThrow(InternalError);
+  });
+
+  it("throws InternalError when OpenRouter request times out", async () => {
+    vi.mocked(fetch).mockRejectedValueOnce(new DOMException("The operation was aborted.", "AbortError"));
+
+    const service = new AIService(buildSupabaseMock());
+
+    await expect(service.generateShoppingLink(SHOPPING_LINK_COMMAND, USER_ID)).rejects.toThrow(InternalError);
+  });
+
+  it("returns ai_usage_incremented=false when shopping_url save succeeds but increment fails", async () => {
+    vi.mocked(fetch).mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          choices: [{ message: { content: "https://www.allegro.pl/listing?string=karma+mokra" } }],
+        }),
+        { status: 200 }
+      )
+    );
+
+    const service = new AIService(
+      buildSupabaseMock({
+        incrementError: { message: "increment failed", code: "23514" },
+      })
+    );
+
+    const result = await service.generateShoppingLink(SHOPPING_LINK_COMMAND, USER_ID);
+
+    expect(result).toEqual({
+      shopping_url: "https://www.allegro.pl/listing?string=karma+mokra",
       ai_usage_incremented: false,
     });
   });

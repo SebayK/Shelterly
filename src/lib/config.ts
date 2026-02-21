@@ -66,9 +66,16 @@ export const APP_CONFIG = {
     /** Timeout for OpenRouter calls */
     TIMEOUT_MS: 15_000,
 
+    /** OpenRouter model used for shopping link generation */
+    SHOPPING_LINK_MODEL: "openai/gpt-4o-mini",
+
     /** Rate limiting configuration for AI endpoints */
     RATE_LIMITING: {
       GENERATE_DESCRIPTION: {
+        windowMs: 60 * 1000, // 1 minute
+        maxRequests: 10,
+      },
+      GENERATE_SHOPPING_LINK: {
         windowMs: 60 * 1000, // 1 minute
         maxRequests: 10,
       },

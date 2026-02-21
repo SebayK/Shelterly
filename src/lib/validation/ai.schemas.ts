@@ -37,3 +37,15 @@ export const GenerateDescriptionCommandSchema = z.object({
 
 export type GenerateDescriptionCommandInput = z.input<typeof GenerateDescriptionCommandSchema>;
 export type GenerateDescriptionCommandOutput = z.output<typeof GenerateDescriptionCommandSchema>;
+
+/**
+ * Validation schema for POST /api/ai/generate-shopping-link request body
+ */
+export const GenerateShoppingLinkCommandSchema = z.object({
+  need_id: z.string().uuid({ message: "need_id must be a valid UUID" }),
+  title: z.string().trim().min(1, { message: "title is required" }).max(200, { message: "title is too long" }),
+  category: NeedCategoryEnum,
+});
+
+export type GenerateShoppingLinkCommandInput = z.input<typeof GenerateShoppingLinkCommandSchema>;
+export type GenerateShoppingLinkCommandOutput = z.output<typeof GenerateShoppingLinkCommandSchema>;
