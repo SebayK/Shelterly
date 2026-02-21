@@ -52,4 +52,29 @@ export const APP_CONFIG = {
       maxRequests: 20,
     },
   },
+
+  /**
+   * AI integrations configuration
+   */
+  AI: {
+    /** Maximum number of AI generations per shelter */
+    USAGE_LIMIT: 100,
+
+    /** OpenRouter model used for need description generation */
+    DESCRIPTION_MODEL: "openai/gpt-4o-mini",
+
+    /** Timeout for OpenRouter calls */
+    TIMEOUT_MS: 15_000,
+
+    /** Rate limiting configuration for AI endpoints */
+    RATE_LIMITING: {
+      GENERATE_DESCRIPTION: {
+        windowMs: 60 * 1000, // 1 minute
+        maxRequests: 10,
+      },
+    },
+
+    /** Default OpenRouter base URL */
+    OPENROUTER_BASE_URL: "https://openrouter.ai/api/v1",
+  },
 } as const;

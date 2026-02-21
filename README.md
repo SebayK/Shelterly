@@ -87,12 +87,24 @@ Shelterly provides a centralized platform where:
 
 3. **Environment Setup**
 
-   Create a `.env.local` file in the root directory with your Supabase credentials:
+   Copy the example file and fill in your credentials:
+
+   ```bash
+   cp .env.example .env.local
+   ```
+
+   Required variables:
 
    ```env
-   PUBLIC_SUPABASE_URL=your_supabase_url
-   PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   SUPABASE_URL=your_supabase_url
+   SUPABASE_KEY=your_supabase_anon_key
    OPENROUTER_API_KEY=your_openrouter_key
+   ```
+
+   Optional variable:
+
+   ```env
+   OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
    ```
 
 4. **Start Development Server**
@@ -173,6 +185,43 @@ Creates a new resource need for the authenticated, verified shelter.
 | `500` | `INTERNAL_ERROR` | Unexpected server error |
 
 **Rate limiting:** 20 requests per 15-minute sliding window per shelter. Responses include `Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers.
+
+#### `POST /api/ai/generate-description`
+
+Generates a short Polish description for an existing shelter need using OpenRouter and saves it to the need.
+
+**Authentication:** Required — `Authorization: Bearer <access_token>`
+
+**Request body (JSON):**
+
+| Field | Type | Required | Description |
+|-------|------|----------|-------------|
+| `need_id` | UUID | ✅ | Need identifier |
+| `category` | `food` \| `textiles` \| `cleaning` \| `medical` \| `toys` \| `other` | ✅ | Need category |
+| `title` | string (1–200 chars) | ✅ | Need title |
+| `target_quantity` | number > 0 | ✅ | Requested quantity |
+| `unit` | `pcs` \| `kg` \| `g` \| `l` \| `ml` \| `pack` | ✅ | Unit of measurement |
+
+**Response `200 OK`:**
+
+```json
+{
+   "description": "Pilnie potrzebujemy karmy mokrej dla naszych kotów. Każda puszka się liczy.",
+   "ai_usage_incremented": true
+}
+```
+
+**Error responses:**
+
+| Status | Code | Reason |
+|--------|------|--------|
+| `400` | `VALIDATION_ERROR` | Missing or invalid fields |
+| `400` | `INVALID_REQUEST` | Body is not valid JSON |
+| `401` | `UNAUTHORIZED` | Missing or invalid token |
+| `403` | `FORBIDDEN` | Not owner of need or AI usage limit exceeded |
+| `404` | `NOT_FOUND` | Need not found or soft-deleted |
+| `429` | `RATE_LIMIT_EXCEEDED` | Max 10 requests per minute per user |
+| `500` | `INTERNAL_ERROR` | Unexpected server error or upstream AI failure |
 
 ---
 
