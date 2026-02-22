@@ -12,6 +12,44 @@ import type {
   UpdateShelterStatusCommand,
 } from "@/types";
 import { InternalError, NotFoundError } from "@/lib/errors";
+import { APP_CONFIG } from "@/lib/config";
+
+/**
+ * Result of fetching a verification document from storage.
+ */
+export interface VerificationDocumentResult {
+  data: Blob;
+  fileName: string;
+  contentType: string;
+}
+
+/**
+ * Derives the MIME type from a file name's extension.
+ * Falls back to `application/octet-stream` for unknown types.
+ */
+function getContentTypeFromFileName(fileName: string): string {
+  const ext = fileName.split(".").pop()?.toLowerCase();
+  switch (ext) {
+    case "pdf":
+      return "application/pdf";
+    case "jpg":
+    case "jpeg":
+      return "image/jpeg";
+    case "png":
+      return "image/png";
+    case "webp":
+      return "image/webp";
+    default:
+      return "application/octet-stream";
+  }
+}
+
+/**
+ * Returns true when the storage path looks safe (no path traversal, valid chars).
+ */
+function isValidStoragePath(path: string): boolean {
+  return !path.includes("..") && !path.startsWith("/") && /^[a-zA-Z0-9_\-/.]+$/.test(path);
+}
 
 /**
  * Raw row returned by the get_pending_shelters_with_email RPC function.
@@ -124,5 +162,65 @@ export class AdminService {
       // updated_at is guaranteed non-null immediately after an UPDATE
       updated_at: updated.updated_at ?? new Date().toISOString(),
     };
+  }
+
+  /**
+   * Downloads the verification document for a given shelter from Supabase Storage.
+   *
+   * @param shelterId - UUID of the shelter whose document should be retrieved
+   * @returns An object with the file Blob, its filename, and the resolved MIME type
+   * @throws NotFoundError if the shelter doesn't exist, has no document path, or the file is missing in storage
+   * @throws InternalError on database or storage failures
+   */
+  async getVerificationDocument(shelterId: string): Promise<VerificationDocumentResult> {
+    // 1. Fetch the shelter profile — only id and verification_doc_path are needed
+    const { data: shelter, error: dbError } = await this.supabase
+      .from("profiles")
+      .select("id, verification_doc_path")
+      .eq("id", shelterId)
+      .maybeSingle();
+
+    if (dbError) {
+      throw new InternalError(`Failed to retrieve shelter data: ${dbError.message}`);
+    }
+
+    if (!shelter) {
+      throw new NotFoundError("Shelter not found");
+    }
+
+    if (!shelter.verification_doc_path) {
+      throw new NotFoundError("Verification document not found");
+    }
+
+    const docPath = shelter.verification_doc_path;
+
+    // 2. Guard against path traversal before touching storage
+    if (!isValidStoragePath(docPath)) {
+      throw new InternalError("Invalid verification document path");
+    }
+
+    // 3. Download the file from Supabase Storage
+    const { data: blob, error: storageError } = await this.supabase.storage
+      .from(APP_CONFIG.STORAGE_BUCKET)
+      .download(docPath);
+
+    if (storageError) {
+      // Supabase Storage returns "Object not found" (or similar) when the file is missing
+      const isNotFound =
+        storageError.message.toLowerCase().includes("not found") ||
+        storageError.message.toLowerCase().includes("does not exist");
+
+      if (isNotFound) {
+        throw new NotFoundError("Verification document file not found");
+      }
+
+      throw new InternalError(`Failed to download verification document: ${storageError.message}`);
+    }
+
+    // 4. Derive metadata from the storage path
+    const fileName = docPath.split("/").pop() ?? "document";
+    const contentType = getContentTypeFromFileName(fileName);
+
+    return { data: blob, fileName, contentType };
   }
 }

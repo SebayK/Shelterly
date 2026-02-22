@@ -301,3 +301,215 @@ describe("AdminService.updateShelterStatus()", () => {
     expect(supabase.from).toHaveBeenCalledWith("profiles");
   });
 });
+// ---------------------------------------------------------------------------
+// AdminService.getVerificationDocument()
+// ---------------------------------------------------------------------------
+
+const DOC_SHELTER_ID = "00000000-0000-0000-0000-000000000020";
+const DOC_PATH = "verification-documents/shelter-20/document.pdf";
+
+/**
+ * Builds a Supabase mock tailored for the getVerificationDocument() path:
+ *   - .from("profiles").select(...).eq("id", ...).maybeSingle()
+ *   - .storage.from("verification-documents").download(path)
+ */
+function buildGetDocumentMock({
+  shelterData = { id: DOC_SHELTER_ID, verification_doc_path: DOC_PATH } as {
+    id: string;
+    verification_doc_path: string | null;
+  } | null,
+  shelterError = null as { message: string } | null,
+  storageBlob = new Blob(["PDF content"], { type: "application/pdf" }) as Blob | null,
+  storageError = null as { message: string } | null,
+} = {}) {
+  // DB chain: .from("profiles").select().eq("id", ...).maybeSingle()
+  const maybeSingle = vi.fn().mockResolvedValue({ data: shelterData, error: shelterError });
+  const eq = vi.fn().mockReturnValue({ maybeSingle });
+  const select = vi.fn().mockReturnValue({ eq });
+  const from = vi.fn().mockReturnValue({ select });
+
+  // Storage chain: .storage.from("verification-documents").download(path)
+  const download = vi.fn().mockResolvedValue({ data: storageBlob, error: storageError });
+  const storageBucket = vi.fn().mockReturnValue({ download });
+  const storage = { from: storageBucket };
+
+  return { from, storage } as unknown as SupabaseClient;
+}
+
+describe("AdminService.getVerificationDocument()", () => {
+  let service: AdminService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // -------------------------------------------------------------------------
+  // Happy path
+  // -------------------------------------------------------------------------
+
+  it("returns VerificationDocumentResult with correct data on success", async () => {
+    const blob = new Blob(["PDF content"]);
+    const supabase = buildGetDocumentMock({ storageBlob: blob });
+    service = new AdminService(supabase);
+
+    const result = await service.getVerificationDocument(DOC_SHELTER_ID);
+
+    expect(result.data).toBe(blob);
+    expect(result.fileName).toBe("document.pdf");
+    expect(result.contentType).toBe("application/pdf");
+  });
+
+  it("derives correct Content-Type for .jpg files", async () => {
+    const supabase = buildGetDocumentMock({
+      shelterData: { id: DOC_SHELTER_ID, verification_doc_path: "docs/photo.jpg" },
+    });
+    service = new AdminService(supabase);
+
+    const result = await service.getVerificationDocument(DOC_SHELTER_ID);
+
+    expect(result.contentType).toBe("image/jpeg");
+    expect(result.fileName).toBe("photo.jpg");
+  });
+
+  it("derives correct Content-Type for .jpeg files", async () => {
+    const supabase = buildGetDocumentMock({
+      shelterData: { id: DOC_SHELTER_ID, verification_doc_path: "docs/photo.jpeg" },
+    });
+    service = new AdminService(supabase);
+
+    const result = await service.getVerificationDocument(DOC_SHELTER_ID);
+
+    expect(result.contentType).toBe("image/jpeg");
+  });
+
+  it("derives correct Content-Type for .png files", async () => {
+    const supabase = buildGetDocumentMock({
+      shelterData: { id: DOC_SHELTER_ID, verification_doc_path: "docs/image.png" },
+    });
+    service = new AdminService(supabase);
+
+    const result = await service.getVerificationDocument(DOC_SHELTER_ID);
+
+    expect(result.contentType).toBe("image/png");
+  });
+
+  it("derives correct Content-Type for .webp files", async () => {
+    const supabase = buildGetDocumentMock({
+      shelterData: { id: DOC_SHELTER_ID, verification_doc_path: "docs/image.webp" },
+    });
+    service = new AdminService(supabase);
+
+    const result = await service.getVerificationDocument(DOC_SHELTER_ID);
+
+    expect(result.contentType).toBe("image/webp");
+  });
+
+  it("falls back to application/octet-stream for unknown extensions", async () => {
+    const supabase = buildGetDocumentMock({
+      shelterData: { id: DOC_SHELTER_ID, verification_doc_path: "docs/archive.zip" },
+    });
+    service = new AdminService(supabase);
+
+    const result = await service.getVerificationDocument(DOC_SHELTER_ID);
+
+    expect(result.contentType).toBe("application/octet-stream");
+  });
+
+  // -------------------------------------------------------------------------
+  // NotFoundError — shelter does not exist
+  // -------------------------------------------------------------------------
+
+  it("throws NotFoundError when shelter profile does not exist", async () => {
+    const supabase = buildGetDocumentMock({ shelterData: null });
+    service = new AdminService(supabase);
+
+    await expect(service.getVerificationDocument(DOC_SHELTER_ID)).rejects.toThrow(NotFoundError);
+  });
+
+  it("throws NotFoundError with 'Shelter not found' message when shelter is missing", async () => {
+    const supabase = buildGetDocumentMock({ shelterData: null });
+    service = new AdminService(supabase);
+
+    await expect(service.getVerificationDocument(DOC_SHELTER_ID)).rejects.toThrow("Shelter not found");
+  });
+
+  // -------------------------------------------------------------------------
+  // NotFoundError — verification_doc_path is null
+  // -------------------------------------------------------------------------
+
+  it("throws NotFoundError when verification_doc_path is null", async () => {
+    const supabase = buildGetDocumentMock({
+      shelterData: { id: DOC_SHELTER_ID, verification_doc_path: null },
+    });
+    service = new AdminService(supabase);
+
+    await expect(service.getVerificationDocument(DOC_SHELTER_ID)).rejects.toThrow(NotFoundError);
+  });
+
+  it("throws NotFoundError with 'Verification document not found' when path is null", async () => {
+    const supabase = buildGetDocumentMock({
+      shelterData: { id: DOC_SHELTER_ID, verification_doc_path: null },
+    });
+    service = new AdminService(supabase);
+
+    await expect(service.getVerificationDocument(DOC_SHELTER_ID)).rejects.toThrow(
+      "Verification document not found"
+    );
+  });
+
+  // -------------------------------------------------------------------------
+  // InternalError — database failure
+  // -------------------------------------------------------------------------
+
+  it("throws InternalError when the DB query fails", async () => {
+    const supabase = buildGetDocumentMock({ shelterError: { message: "connection refused" } });
+    service = new AdminService(supabase);
+
+    await expect(service.getVerificationDocument(DOC_SHELTER_ID)).rejects.toThrow(InternalError);
+  });
+
+  it("includes Supabase DB error message in InternalError", async () => {
+    const supabase = buildGetDocumentMock({ shelterError: { message: "connection refused" } });
+    service = new AdminService(supabase);
+
+    await expect(service.getVerificationDocument(DOC_SHELTER_ID)).rejects.toThrow("connection refused");
+  });
+
+  // -------------------------------------------------------------------------
+  // NotFoundError — storage file not found
+  // -------------------------------------------------------------------------
+
+  it("throws NotFoundError when storage returns a 'not found' error", async () => {
+    const supabase = buildGetDocumentMock({ storageError: { message: "Object not found" } });
+    service = new AdminService(supabase);
+
+    await expect(service.getVerificationDocument(DOC_SHELTER_ID)).rejects.toThrow(NotFoundError);
+  });
+
+  it("throws NotFoundError with appropriate message when storage file is missing", async () => {
+    const supabase = buildGetDocumentMock({ storageError: { message: "Object not found" } });
+    service = new AdminService(supabase);
+
+    await expect(service.getVerificationDocument(DOC_SHELTER_ID)).rejects.toThrow(
+      "Verification document file not found"
+    );
+  });
+
+  // -------------------------------------------------------------------------
+  // InternalError — storage generic failure
+  // -------------------------------------------------------------------------
+
+  it("throws InternalError when storage returns a non-404 error", async () => {
+    const supabase = buildGetDocumentMock({ storageError: { message: "internal storage error" } });
+    service = new AdminService(supabase);
+
+    await expect(service.getVerificationDocument(DOC_SHELTER_ID)).rejects.toThrow(InternalError);
+  });
+
+  it("includes storage error message in InternalError for generic storage failures", async () => {
+    const supabase = buildGetDocumentMock({ storageError: { message: "internal storage error" } });
+    service = new AdminService(supabase);
+
+    await expect(service.getVerificationDocument(DOC_SHELTER_ID)).rejects.toThrow("internal storage error");
+  });
+});
