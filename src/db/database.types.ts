@@ -1090,6 +1090,19 @@ export interface Database {
         };
         Returns: string;
       };
+      get_pending_shelters_with_email: {
+        Args: { p_limit?: number; p_offset?: number };
+        Returns: {
+          id: string;
+          name: string | null;
+          nip: string | null;
+          city: string | null;
+          email: string;
+          verification_doc_path: string | null;
+          created_at: string;
+          total_count: number;
+        }[];
+      };
     };
     Enums: {
       need_category: "food" | "textiles" | "cleaning" | "medical" | "toys" | "other";
