@@ -5,8 +5,13 @@
  */
 
 import type { SupabaseClient } from "@/db/supabase.client";
-import type { PendingShelterListResponseDTO, PendingShelterListItemDTO } from "@/types";
-import { InternalError } from "@/lib/errors";
+import type {
+  PendingShelterListResponseDTO,
+  PendingShelterListItemDTO,
+  ShelterStatusUpdateResponseDTO,
+  UpdateShelterStatusCommand,
+} from "@/types";
+import { InternalError, NotFoundError } from "@/lib/errors";
 
 /**
  * Raw row returned by the get_pending_shelters_with_email RPC function.
@@ -67,6 +72,57 @@ export class AdminService {
         limit,
         offset,
       },
+    };
+  }
+
+  /**
+   * Updates the verification status of a shelter.
+   * Only `verified`, `rejected`, and `suspended` statuses are allowed.
+   * The `rejection_reason` field is validated but not persisted (no column in DB yet).
+   *
+   * @param shelterId - UUID of the shelter profile to update
+   * @param command - Command containing the new status (and optional rejection_reason)
+   * @returns Updated shelter status DTO
+   * @throws NotFoundError if no shelter profile with the given ID exists
+   * @throws InternalError on database failure
+   */
+  async updateShelterStatus(
+    shelterId: string,
+    command: UpdateShelterStatusCommand
+  ): Promise<ShelterStatusUpdateResponseDTO> {
+    // 1. Verify the shelter exists and has role = 'shelter'
+    const { data: existing, error: selectError } = await this.supabase
+      .from("profiles")
+      .select("id")
+      .eq("id", shelterId)
+      .eq("role", "shelter")
+      .maybeSingle();
+
+    if (selectError) {
+      throw new InternalError(`Failed to fetch shelter: ${selectError.message}`);
+    }
+
+    if (!existing) {
+      throw new NotFoundError("Shelter not found");
+    }
+
+    // 2. Update status (rejection_reason is not persisted — no column in schema yet)
+    const { data: updated, error: updateError } = await this.supabase
+      .from("profiles")
+      .update({ status: command.status })
+      .eq("id", shelterId)
+      .select("id, status, updated_at")
+      .single();
+
+    if (updateError || !updated) {
+      throw new InternalError(`Failed to update shelter status: ${updateError?.message ?? "no data returned"}`);
+    }
+
+    return {
+      id: updated.id,
+      status: updated.status,
+      // updated_at is guaranteed non-null immediately after an UPDATE
+      updated_at: updated.updated_at ?? new Date().toISOString(),
     };
   }
 }

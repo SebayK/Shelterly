@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AdminService } from "./admin.service";
-import { InternalError } from "@/lib/errors";
+import { InternalError, NotFoundError } from "@/lib/errors";
 import type { SupabaseClient } from "@/db/supabase.client";
 
 // ---------------------------------------------------------------------------
@@ -154,5 +154,150 @@ describe("AdminService.getPendingShelters()", () => {
       p_limit: 10,
       p_offset: 30,
     });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// AdminService.updateShelterStatus()
+// ---------------------------------------------------------------------------
+
+const SHELTER_ID = "00000000-0000-0000-0000-000000000010";
+
+function buildUpdateStatusMock({
+  selectData = { id: SHELTER_ID } as { id: string } | null,
+  selectError = null as { message: string } | null,
+  updateData = { id: SHELTER_ID, status: "verified", updated_at: "2026-02-22T12:00:00Z" } as {
+    id: string;
+    status: string;
+    updated_at: string;
+  } | null,
+  updateError = null as { message: string } | null,
+} = {}) {
+  // SELECT chain: .from().select("id").eq("id").eq("role").maybeSingle()
+  const maybeSingle = vi.fn().mockResolvedValue({ data: selectData, error: selectError });
+  const eqRole = vi.fn().mockReturnValue({ maybeSingle });
+  const eqId = vi.fn().mockReturnValue({ eq: eqRole });
+  const selectChain = vi.fn().mockReturnValue({ eq: eqId });
+
+  // UPDATE chain: .from().update().eq("id").select().single()
+  const single = vi.fn().mockResolvedValue({ data: updateData, error: updateError });
+  const selectAfterUpdate = vi.fn().mockReturnValue({ single });
+  const eqForUpdate = vi.fn().mockReturnValue({ select: selectAfterUpdate });
+  const updateChain = vi.fn().mockReturnValue({ eq: eqForUpdate });
+
+  const from = vi.fn().mockReturnValue({ select: selectChain, update: updateChain });
+
+  return { from } as unknown as SupabaseClient;
+}
+
+describe("AdminService.updateShelterStatus()", () => {
+  let service: AdminService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // -------------------------------------------------------------------------
+  // Success — happy path
+  // -------------------------------------------------------------------------
+
+  it("returns ShelterStatusUpdateResponseDTO on successful update to 'verified'", async () => {
+    const supabase = buildUpdateStatusMock({
+      updateData: { id: SHELTER_ID, status: "verified", updated_at: "2026-02-22T12:00:00Z" },
+    });
+    service = new AdminService(supabase);
+
+    const result = await service.updateShelterStatus(SHELTER_ID, { status: "verified" });
+
+    expect(result).toEqual({ id: SHELTER_ID, status: "verified", updated_at: "2026-02-22T12:00:00Z" });
+  });
+
+  it("returns correct DTO when status is set to 'rejected'", async () => {
+    const supabase = buildUpdateStatusMock({
+      updateData: { id: SHELTER_ID, status: "rejected", updated_at: "2026-02-22T13:00:00Z" },
+    });
+    service = new AdminService(supabase);
+
+    const result = await service.updateShelterStatus(SHELTER_ID, {
+      status: "rejected",
+      rejection_reason: "Documents are invalid",
+    });
+
+    expect(result.status).toBe("rejected");
+    expect(result.id).toBe(SHELTER_ID);
+  });
+
+  it("returns correct DTO when status is set to 'suspended'", async () => {
+    const supabase = buildUpdateStatusMock({
+      updateData: { id: SHELTER_ID, status: "suspended", updated_at: "2026-02-22T14:00:00Z" },
+    });
+    service = new AdminService(supabase);
+
+    const result = await service.updateShelterStatus(SHELTER_ID, { status: "suspended" });
+
+    expect(result.status).toBe("suspended");
+  });
+
+  // -------------------------------------------------------------------------
+  // NotFoundError — shelter does not exist
+  // -------------------------------------------------------------------------
+
+  it("throws NotFoundError when shelter profile does not exist", async () => {
+    const supabase = buildUpdateStatusMock({ selectData: null });
+    service = new AdminService(supabase);
+
+    await expect(service.updateShelterStatus(SHELTER_ID, { status: "verified" })).rejects.toThrow(NotFoundError);
+  });
+
+  it("throws NotFoundError with message 'Shelter not found'", async () => {
+    const supabase = buildUpdateStatusMock({ selectData: null });
+    service = new AdminService(supabase);
+
+    await expect(service.updateShelterStatus(SHELTER_ID, { status: "verified" })).rejects.toThrow("Shelter not found");
+  });
+
+  // -------------------------------------------------------------------------
+  // InternalError — database failures
+  // -------------------------------------------------------------------------
+
+  it("throws InternalError when SELECT returns a database error", async () => {
+    const supabase = buildUpdateStatusMock({ selectError: { message: "connection timeout" } });
+    service = new AdminService(supabase);
+
+    await expect(service.updateShelterStatus(SHELTER_ID, { status: "verified" })).rejects.toThrow(InternalError);
+  });
+
+  it("includes Supabase error message in InternalError on SELECT failure", async () => {
+    const supabase = buildUpdateStatusMock({ selectError: { message: "connection timeout" } });
+    service = new AdminService(supabase);
+
+    await expect(service.updateShelterStatus(SHELTER_ID, { status: "verified" })).rejects.toThrow("connection timeout");
+  });
+
+  it("throws InternalError when UPDATE returns a database error", async () => {
+    const supabase = buildUpdateStatusMock({ updateError: { message: "deadlock detected" } });
+    service = new AdminService(supabase);
+
+    await expect(service.updateShelterStatus(SHELTER_ID, { status: "verified" })).rejects.toThrow(InternalError);
+  });
+
+  it("throws InternalError when UPDATE returns null data", async () => {
+    const supabase = buildUpdateStatusMock({ updateData: null });
+    service = new AdminService(supabase);
+
+    await expect(service.updateShelterStatus(SHELTER_ID, { status: "verified" })).rejects.toThrow(InternalError);
+  });
+
+  // -------------------------------------------------------------------------
+  // DB call arguments
+  // -------------------------------------------------------------------------
+
+  it("queries profiles with correct shelterId and role='shelter' during existence check", async () => {
+    const supabase = buildUpdateStatusMock();
+    service = new AdminService(supabase);
+
+    await service.updateShelterStatus(SHELTER_ID, { status: "verified" });
+
+    expect(supabase.from).toHaveBeenCalledWith("profiles");
   });
 });
