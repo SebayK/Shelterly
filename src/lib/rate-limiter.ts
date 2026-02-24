@@ -32,10 +32,16 @@ export class RateLimiter {
   private readonly maxRequests: number;
   /** Map of key → sorted array of request timestamps */
   private readonly store = new Map<string, number[]>();
+  /**
+   * Background timer that evicts keys whose window has fully expired.
+   * Prevents unbounded memory growth when unique keys accumulate over time.
+   */
+  private readonly cleanupInterval: ReturnType<typeof setInterval>;
 
   constructor(options: RateLimiterOptions) {
     this.windowMs = options.windowMs;
     this.maxRequests = options.maxRequests;
+    this.cleanupInterval = setInterval(() => this.prune(), this.windowMs);
   }
 
   /**
@@ -73,5 +79,29 @@ export class RateLimiter {
    */
   reset(key: string): void {
     this.store.delete(key);
+  }
+
+  /**
+   * Evict all keys whose entire request window has expired.
+   * Called automatically every windowMs by the internal cleanup interval.
+   */
+  private prune(): void {
+    const windowStart = Date.now() - this.windowMs;
+    for (const [key, timestamps] of this.store.entries()) {
+      const active = timestamps.filter((t) => t > windowStart);
+      if (active.length === 0) {
+        this.store.delete(key);
+      } else {
+        this.store.set(key, active);
+      }
+    }
+  }
+
+  /**
+   * Stop the background cleanup interval.
+   * Call this when the limiter instance is no longer needed (e.g., in tests).
+   */
+  destroy(): void {
+    clearInterval(this.cleanupInterval);
   }
 }
