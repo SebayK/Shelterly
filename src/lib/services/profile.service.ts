@@ -48,7 +48,8 @@ export class ProfileService {
       `,
         { count: "exact" }
       )
-      .eq("status", "verified");
+      .eq("status", "verified")
+      .eq("role", "shelter"); // Only show shelters, not admins
 
     // If urgent_only filter is requested, we need to filter profiles that have urgent needs
     // This must be done at query level to get correct total count for pagination
@@ -169,6 +170,7 @@ export class ProfileService {
       .select("*")
       .eq("id", id)
       .eq("status", "verified")
+      .eq("role", "shelter") // Only show shelters, not admins
       .single();
 
     if (error || !profile) {

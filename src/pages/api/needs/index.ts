@@ -109,7 +109,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // 3. Load the shelter profile and verify its status
     const { data: profile, error: profileError } = await supabase
       .from("profiles")
-      .select("id, status")
+      .select("id, status, role")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -120,6 +120,11 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     if (!profile) {
       return createErrorHttpResponse("NOT_FOUND", "Shelter profile not found", 404);
+    }
+
+    // Only shelters can create needs, not admins
+    if (profile.role !== "shelter") {
+      return createErrorHttpResponse("FORBIDDEN", "Only shelters can create needs", 403);
     }
 
     shelterId = profile.id;

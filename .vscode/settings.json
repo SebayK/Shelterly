@@ -17,6 +17,8 @@
     "git add": true,
     "git commit": true,
     "mv": true,
-    "mkdir": true
+    "mkdir": true,
+    "npm run newman": true,
+    "npx newman": true
   }
 }
