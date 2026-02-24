@@ -1,9 +1,11 @@
 -- ============================================================================
 -- MIGRATION: Disable RLS Policies
 -- ============================================================================
+-- Environment: DEVELOPMENT ONLY - DO NOT APPLY IN PRODUCTION
 -- Purpose: Drops all RLS policies from profiles and needs tables
 -- Affected: Removes all existing policies on public.profiles and public.needs
 -- Rationale: Temporarily disabling policies for development/testing
+-- Note: This migration is skipped in production deployments
 -- ============================================================================
 
 -- -----------------------------------------------------------------------------

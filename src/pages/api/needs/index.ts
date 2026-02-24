@@ -1,7 +1,14 @@
 import type { APIRoute } from "astro";
 import { NeedsService } from "@/lib/services/needs.service";
 import { NeedsQueryParamsSchema, CreateNeedSchema } from "@/lib/validation/needs.schemas";
-import { createValidationErrorResponse, createErrorHttpResponse, logError, logErrorWithContext, logSuccess, ForbiddenError } from "@/lib/errors";
+import {
+  createValidationErrorResponse,
+  createErrorHttpResponse,
+  logError,
+  logErrorWithContext,
+  logSuccess,
+  ForbiddenError,
+} from "@/lib/errors";
 import { RateLimiter } from "@/lib/rate-limiter";
 import { APP_CONFIG } from "@/lib/config";
 
@@ -66,11 +73,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
     logError("[GET /api/needs]", error);
 
     // Generic error response for unexpected errors
-    return createErrorHttpResponse(
-      "INTERNAL_ERROR",
-      "An unexpected error occurred while fetching needs",
-      500
-    );
+    return createErrorHttpResponse("INTERNAL_ERROR", "An unexpected error occurred while fetching needs", 500);
   }
 };
 
@@ -111,10 +114,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       .maybeSingle();
 
     if (profileError) {
-      logErrorWithContext(
-        { endpoint: "POST /api/needs", user_id: userId },
-        profileError
-      );
+      logErrorWithContext({ endpoint: "POST /api/needs", user_id: userId }, profileError);
       return createErrorHttpResponse("INTERNAL_ERROR", "Unable to retrieve shelter profile", 500);
     }
 
@@ -190,10 +190,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
 
     // user_id and shelter_id are available here if resolved before the exception
     logErrorWithContext({ endpoint: "POST /api/needs", user_id: userId, shelter_id: shelterId }, error);
-    return createErrorHttpResponse(
-      "INTERNAL_ERROR",
-      "An unexpected error occurred while creating the need",
-      500
-    );
+    return createErrorHttpResponse("INTERNAL_ERROR", "An unexpected error occurred while creating the need", 500);
   }
 };

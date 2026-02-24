@@ -130,6 +130,55 @@ Shelterly provides a centralized platform where:
 | `npm run test:watch` | Run tests in watch mode                    |
 | `npm run test:coverage` | Run tests with coverage report          |
 
+## Database & Deployment
+
+### Local Development
+
+The project uses **Supabase** with local development environment:
+
+```bash
+# Start local Supabase (requires Docker)
+npx supabase start
+
+# Reset database to latest migrations
+npx supabase db reset
+
+# Stop local Supabase
+npx supabase stop
+```
+
+**Note:** In local development, Row Level Security (RLS) is **disabled** for easier testing. See [supabase/DEPLOYMENT.md](supabase/DEPLOYMENT.md) for details.
+
+### Migrations
+
+Database migrations are located in `supabase/migrations/`:
+
+| Migration | Environment | Description |
+|-----------|-------------|-------------|
+| `20260119000000_init_schema.sql` | All | Initial schema with RLS policies |
+| `20260124000000_update_handle_new_user.sql` | All | User metadata handling |
+| `20260221000000_add_get_pending_shelters_fn.sql` | All | Admin functions |
+| `20260119120000_disable_rls_policies.sql` | **Dev only** | Drop RLS policies |
+| `20260224000000_disable_rls.sql` | **Dev only** | Disable RLS completely |
+
+⚠️ **Important:** Migrations marked "Dev only" should **NOT be applied in production**. RLS must remain enabled in production for security.
+
+### Production Deployment
+
+Use the provided deployment script for production:
+
+```bash
+# Deploy with RLS enabled
+./scripts/deploy-production.sh
+```
+
+This script automatically:
+- Excludes dev-only migrations
+- Applies production migrations with RLS enabled
+- Verifies RLS status after deployment
+
+For detailed deployment instructions, see [supabase/DEPLOYMENT.md](supabase/DEPLOYMENT.md).
+
 ## Project Scope
 
 ### API Endpoints

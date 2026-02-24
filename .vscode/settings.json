@@ -14,6 +14,9 @@
     "npx supabase": true,
     "npm install": true,
     "npx vitest": true,
-    "git add": true
+    "git add": true,
+    "git commit": true,
+    "mv": true,
+    "mkdir": true
   }
 }
