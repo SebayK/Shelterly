@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { NeedsService } from "./needs.service";
-import { InternalError } from "@/lib/errors";
+import { InternalError, NotFoundError, ForbiddenError } from "@/lib/errors";
 import type { CreateNeedCommand } from "@/types";
 
 // ---------------------------------------------------------------------------
@@ -165,5 +165,143 @@ describe("NeedsService.createNeed()", () => {
     service = new NeedsService(buildSupabaseMock({ error: { message: "internal pg error" } }));
 
     await expect(service.createNeed(SHELTER_ID, COMMAND)).rejects.not.toThrow("internal pg error");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// fulfillNeed tests
+// ---------------------------------------------------------------------------
+
+describe("NeedsService.fulfillNeed()", () => {
+  const NEED_ID = "00000000-0000-0000-0000-000000000099";
+  const USER_ID = "00000000-0000-0000-0000-000000000001";
+  const NEED_ROW = {
+    id: NEED_ID,
+    shelter_id: USER_ID,
+    is_fulfilled: false,
+  };
+  const UPDATED_ROW = {
+    id: NEED_ID,
+    is_fulfilled: true,
+    updated_at: "2026-02-24T10:00:00Z",
+  };
+
+  /**
+   * Builds a Supabase client mock that handles two sequential `from("needs")` calls:
+   *  1. SELECT chain: .select().eq().is().maybeSingle()
+   *  2. UPDATE chain: .update().eq().select().single()
+   */
+  function buildFulfillMock({
+    selectData = NEED_ROW as typeof NEED_ROW | null,
+    selectError = null as { message: string; code?: string } | null,
+    updateData = UPDATED_ROW as typeof UPDATED_ROW | null,
+    updateError = null as { message: string; code?: string } | null,
+  } = {}) {
+    // SELECT chain
+    const maybeSingle = vi.fn().mockResolvedValue({ data: selectData, error: selectError });
+    const isNull = vi.fn().mockReturnValue({ maybeSingle });
+    const eqSelect = vi.fn().mockReturnValue({ is: isNull });
+    const selectFn = vi.fn().mockReturnValue({ eq: eqSelect });
+
+    // UPDATE chain
+    const single = vi.fn().mockResolvedValue({ data: updateData, error: updateError });
+    const selectUpdate = vi.fn().mockReturnValue({ single });
+    const eqUpdate = vi.fn().mockReturnValue({ select: selectUpdate });
+    const updateFn = vi.fn().mockReturnValue({ eq: eqUpdate });
+
+    const from = vi.fn().mockReturnValueOnce({ select: selectFn }).mockReturnValueOnce({ update: updateFn });
+
+    return { from } as unknown as import("@/db/supabase.client").SupabaseClient;
+  }
+
+  let service: NeedsService;
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  // -------------------------------------------------------------------------
+  // Success path
+  // -------------------------------------------------------------------------
+
+  it("returns NeedFulfillResponseDTO on success", async () => {
+    service = new NeedsService(buildFulfillMock());
+
+    const result = await service.fulfillNeed(NEED_ID, USER_ID);
+
+    expect(result).toEqual({
+      id: NEED_ID,
+      is_fulfilled: true,
+      updated_at: UPDATED_ROW.updated_at,
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // NotFoundError paths
+  // -------------------------------------------------------------------------
+
+  it("throws NotFoundError when need does not exist or is soft-deleted", async () => {
+    service = new NeedsService(buildFulfillMock({ selectData: null }));
+
+    await expect(service.fulfillNeed(NEED_ID, USER_ID)).rejects.toThrow(NotFoundError);
+  });
+
+  it('throws NotFoundError with message "Need not found" when no row returned', async () => {
+    service = new NeedsService(buildFulfillMock({ selectData: null }));
+
+    await expect(service.fulfillNeed(NEED_ID, USER_ID)).rejects.toThrow("Need not found");
+  });
+
+  it("throws NotFoundError when need is already fulfilled", async () => {
+    const fulfilledNeed = { ...NEED_ROW, is_fulfilled: true };
+    service = new NeedsService(buildFulfillMock({ selectData: fulfilledNeed }));
+
+    await expect(service.fulfillNeed(NEED_ID, USER_ID)).rejects.toThrow(NotFoundError);
+  });
+
+  it('throws NotFoundError with "Need is already fulfilled" when already fulfilled', async () => {
+    const fulfilledNeed = { ...NEED_ROW, is_fulfilled: true };
+    service = new NeedsService(buildFulfillMock({ selectData: fulfilledNeed }));
+
+    await expect(service.fulfillNeed(NEED_ID, USER_ID)).rejects.toThrow("Need is already fulfilled");
+  });
+
+  // -------------------------------------------------------------------------
+  // ForbiddenError path
+  // -------------------------------------------------------------------------
+
+  it("throws ForbiddenError when authenticated user is not the owner", async () => {
+    const otherOwnerNeed = { ...NEED_ROW, shelter_id: "00000000-0000-0000-0000-000000000002" };
+    service = new NeedsService(buildFulfillMock({ selectData: otherOwnerNeed }));
+
+    await expect(service.fulfillNeed(NEED_ID, USER_ID)).rejects.toThrow(ForbiddenError);
+  });
+
+  // -------------------------------------------------------------------------
+  // InternalError paths
+  // -------------------------------------------------------------------------
+
+  it("throws InternalError on SELECT database error", async () => {
+    service = new NeedsService(buildFulfillMock({ selectError: { message: "connection refused" } }));
+
+    await expect(service.fulfillNeed(NEED_ID, USER_ID)).rejects.toThrow(InternalError);
+  });
+
+  it("throws InternalError with user-friendly message on SELECT error", async () => {
+    service = new NeedsService(buildFulfillMock({ selectError: { message: "pg error" } }));
+
+    await expect(service.fulfillNeed(NEED_ID, USER_ID)).rejects.toThrow("Unable to retrieve need");
+  });
+
+  it("throws InternalError on UPDATE database error", async () => {
+    service = new NeedsService(buildFulfillMock({ updateError: { message: "constraint violation", code: "23514" } }));
+
+    await expect(service.fulfillNeed(NEED_ID, USER_ID)).rejects.toThrow(InternalError);
+  });
+
+  it("throws InternalError with user-friendly message on UPDATE error", async () => {
+    service = new NeedsService(buildFulfillMock({ updateError: { message: "pg error" } }));
+
+    await expect(service.fulfillNeed(NEED_ID, USER_ID)).rejects.toThrow("Unable to fulfill need");
   });
 });

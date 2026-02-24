@@ -9,13 +9,14 @@ import type {
   NeedListItemDTO,
   NeedDetailDTO,
   NeedCreateResponseDTO,
+  NeedFulfillResponseDTO,
   CreateNeedCommand,
   ShelterInfo,
   ShelterDetailInfo,
   Pagination,
   NeedsQueryParams,
 } from "@/types";
-import { InternalError, NotFoundError, logError, logErrorWithContext } from "@/lib/errors";
+import { InternalError, NotFoundError, ForbiddenError, logError, logErrorWithContext } from "@/lib/errors";
 
 export class NeedsService {
   constructor(private supabase: SupabaseClient) {}
@@ -281,6 +282,81 @@ export class NeedsService {
       unit: data.unit,
       is_fulfilled: data.is_fulfilled,
       created_at: data.created_at,
+    };
+  }
+
+  /**
+   * Mark a need as fulfilled
+   * Only the shelter that owns the need can fulfill it
+   * Needs already fulfilled or soft-deleted are treated as not found
+   * @param needId - UUID of the need to fulfill
+   * @param userId - UUID of the authenticated user (shelter owner)
+   * @returns NeedFulfillResponseDTO with updated id, is_fulfilled and updated_at
+   * @throws NotFoundError when need does not exist, is soft-deleted, or already fulfilled
+   * @throws ForbiddenError when the authenticated user is not the owner of the need
+   * @throws InternalError on database errors
+   */
+  async fulfillNeed(needId: string, userId: string): Promise<NeedFulfillResponseDTO> {
+    // 1. Fetch the need — exclude soft-deleted records
+    const { data: need, error: selectError } = await this.supabase
+      .from("needs")
+      .select("id, shelter_id, is_fulfilled")
+      .eq("id", needId)
+      .is("deleted_at", null)
+      .maybeSingle();
+
+    if (selectError) {
+      logErrorWithContext(
+        {
+          endpoint: "POST /api/needs/:id/fulfill",
+          user_id: userId,
+          shelter_id: needId,
+        },
+        selectError
+      );
+      throw new InternalError("Unable to retrieve need");
+    }
+
+    // 2. Need not found or soft-deleted
+    if (!need) {
+      throw new NotFoundError("Need not found");
+    }
+
+    // 3. Authorization — only the owner can fulfill
+    if (need.shelter_id !== userId) {
+      throw new ForbiddenError("You are not the owner of this need");
+    }
+
+    // 4. Already fulfilled — treat as not actionable (consistent with API convention)
+    if (need.is_fulfilled) {
+      throw new NotFoundError("Need is already fulfilled");
+    }
+
+    // 5. Update the need
+    const { data: updated, error: updateError } = await this.supabase
+      .from("needs")
+      .update({ is_fulfilled: true })
+      .eq("id", needId)
+      .select("id, is_fulfilled, updated_at")
+      .single();
+
+    if (updateError) {
+      logErrorWithContext(
+        {
+          endpoint: "POST /api/needs/:id/fulfill",
+          user_id: userId,
+          shelter_id: needId,
+          constraint: (updateError as { code?: string }).code,
+        },
+        updateError
+      );
+      throw new InternalError("Unable to fulfill need");
+    }
+
+    return {
+      id: updated.id,
+      is_fulfilled: updated.is_fulfilled,
+      updated_at: updated.updated_at ?? new Date().toISOString(),
     };
   }
 }
