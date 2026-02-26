@@ -87,7 +87,35 @@ export class AIService {
       throw new ForbiddenError("AI usage limit exceeded");
     }
 
-    const description = await this.callOpenRouter(command);
+    // Increment the counter BEFORE calling AI to prevent the race condition where two
+    // concurrent requests both pass the limit check and both consume a generation slot.
+    const { error: incrementError } = await this.supabase
+      .from("profiles")
+      .update({ ai_usage_count: profile.ai_usage_count + 1 })
+      .eq("id", userId);
+
+    if (incrementError) {
+      logErrorWithContext(
+        {
+          endpoint: "AIService.generateNeedDescription",
+          user_id: userId,
+          shelter_id: need.shelter_id,
+          request_body: { need_id: command.need_id },
+          constraint: (incrementError as { code?: string }).code,
+        },
+        incrementError
+      );
+      throw new InternalError("Unable to update AI usage counter");
+    }
+
+    let description: string;
+    try {
+      description = await this.callOpenRouter(command);
+    } catch (aiError) {
+      // Best-effort rollback on AI failure so the slot is not wasted
+      await this.supabase.from("profiles").update({ ai_usage_count: profile.ai_usage_count }).eq("id", userId);
+      throw aiError;
+    }
 
     const { error: updateNeedError } = await this.supabase
       .from("needs")
@@ -109,27 +137,9 @@ export class AIService {
       throw new InternalError("Failed to save generated description");
     }
 
-    const { error: incrementError } = await this.supabase
-      .from("profiles")
-      .update({ ai_usage_count: profile.ai_usage_count + 1 })
-      .eq("id", userId);
-
-    if (incrementError) {
-      logErrorWithContext(
-        {
-          endpoint: "AIService.generateNeedDescription",
-          user_id: userId,
-          shelter_id: need.shelter_id,
-          request_body: { need_id: command.need_id },
-          constraint: (incrementError as { code?: string }).code,
-        },
-        incrementError
-      );
-    }
-
     return {
       description,
-      ai_usage_incremented: !incrementError,
+      ai_usage_incremented: true,
     };
   }
 
@@ -199,11 +209,40 @@ export class AIService {
       throw new ForbiddenError("AI usage limit exceeded");
     }
 
+    // Increment the counter BEFORE calling AI to prevent race conditions
+    const { error: incrementError } = await this.supabase
+      .from("profiles")
+      .update({ ai_usage_count: profile.ai_usage_count + 1 })
+      .eq("id", userId);
+
+    if (incrementError) {
+      logErrorWithContext(
+        {
+          endpoint: "AIService.generateShoppingLink",
+          user_id: userId,
+          shelter_id: need.shelter_id,
+          request_body: { need_id: command.need_id },
+          constraint: (incrementError as { code?: string }).code,
+        },
+        incrementError
+      );
+      throw new InternalError("Unable to update AI usage counter");
+    }
+
     // 4. Call AI to generate shopping URL
-    const shoppingUrl = await this.callOpenRouterForShoppingLink(command);
+    let shoppingUrl: string;
+    try {
+      shoppingUrl = await this.callOpenRouterForShoppingLink(command);
+    } catch (aiError) {
+      // Best-effort rollback on AI failure
+      await this.supabase.from("profiles").update({ ai_usage_count: profile.ai_usage_count }).eq("id", userId);
+      throw aiError;
+    }
 
     // 5. Validate the returned URL
     if (!shoppingUrl.startsWith("https://")) {
+      // Rollback the counter since we won't actually produce a usable result
+      await this.supabase.from("profiles").update({ ai_usage_count: profile.ai_usage_count }).eq("id", userId);
       throw new InternalError("AI returned an invalid shopping URL");
     }
 
@@ -228,28 +267,9 @@ export class AIService {
       throw new InternalError("Failed to save generated shopping URL");
     }
 
-    // 7. Increment AI usage counter (best-effort)
-    const { error: incrementError } = await this.supabase
-      .from("profiles")
-      .update({ ai_usage_count: profile.ai_usage_count + 1 })
-      .eq("id", userId);
-
-    if (incrementError) {
-      logErrorWithContext(
-        {
-          endpoint: "AIService.generateShoppingLink",
-          user_id: userId,
-          shelter_id: need.shelter_id,
-          request_body: { need_id: command.need_id },
-          constraint: (incrementError as { code?: string }).code,
-        },
-        incrementError
-      );
-    }
-
     return {
       shopping_url: shoppingUrl,
-      ai_usage_incremented: !incrementError,
+      ai_usage_incremented: true,
     };
   }
 
@@ -317,7 +337,9 @@ export class AIService {
   }
 
   private buildShoppingLinkPrompt(command: GenerateShoppingLinkCommand): string {
-    return ["Kategoria: " + command.category, "Tytuł potrzeby: " + command.title].join("\n");
+    // Sanitize user-controlled input to prevent prompt injection via newlines / control chars
+    const safeTitle = command.title.replace(/[\r\n\t]/g, " ").trim();
+    return ["Kategoria: " + command.category, "Tytuł potrzeby: " + safeTitle].join("\n");
   }
 
   private async callOpenRouter(command: GenerateDescriptionCommand): Promise<string> {
@@ -381,10 +403,12 @@ export class AIService {
   }
 
   private buildPrompt(command: GenerateDescriptionCommand): string {
+    // Sanitize user-controlled input to prevent prompt injection via newlines / control chars
+    const safeTitle = command.title.replace(/[\r\n\t]/g, " ").trim();
     return [
       "Napisz krótki, przekonujący opis po polsku (2-3 zdania) dla następującej potrzeby schroniska:",
       `- Kategoria: ${command.category}`,
-      `- Tytuł: ${command.title}`,
+      `- Tytuł: ${safeTitle}`,
       `- Ilość: ${command.target_quantity} ${command.unit}`,
       "",
       "Opis powinien być empatyczny, zachęcać do pomocy i skupiać się na dobrostanie zwierząt.",
