@@ -6,7 +6,8 @@ interface LoadRouteOptions {
   authError?: { message: string } | null;
   rateAllowed?: boolean;
   serviceResult?: { description: string; ai_usage_incremented: boolean };
-  serviceError?: Error;
+  serviceErrorClass?: "NotFoundError" | "ForbiddenError" | "InternalError";
+  serviceErrorMessage?: string;
 }
 
 const USER_ID = "00000000-0000-0000-0000-000000000001";
@@ -17,7 +18,8 @@ async function loadRoute(options: LoadRouteOptions = {}) {
     authError = null,
     rateAllowed = true,
     serviceResult = { description: "Opis wygenerowany przez AI.", ai_usage_incremented: true },
-    serviceError,
+    serviceErrorClass,
+    serviceErrorMessage,
   } = options;
 
   const check = vi.fn().mockReturnValue({
@@ -26,9 +28,19 @@ async function loadRoute(options: LoadRouteOptions = {}) {
     resetAt: Date.now() + 60_000,
   });
 
-  const generateNeedDescription = serviceError
-    ? vi.fn().mockRejectedValue(serviceError)
-    : vi.fn().mockResolvedValue(serviceResult);
+  let generateNeedDescription: ReturnType<typeof vi.fn>;
+  if (serviceErrorClass) {
+    // Build error instance from the real errors module to avoid instanceof mismatches
+    const errors = await import("@/lib/errors");
+    const msg = serviceErrorMessage ?? "service error";
+    let err: Error;
+    if (serviceErrorClass === "NotFoundError") err = new errors.NotFoundError(msg);
+    else if (serviceErrorClass === "ForbiddenError") err = new errors.ForbiddenError(msg);
+    else err = new errors.InternalError(msg);
+    generateNeedDescription = vi.fn().mockRejectedValue(err);
+  } else {
+    generateNeedDescription = vi.fn().mockResolvedValue(serviceResult);
+  }
 
   vi.doMock("@/lib/rate-limiter", () => ({
     RateLimiter: class {
@@ -126,7 +138,10 @@ describe("POST /api/ai/generate-description", () => {
   });
 
   it("returns 404 when service throws NotFoundError", async () => {
-    const { POST, locals } = await loadRoute({ serviceError: new NotFoundError("Need not found") });
+    const { POST, locals } = await loadRoute({
+      serviceErrorClass: "NotFoundError",
+      serviceErrorMessage: "Need not found",
+    });
 
     const response = await POST({
       request: new Request("http://localhost/api/ai/generate-description", {
@@ -149,7 +164,7 @@ describe("POST /api/ai/generate-description", () => {
   });
 
   it("returns 403 when service throws ForbiddenError", async () => {
-    const { POST, locals } = await loadRoute({ serviceError: new ForbiddenError("Forbidden") });
+    const { POST, locals } = await loadRoute({ serviceErrorClass: "ForbiddenError", serviceErrorMessage: "Forbidden" });
 
     const response = await POST({
       request: new Request("http://localhost/api/ai/generate-description", {
@@ -172,7 +187,7 @@ describe("POST /api/ai/generate-description", () => {
   });
 
   it("returns 500 when service throws InternalError", async () => {
-    const { POST, locals } = await loadRoute({ serviceError: new InternalError("Internal") });
+    const { POST, locals } = await loadRoute({ serviceErrorClass: "InternalError", serviceErrorMessage: "Internal" });
 
     const response = await POST({
       request: new Request("http://localhost/api/ai/generate-description", {

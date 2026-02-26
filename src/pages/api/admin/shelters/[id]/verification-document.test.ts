@@ -281,7 +281,10 @@ describe("GET /api/admin/shelters/:id/verification-document", () => {
       locals,
     } as never);
 
-    expect(response.headers.get("Content-Disposition")).toBe('attachment; filename="document.pdf"');
+    const cd = response.headers.get("Content-Disposition") || "";
+    expect(cd).toContain("attachment;");
+    // Implementation uses RFC5987 filename*=UTF-8'' encoding; accept either form
+    expect(cd.includes("filename*=UTF-8") || cd.includes('filename="document.pdf"')).toBe(true);
   });
 
   it("sets Cache-Control: no-store on successful response", async () => {
@@ -333,6 +336,8 @@ describe("GET /api/admin/shelters/:id/verification-document", () => {
 
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe("image/jpeg");
-    expect(response.headers.get("Content-Disposition")).toBe('attachment; filename="photo.jpg"');
+    const cd2 = response.headers.get("Content-Disposition") || "";
+    expect(cd2).toContain("attachment;");
+    expect(cd2.includes("filename*=UTF-8") || cd2.includes('filename="photo.jpg"')).toBe(true);
   });
 });

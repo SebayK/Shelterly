@@ -36,16 +36,18 @@ Endpoint generuje link do wyszukiwania produktów (np. Ceneo.pl) dla konkretnej 
 Wszystkie wymienione typy są już zdefiniowane w `src/types.ts`.
 
 **Command Model (ciało żądania):**
+
 ```typescript
 // Command 6: POST /api/ai/generate-shopping-link
 export interface GenerateShoppingLinkCommand {
-  need_id: string;       // UUID
+  need_id: string; // UUID
   title: string;
   category: NeedCategory;
 }
 ```
 
 **Response DTO:**
+
 ```typescript
 // DTO 18: POST /api/ai/generate-shopping-link
 export interface AIGenerateShoppingLinkResponseDTO {
@@ -55,6 +57,7 @@ export interface AIGenerateShoppingLinkResponseDTO {
 ```
 
 **Nowy schemat walidacji Zod** (do dodania w `src/lib/validation/ai.schemas.ts`):
+
 ```typescript
 export const GenerateShoppingLinkCommandSchema = z.object({
   need_id: z.string().uuid({ message: "need_id must be a valid UUID" }),
@@ -68,6 +71,7 @@ export const GenerateShoppingLinkCommandSchema = z.object({
 ## 4. Szczegóły odpowiedzi
 
 ### Sukces — 200 OK
+
 ```json
 {
   "shopping_url": "https://www.ceneo.pl/search?q=karma+mokra+koty+premium",
@@ -79,14 +83,14 @@ export const GenerateShoppingLinkCommandSchema = z.object({
 
 ### Kody błędów
 
-| Kod | Sytuacja |
-|-----|----------|
-| `400 Bad Request` | Nieprawidłowy JSON lub błędy walidacji Zod |
-| `401 Unauthorized` | Brak sesji / nieważny token |
-| `403 Forbidden` | Wywołujący nie jest właścicielem potrzeby LUB przekroczono limit AI (`ai_usage_count >= USAGE_LIMIT`) |
-| `404 Not Found` | Potrzeba nie istnieje lub jest soft-deleted |
-| `429 Too Many Requests` | Rate limit per użytkownik przekroczony |
-| `500 Internal Server Error` | Błąd bazy danych, timeout OpenRouter lub inna nieoczekiwana awaria |
+| Kod                         | Sytuacja                                                                                              |
+| --------------------------- | ----------------------------------------------------------------------------------------------------- |
+| `400 Bad Request`           | Nieprawidłowy JSON lub błędy walidacji Zod                                                            |
+| `401 Unauthorized`          | Brak sesji / nieważny token                                                                           |
+| `403 Forbidden`             | Wywołujący nie jest właścicielem potrzeby LUB przekroczono limit AI (`ai_usage_count >= USAGE_LIMIT`) |
+| `404 Not Found`             | Potrzeba nie istnieje lub jest soft-deleted                                                           |
+| `429 Too Many Requests`     | Rate limit per użytkownik przekroczony                                                                |
+| `500 Internal Server Error` | Błąd bazy danych, timeout OpenRouter lub inna nieoczekiwana awaria                                    |
 
 ---
 
@@ -159,24 +163,24 @@ export const GenerateShoppingLinkCommandSchema = z.object({
 
 ## 7. Obsługa błędów
 
-| Sytuacja | Klasa błędu | Kod HTTP |
-|----------|-------------|----------|
-| Brak `locals.supabase` | — | `500` |
-| Błąd `supabase.auth.getUser()` lub brak użytkownika | — | `401` |
-| Przekroczony rate limit w pamięci | — | `429` |
-| Nieprawidłowy JSON w body | — | `400` |
-| Błąd walidacji Zod | — | `400` z `details[]` |
-| Błąd DB przy SELECT needs | `InternalError` | `500` |
-| Need nie znaleziony / soft-deleted | `NotFoundError` | `404` |
-| Nie-właściciel potrzeby | `ForbiddenError` | `403` |
-| Błąd DB przy SELECT profile | `InternalError` | `500` |
-| Profil nie znaleziony | `NotFoundError` | `404` |
-| Limit AI przekroczony | `ForbiddenError` | `403` |
-| Błąd/timeout OpenRouter | `InternalError` | `500` |
-| Pusta/nieprawidłowa odpowiedź AI | `InternalError` | `500` |
-| Błąd DB przy UPDATE needs.shopping_url | `InternalError` | `500` |
-| Błąd DB przy UPDATE ai_usage_count | logowanie (best-effort) | `200` (ai_usage_incremented: false) |
-| Nieobsłużony wyjątek | — | `500` |
+| Sytuacja                                            | Klasa błędu             | Kod HTTP                            |
+| --------------------------------------------------- | ----------------------- | ----------------------------------- |
+| Brak `locals.supabase`                              | —                       | `500`                               |
+| Błąd `supabase.auth.getUser()` lub brak użytkownika | —                       | `401`                               |
+| Przekroczony rate limit w pamięci                   | —                       | `429`                               |
+| Nieprawidłowy JSON w body                           | —                       | `400`                               |
+| Błąd walidacji Zod                                  | —                       | `400` z `details[]`                 |
+| Błąd DB przy SELECT needs                           | `InternalError`         | `500`                               |
+| Need nie znaleziony / soft-deleted                  | `NotFoundError`         | `404`                               |
+| Nie-właściciel potrzeby                             | `ForbiddenError`        | `403`                               |
+| Błąd DB przy SELECT profile                         | `InternalError`         | `500`                               |
+| Profil nie znaleziony                               | `NotFoundError`         | `404`                               |
+| Limit AI przekroczony                               | `ForbiddenError`        | `403`                               |
+| Błąd/timeout OpenRouter                             | `InternalError`         | `500`                               |
+| Pusta/nieprawidłowa odpowiedź AI                    | `InternalError`         | `500`                               |
+| Błąd DB przy UPDATE needs.shopping_url              | `InternalError`         | `500`                               |
+| Błąd DB przy UPDATE ai_usage_count                  | logowanie (best-effort) | `200` (ai_usage_incremented: false) |
+| Nieobsłużony wyjątek                                | —                       | `500`                               |
 
 Wszystkie błędy są logowane przez `logErrorWithContext` z pełnym kontekstem (endpoint, user_id, need_id). Sukces jest logowany przez `logSuccess`.
 
@@ -201,6 +205,7 @@ Wszystkie błędy są logowane przez `logErrorWithContext` z pełnym kontekstem 
 ### Krok 1 — Konfiguracja: rate limiter i model AI
 
 W pliku `src/lib/config.ts` dodać:
+
 - `APP_CONFIG.AI.RATE_LIMITING.GENERATE_SHOPPING_LINK` (`windowMs: 60_000`, `maxRequests: 10`)
 - (opcjonalnie) `APP_CONFIG.AI.SHOPPING_LINK_MODEL` — jeśli model ma się różnić od `DESCRIPTION_MODEL`
 
@@ -247,6 +252,7 @@ async generateShoppingLink(
 ```
 
 **Prompt dla AI** — przykład systemu:
+
 ```
 Jesteś asystentem pomagającym schroniskom dla zwierząt w Polsce znaleźć produkty online.
 Zwróć TYLKO jeden URL (bez żadnego innego tekstu), kierujący do wyników wyszukiwania produktu
@@ -255,12 +261,14 @@ Format URL: https://www.ceneo.pl/search?q=<zakodowane_słowa_kluczowe>
 ```
 
 **Prompt użytkownika:**
+
 ```
 Kategoria: {category}
 Tytuł potrzeby: {title}
 ```
 
 **Walidacja wyjścia:**
+
 ```typescript
 if (!shoppingUrl.startsWith("https://")) {
   throw new InternalError("AI returned an invalid shopping URL");
@@ -291,9 +299,7 @@ import { GenerateShoppingLinkCommandSchema } from "@/lib/validation/ai.schemas";
 
 export const prerender = false;
 
-const generateShoppingLinkLimiter = new RateLimiter(
-  APP_CONFIG.AI.RATE_LIMITING.GENERATE_SHOPPING_LINK
-);
+const generateShoppingLinkLimiter = new RateLimiter(APP_CONFIG.AI.RATE_LIMITING.GENERATE_SHOPPING_LINK);
 
 export const POST: APIRoute = async ({ request, locals }) => {
   // 1. Sprawdzenie połączenia z DB

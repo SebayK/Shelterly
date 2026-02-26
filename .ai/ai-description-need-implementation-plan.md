@@ -90,14 +90,14 @@ export const GenerateDescriptionCommandSchema = z.object({
 
 ### Error Responses
 
-| Status | Kod błędu             | Przykładowa sytuacja                                          |
-| ------ | --------------------- | ------------------------------------------------------------- |
-| 400    | `VALIDATION_ERROR`    | Niepoprawny format UUID, brak wymaganych pól                  |
-| 401    | `UNAUTHORIZED`        | Brak lub wygasły token sesji                                  |
-| 403    | `FORBIDDEN`           | Użytkownik nie jest właścicielem potrzeby lub limit AI wycz.  |
-| 404    | `NOT_FOUND`           | Potrzeba o podanym `need_id` nie istnieje lub jest usunięta   |
-| 429    | `RATE_LIMIT_EXCEEDED` | Zbyt wiele żądań w oknie czasowym (rate limiter)              |
-| 500    | `INTERNAL_ERROR`      | Błąd OpenRouter lub błąd zapisu do bazy danych                |
+| Status | Kod błędu             | Przykładowa sytuacja                                         |
+| ------ | --------------------- | ------------------------------------------------------------ |
+| 400    | `VALIDATION_ERROR`    | Niepoprawny format UUID, brak wymaganych pól                 |
+| 401    | `UNAUTHORIZED`        | Brak lub wygasły token sesji                                 |
+| 403    | `FORBIDDEN`           | Użytkownik nie jest właścicielem potrzeby lub limit AI wycz. |
+| 404    | `NOT_FOUND`           | Potrzeba o podanym `need_id` nie istnieje lub jest usunięta  |
+| 429    | `RATE_LIMIT_EXCEEDED` | Zbyt wiele żądań w oknie czasowym (rate limiter)             |
+| 500    | `INTERNAL_ERROR`      | Błąd OpenRouter lub błąd zapisu do bazy danych               |
 
 ---
 
@@ -179,17 +179,17 @@ Nie używaj tagów HTML ani markdown. Tylko czysty tekst.
 
 ## 7. Obsługa błędów
 
-| Scenariusz                                         | Typ błędu       | Status | Kod                   |
-| -------------------------------------------------- | --------------- | ------ | --------------------- |
-| Niepoprawne body (zły format UUID, brak pól)       | Walidacja       | 400    | `VALIDATION_ERROR`    |
-| Brak lub wygasły token sesji                       | Autentykacja    | 401    | `UNAUTHORIZED`        |
-| `need.shelter_id !== user.id`                      | Autoryzacja     | 403    | `FORBIDDEN`           |
-| `ai_usage_count >= AI_USAGE_LIMIT`                 | Autoryzacja     | 403    | `FORBIDDEN`           |
-| Need nie istnieje lub `deleted_at IS NOT NULL`     | Zasób           | 404    | `NOT_FOUND`           |
-| Zbyt wiele żądań (rate limiter)                    | Throttling      | 429    | `RATE_LIMIT_EXCEEDED` |
-| Błąd HTTP od OpenRouter (timeout, 5xx)             | Zewnętrzny      | 500    | `INTERNAL_ERROR`      |
-| Błąd zapisu opisu do bazy                          | Baza danych     | 500    | `INTERNAL_ERROR`      |
-| Inkrementacja `ai_usage_count` nie powiodła się    | Baza danych     | 200*   | —                     |
+| Scenariusz                                      | Typ błędu    | Status | Kod                   |
+| ----------------------------------------------- | ------------ | ------ | --------------------- |
+| Niepoprawne body (zły format UUID, brak pól)    | Walidacja    | 400    | `VALIDATION_ERROR`    |
+| Brak lub wygasły token sesji                    | Autentykacja | 401    | `UNAUTHORIZED`        |
+| `need.shelter_id !== user.id`                   | Autoryzacja  | 403    | `FORBIDDEN`           |
+| `ai_usage_count >= AI_USAGE_LIMIT`              | Autoryzacja  | 403    | `FORBIDDEN`           |
+| Need nie istnieje lub `deleted_at IS NOT NULL`  | Zasób        | 404    | `NOT_FOUND`           |
+| Zbyt wiele żądań (rate limiter)                 | Throttling   | 429    | `RATE_LIMIT_EXCEEDED` |
+| Błąd HTTP od OpenRouter (timeout, 5xx)          | Zewnętrzny   | 500    | `INTERNAL_ERROR`      |
+| Błąd zapisu opisu do bazy                       | Baza danych  | 500    | `INTERNAL_ERROR`      |
+| Inkrementacja `ai_usage_count` nie powiodła się | Baza danych  | 200\*  | —                     |
 
 > \* Jeśli opis zostanie pomyślnie zapisany, ale inkrementacja `ai_usage_count` nie powiedzie się, zwracamy 200 z `ai_usage_incremented: false` i logujemy błąd. Opis jest wartościowy dla użytkownika — nie cofamy całej operacji.
 
@@ -508,6 +508,7 @@ OPENROUTER_API_KEY=sk-or-...
 **Plik do utworzenia:** `src/lib/services/ai.service.test.ts`
 
 Scenariusze testowe:
+
 - ✅ Poprawne wygenerowanie opisu — zwraca `{ description, ai_usage_incremented: true }`
 - ❌ Need nie istnieje → `NotFoundError`
 - ❌ `need.shelter_id !== userId` → `ForbiddenError("not the owner")`
@@ -519,11 +520,11 @@ Scenariusze testowe:
 
 ### Podsumowanie plików do utworzenia/modyfikacji
 
-| Akcja      | Plik                                          |
-| ---------- | --------------------------------------------- |
-| Modyfikacja | `src/lib/config.ts`                          |
-| Modyfikacja | `src/env.d.ts`                               |
-| Utworzenie  | `src/lib/validation/ai.schemas.ts`           |
-| Utworzenie  | `src/lib/services/ai.service.ts`             |
-| Utworzenie  | `src/pages/api/ai/generate-description.ts`   |
-| Opcjonalne  | `src/lib/services/ai.service.test.ts`        |
+| Akcja       | Plik                                       |
+| ----------- | ------------------------------------------ |
+| Modyfikacja | `src/lib/config.ts`                        |
+| Modyfikacja | `src/env.d.ts`                             |
+| Utworzenie  | `src/lib/validation/ai.schemas.ts`         |
+| Utworzenie  | `src/lib/services/ai.service.ts`           |
+| Utworzenie  | `src/pages/api/ai/generate-description.ts` |
+| Opcjonalne  | `src/lib/services/ai.service.test.ts`      |

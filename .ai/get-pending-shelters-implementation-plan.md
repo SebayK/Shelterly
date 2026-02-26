@@ -55,7 +55,7 @@ Wymagane jest stworzenie nowego schematu Zod:
 
 ```typescript
 // src/lib/validation/admin.schemas.ts
-PendingSheltersQueryParamsSchema  // walidacja limit i offset
+PendingSheltersQueryParamsSchema; // walidacja limit i offset
 ```
 
 ---
@@ -87,12 +87,12 @@ PendingSheltersQueryParamsSchema  // walidacja limit i offset
 
 ### Błędy
 
-| Status | Error Code         | Opis                                   |
-|--------|--------------------|----------------------------------------|
-| 400    | `VALIDATION_ERROR` | Nieprawidłowe parametry paginacji      |
-| 401    | `UNAUTHORIZED`     | Brak lub nieprawidłowy token           |
+| Status | Error Code         | Opis                                       |
+| ------ | ------------------ | ------------------------------------------ |
+| 400    | `VALIDATION_ERROR` | Nieprawidłowe parametry paginacji          |
+| 401    | `UNAUTHORIZED`     | Brak lub nieprawidłowy token               |
 | 403    | `FORBIDDEN`        | Zalogowany użytkownik nie jest super_admin |
-| 500    | `INTERNAL_ERROR`   | Błąd bazy danych lub nieoczekiwany     |
+| 500    | `INTERNAL_ERROR`   | Błąd bazy danych lub nieoczekiwany         |
 
 ---
 
@@ -168,10 +168,11 @@ $$;
 ```
 
 Wywołanie z poziomu serwisu:
+
 ```typescript
-const { data, error } = await this.supabase.rpc('get_pending_shelters_with_email', {
+const { data, error } = await this.supabase.rpc("get_pending_shelters_with_email", {
   p_limit: limit,
-  p_offset: offset
+  p_offset: offset,
 });
 ```
 
@@ -199,15 +200,15 @@ Stworzyć dedykowany klient z service role key w `src/db/supabase.admin.ts`, uż
 
 ## 7. Obsługa błędów
 
-| Scenariusz | Typ błędu | Status | Error Code |
-|---|---|---|---|
-| Brak nagłówka Authorization lub wygasły token | `UnauthorizedError` | 401 | `UNAUTHORIZED` |
-| Użytkownik istnieje, ale `role !== 'super_admin'` | `ForbiddenError` | 403 | `FORBIDDEN` |
-| Nieprawidłowy `limit` (np. ujemny, nie-liczba) | Zod validation | 400 | `VALIDATION_ERROR` |
-| Nieprawidłowy `offset` (np. ujemny, nie-liczba) | Zod validation | 400 | `VALIDATION_ERROR` |
-| Błąd Supabase przy pobieraniu profilu admina | `InternalError` | 500 | `INTERNAL_ERROR` |
-| Błąd wywołania RPC | `InternalError` | 500 | `INTERNAL_ERROR` |
-| Nieoczekiwany błąd | `Error` | 500 | `INTERNAL_ERROR` |
+| Scenariusz                                        | Typ błędu           | Status | Error Code         |
+| ------------------------------------------------- | ------------------- | ------ | ------------------ |
+| Brak nagłówka Authorization lub wygasły token     | `UnauthorizedError` | 401    | `UNAUTHORIZED`     |
+| Użytkownik istnieje, ale `role !== 'super_admin'` | `ForbiddenError`    | 403    | `FORBIDDEN`        |
+| Nieprawidłowy `limit` (np. ujemny, nie-liczba)    | Zod validation      | 400    | `VALIDATION_ERROR` |
+| Nieprawidłowy `offset` (np. ujemny, nie-liczba)   | Zod validation      | 400    | `VALIDATION_ERROR` |
+| Błąd Supabase przy pobieraniu profilu admina      | `InternalError`     | 500    | `INTERNAL_ERROR`   |
+| Błąd wywołania RPC                                | `InternalError`     | 500    | `INTERNAL_ERROR`   |
+| Nieoczekiwany błąd                                | `Error`             | 500    | `INTERNAL_ERROR`   |
 
 Użyć `createErrorHttpResponse()` i `createValidationErrorResponse()` z `src/lib/errors.ts` do generowania odpowiedzi błędu w formacie standardowym projektu.
 
@@ -241,20 +242,8 @@ Stworzyć plik `src/lib/validation/admin.schemas.ts`:
 import { z } from "zod";
 
 export const PendingSheltersQueryParamsSchema = z.object({
-  limit: z
-    .union([
-      z.coerce.number().int().min(1).max(100),
-      z.null(),
-      z.undefined(),
-    ])
-    .transform((val) => val ?? 20),
-  offset: z
-    .union([
-      z.coerce.number().int().min(0),
-      z.null(),
-      z.undefined(),
-    ])
-    .transform((val) => val ?? 0),
+  limit: z.union([z.coerce.number().int().min(1).max(100), z.null(), z.undefined()]).transform((val) => val ?? 20),
+  offset: z.union([z.coerce.number().int().min(0), z.null(), z.undefined()]).transform((val) => val ?? 0),
 });
 
 export type PendingSheltersQueryParamsOutput = z.output<typeof PendingSheltersQueryParamsSchema>;
@@ -312,12 +301,7 @@ Stworzyć plik `src/pages/api/admin/shelters/pending.ts`:
 import type { APIRoute } from "astro";
 import { AdminService } from "@/lib/services/admin.service";
 import { PendingSheltersQueryParamsSchema } from "@/lib/validation/admin.schemas";
-import {
-  createValidationErrorResponse,
-  createErrorHttpResponse,
-  logError,
-  ForbiddenError,
-} from "@/lib/errors";
+import { createValidationErrorResponse, createErrorHttpResponse, logError, ForbiddenError } from "@/lib/errors";
 
 export const prerender = false;
 
@@ -334,7 +318,10 @@ export const GET: APIRoute = async ({ url, locals }) => {
     }
 
     // 1. Uwierzytelnienie
-    const { data: { user }, error: authError } = await supabase.auth.getUser();
+    const {
+      data: { user },
+      error: authError,
+    } = await supabase.auth.getUser();
     if (authError || !user) {
       return createErrorHttpResponse("UNAUTHORIZED", "Authentication required", 401);
     }
@@ -393,6 +380,7 @@ Uruchomić `tsc --noEmit` i `eslint` aby upewnić się, że typy są spójne mi�
 ### Krok 6: Testy jednostkowe
 
 Stworzyć `src/lib/services/admin.service.test.ts` testując:
+
 - Prawidłowe mapowanie danych z RPC na `PendingShelterListItemDTO`
 - Obsługę pustej listy (brak pending shelters)
 - Rzucanie `InternalError` przy błędzie Supabase
@@ -401,6 +389,7 @@ Stworzyć `src/lib/services/admin.service.test.ts` testując:
 ### Krok 7: Testy integracyjne endpointu
 
 Stworzyć `src/pages/api/admin/shelters/pending.test.ts` testując:
+
 - 401 gdy brak tokenu
 - 403 gdy użytkownik ma `role !== 'super_admin'`
 - 400 gdy `limit` lub `offset` są nieprawidłowe

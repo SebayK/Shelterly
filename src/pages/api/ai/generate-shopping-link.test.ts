@@ -6,7 +6,8 @@ interface LoadRouteOptions {
   authError?: { message: string } | null;
   rateAllowed?: boolean;
   serviceResult?: { shopping_url: string; ai_usage_incremented: boolean };
-  serviceError?: Error;
+  serviceErrorClass?: "NotFoundError" | "ForbiddenError" | "InternalError";
+  serviceErrorMessage?: string;
 }
 
 const USER_ID = "00000000-0000-0000-0000-000000000001";
@@ -20,7 +21,8 @@ async function loadRoute(options: LoadRouteOptions = {}) {
       shopping_url: "https://www.ceneo.pl/search?q=karma+mokra+koty",
       ai_usage_incremented: true,
     },
-    serviceError,
+    serviceErrorClass,
+    serviceErrorMessage,
   } = options;
 
   const check = vi.fn().mockReturnValue({
@@ -29,9 +31,18 @@ async function loadRoute(options: LoadRouteOptions = {}) {
     resetAt: Date.now() + 60_000,
   });
 
-  const generateShoppingLink = serviceError
-    ? vi.fn().mockRejectedValue(serviceError)
-    : vi.fn().mockResolvedValue(serviceResult);
+  let generateShoppingLink: ReturnType<typeof vi.fn>;
+  if (serviceErrorClass) {
+    const errors = await import("@/lib/errors");
+    const msg = serviceErrorMessage ?? "service error";
+    let err: Error;
+    if (serviceErrorClass === "NotFoundError") err = new errors.NotFoundError(msg);
+    else if (serviceErrorClass === "ForbiddenError") err = new errors.ForbiddenError(msg);
+    else err = new errors.InternalError(msg);
+    generateShoppingLink = vi.fn().mockRejectedValue(err);
+  } else {
+    generateShoppingLink = vi.fn().mockResolvedValue(serviceResult);
+  }
 
   vi.doMock("@/lib/rate-limiter", () => ({
     RateLimiter: class {
@@ -169,7 +180,10 @@ describe("POST /api/ai/generate-shopping-link", () => {
   });
 
   it("returns 404 when service throws NotFoundError", async () => {
-    const { POST, locals } = await loadRoute({ serviceError: new NotFoundError("Need not found") });
+    const { POST, locals } = await loadRoute({
+      serviceErrorClass: "NotFoundError",
+      serviceErrorMessage: "Need not found",
+    });
 
     const response = await POST({
       request: new Request("http://localhost/api/ai/generate-shopping-link", {
@@ -187,7 +201,8 @@ describe("POST /api/ai/generate-shopping-link", () => {
 
   it("returns 403 when service throws ForbiddenError (not owner)", async () => {
     const { POST, locals } = await loadRoute({
-      serviceError: new ForbiddenError("You are not the owner of this need"),
+      serviceErrorClass: "ForbiddenError",
+      serviceErrorMessage: "You are not the owner of this need",
     });
 
     const response = await POST({
@@ -206,7 +221,8 @@ describe("POST /api/ai/generate-shopping-link", () => {
 
   it("returns 403 when service throws ForbiddenError (AI limit exceeded)", async () => {
     const { POST, locals } = await loadRoute({
-      serviceError: new ForbiddenError("AI usage limit exceeded"),
+      serviceErrorClass: "ForbiddenError",
+      serviceErrorMessage: "AI usage limit exceeded",
     });
 
     const response = await POST({
@@ -224,7 +240,7 @@ describe("POST /api/ai/generate-shopping-link", () => {
   });
 
   it("returns 500 when service throws InternalError", async () => {
-    const { POST, locals } = await loadRoute({ serviceError: new InternalError("Internal") });
+    const { POST, locals } = await loadRoute({ serviceErrorClass: "InternalError", serviceErrorMessage: "Internal" });
 
     const response = await POST({
       request: new Request("http://localhost/api/ai/generate-shopping-link", {

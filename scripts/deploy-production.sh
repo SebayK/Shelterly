@@ -62,11 +62,26 @@ cat supabase/migrations/20260221000000_add_get_pending_shelters_fn.sql >> "$TEMP
 
 echo "✅ Bundle created: $TEMP_FILE"
 echo ""
-echo "📤 Deploying to production..."
+echo "📤 Checking for pending dev-only (disable_rls) migrations..."
 echo ""
 
-# Push to production (will prompt for confirmation)
-supabase db push
+# Ensure no dev-only disable_rls migrations are pending before deploying
+PENDING_DISABLE_RLS_MIGRATIONS=$(supabase migration list 2>/dev/null | grep -E "disable_rls" | grep -E "\bPENDING\b" || true)
+
+if [ -n "$PENDING_DISABLE_RLS_MIGRATIONS" ]; then
+  echo "❌ Error: The following dev-only disable_rls migrations are pending and must NOT be applied to production:"
+  echo ""
+  echo "$PENDING_DISABLE_RLS_MIGRATIONS"
+  echo ""
+  echo "Please ensure these migrations are not pending on the production database (e.g., move them out of the production migration set or mark them as applied safely) before running this script."
+  exit 1
+fi
+
+echo "📤 Deploying curated production bundle to Supabase..."
+echo ""
+
+# Execute only the curated production bundle against the linked Supabase project
+supabase db execute --file "$TEMP_FILE"
 
 echo ""
 echo "🔍 Verifying RLS status..."

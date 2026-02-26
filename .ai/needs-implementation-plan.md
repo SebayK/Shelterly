@@ -21,14 +21,14 @@ Endpoint `GET /api/needs` służy do pobierania listy potrzeb zgłoszonych przez
 
 **Query Parameters:**
 
-| Parametr | Typ | Wymagany | Default | Opis |
-|----------|-----|----------|---------|------|
-| `shelter_id` | UUID | Nie | - | Identyfikator schroniska do filtrowania |
-| `category` | Enum | Nie | - | Kategoria potrzeby (food, textiles, cleaning, medical, toys, other) |
-| `urgency` | Enum | Nie | - | Poziom pilności (low, normal, high, urgent, critical) |
-| `fulfilled` | Boolean | Nie | - | Czy zawierać zrealizowane potrzeby (true/false) |
-| `limit` | Number | Nie | 20 | Liczba wyników na stronę (1-100) |
-| `offset` | Number | Nie | 0 | Offset dla paginacji (>= 0) |
+| Parametr     | Typ     | Wymagany | Default | Opis                                                                |
+| ------------ | ------- | -------- | ------- | ------------------------------------------------------------------- |
+| `shelter_id` | UUID    | Nie      | -       | Identyfikator schroniska do filtrowania                             |
+| `category`   | Enum    | Nie      | -       | Kategoria potrzeby (food, textiles, cleaning, medical, toys, other) |
+| `urgency`    | Enum    | Nie      | -       | Poziom pilności (low, normal, high, urgent, critical)               |
+| `fulfilled`  | Boolean | Nie      | -       | Czy zawierać zrealizowane potrzeby (true/false)                     |
+| `limit`      | Number  | Nie      | 20      | Liczba wyników na stronę (1-100)                                    |
+| `offset`     | Number  | Nie      | 0       | Offset dla paginacji (>= 0)                                         |
 
 **Przykładowe żądania:**
 
@@ -138,8 +138,8 @@ GET /api/needs?fulfilled=false&offset=20
       "title": "Karma mokra dla kotów",
       "description": "Pilnie potrzebujemy karmy mokrej dla naszych kotów...",
       "urgency": "urgent",
-      "target_quantity": 50.00,
-      "current_quantity": 12.00,
+      "target_quantity": 50.0,
+      "current_quantity": 12.0,
       "unit": "kg",
       "progress_percentage": 24,
       "is_fulfilled": false,
@@ -296,17 +296,17 @@ PostgreSQL Database (needs + profiles tables)
 
 ### Tabela scenariuszy błędów
 
-| Scenariusz | Kod HTTP | Error Code | Message | Przykład |
-|------------|----------|------------|---------|----------|
-| Nieprawidłowy UUID | 400 | VALIDATION_ERROR | Invalid UUID format for shelter_id | `shelter_id=invalid-uuid` |
-| Nieznana kategoria | 400 | VALIDATION_ERROR | Invalid category value | `category=unknown` |
-| Nieznana pilność | 400 | VALIDATION_ERROR | Invalid urgency value | `urgency=super-urgent` |
-| Limit < 1 | 400 | VALIDATION_ERROR | Limit must be between 1 and 100 | `limit=0` |
-| Limit > 100 | 400 | VALIDATION_ERROR | Limit must be between 1 and 100 | `limit=1000` |
-| Offset < 0 | 400 | VALIDATION_ERROR | Offset must be non-negative | `offset=-5` |
-| Nieprawidłowy boolean | 400 | VALIDATION_ERROR | Fulfilled must be a boolean | `fulfilled=maybe` |
-| Błąd połączenia z DB | 500 | INTERNAL_ERROR | An unexpected error occurred | - |
-| Timeout bazy danych | 500 | SERVICE_UNAVAILABLE | Service temporarily unavailable | - |
+| Scenariusz            | Kod HTTP | Error Code          | Message                            | Przykład                  |
+| --------------------- | -------- | ------------------- | ---------------------------------- | ------------------------- |
+| Nieprawidłowy UUID    | 400      | VALIDATION_ERROR    | Invalid UUID format for shelter_id | `shelter_id=invalid-uuid` |
+| Nieznana kategoria    | 400      | VALIDATION_ERROR    | Invalid category value             | `category=unknown`        |
+| Nieznana pilność      | 400      | VALIDATION_ERROR    | Invalid urgency value              | `urgency=super-urgent`    |
+| Limit < 1             | 400      | VALIDATION_ERROR    | Limit must be between 1 and 100    | `limit=0`                 |
+| Limit > 100           | 400      | VALIDATION_ERROR    | Limit must be between 1 and 100    | `limit=1000`              |
+| Offset < 0            | 400      | VALIDATION_ERROR    | Offset must be non-negative        | `offset=-5`               |
+| Nieprawidłowy boolean | 400      | VALIDATION_ERROR    | Fulfilled must be a boolean        | `fulfilled=maybe`         |
+| Błąd połączenia z DB  | 500      | INTERNAL_ERROR      | An unexpected error occurred       | -                         |
+| Timeout bazy danych   | 500      | SERVICE_UNAVAILABLE | Service temporarily unavailable    | -                         |
 
 ### Implementacja obsługi błędów
 
@@ -314,39 +314,45 @@ PostgreSQL Database (needs + profiles tables)
 try {
   // Walidacja
   const validatedParams = needsQuerySchema.parse(rawParams);
-  
+
   // Service call
   const result = await getNeeds(validatedParams, supabase);
-  
+
   return new Response(JSON.stringify(result), {
     status: 200,
-    headers: { 'Content-Type': 'application/json' }
+    headers: { "Content-Type": "application/json" },
   });
 } catch (error) {
   if (error instanceof z.ZodError) {
     // Validation errors
-    return new Response(JSON.stringify({
-      code: 'VALIDATION_ERROR',
-      message: 'Invalid query parameters',
-      details: error.errors.map(e => ({
-        field: e.path.join('.'),
-        message: e.message
-      }))
-    }), {
-      status: 400,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return new Response(
+      JSON.stringify({
+        code: "VALIDATION_ERROR",
+        message: "Invalid query parameters",
+        details: error.errors.map((e) => ({
+          field: e.path.join("."),
+          message: e.message,
+        })),
+      }),
+      {
+        status: 400,
+        headers: { "Content-Type": "application/json" },
+      }
+    );
   }
-  
+
   // Server errors
-  console.error('Error fetching needs:', error);
-  return new Response(JSON.stringify({
-    code: 'INTERNAL_ERROR',
-    message: 'An unexpected error occurred'
-  }), {
-    status: 500,
-    headers: { 'Content-Type': 'application/json' }
-  });
+  console.error("Error fetching needs:", error);
+  return new Response(
+    JSON.stringify({
+      code: "INTERNAL_ERROR",
+      message: "An unexpected error occurred",
+    }),
+    {
+      status: 500,
+      headers: { "Content-Type": "application/json" },
+    }
+  );
 }
 ```
 
@@ -436,11 +442,11 @@ try {
    ```typescript
    export const needsQuerySchema = z.object({
      shelter_id: z.string().uuid().optional(),
-     category: z.enum(['food', 'textiles', 'cleaning', 'medical', 'toys', 'other']).optional(),
-     urgency: z.enum(['low', 'normal', 'high', 'urgent', 'critical']).optional(),
+     category: z.enum(["food", "textiles", "cleaning", "medical", "toys", "other"]).optional(),
+     urgency: z.enum(["low", "normal", "high", "urgent", "critical"]).optional(),
      fulfilled: z.coerce.boolean().optional(),
      limit: z.coerce.number().int().min(1).max(100).default(20),
-     offset: z.coerce.number().int().min(0).default(0)
+     offset: z.coerce.number().int().min(0).default(0),
    });
    ```
 
@@ -471,8 +477,9 @@ try {
 
    ```typescript
    let query = supabase
-     .from('needs')
-     .select(`
+     .from("needs")
+     .select(
+       `
        id,
        category,
        title,
@@ -489,13 +496,15 @@ try {
          city,
          status
        )
-     `, { count: 'exact' })
-     .is('deleted_at', null)
-     .eq('profiles.status', 'verified')
-     .order('created_at', { ascending: false });
+     `,
+       { count: "exact" }
+     )
+     .is("deleted_at", null)
+     .eq("profiles.status", "verified")
+     .order("created_at", { ascending: false });
    ```
 
-   **Uwaga:** 
+   **Uwaga:**
    - Użycie `profiles!inner` zamiast `shelter:profiles!shelter_id` - INNER JOIN automatycznie przez foreign key
    - Dodanie pola `status` do select jest konieczne, aby móc filtrować po `profiles.status`
    - INNER JOIN zapewnia, że zwracane są tylko needs z powiązanymi profilami schronisk
@@ -531,7 +540,7 @@ try {
    - Obsługa błędów walidacji przez `createValidationErrorResponse()`
    - Pobranie Supabase client z `context.locals.supabase`
    - Utworzenie instancji `NeedsService` z Supabase client
-   - Wywołanie `needsService.getNeeds()` 
+   - Wywołanie `needsService.getNeeds()`
    - Zwrócenie odpowiedzi JSON
 4. Implementacja obsługi błędów:
    - Try-catch block
@@ -547,22 +556,22 @@ try {
 **Struktura pliku:**
 
 ```typescript
-import type { APIRoute } from 'astro';
-import { NeedsService } from '../../../lib/services/needs.service';
-import { needsQuerySchema } from '../../../lib/validation/needs.schemas';
-import { createValidationErrorResponse, createErrorHttpResponse, logError } from '../../../lib/errors';
+import type { APIRoute } from "astro";
+import { NeedsService } from "../../../lib/services/needs.service";
+import { needsQuerySchema } from "../../../lib/validation/needs.schemas";
+import { createValidationErrorResponse, createErrorHttpResponse, logError } from "../../../lib/errors";
 
 export const prerender = false;
 
 export const GET: APIRoute = async ({ url, locals }) => {
   try {
     // Extract and validate query parameters
-    const shelter_id = url.searchParams.get('shelter_id');
-    const category = url.searchParams.get('category');
-    const urgency = url.searchParams.get('urgency');
-    const fulfilled = url.searchParams.get('fulfilled');
-    const limit = url.searchParams.get('limit');
-    const offset = url.searchParams.get('offset');
+    const shelter_id = url.searchParams.get("shelter_id");
+    const category = url.searchParams.get("category");
+    const urgency = url.searchParams.get("urgency");
+    const fulfilled = url.searchParams.get("fulfilled");
+    const limit = url.searchParams.get("limit");
+    const offset = url.searchParams.get("offset");
 
     const validationResult = needsQuerySchema.safeParse({
       shelter_id,
@@ -578,32 +587,28 @@ export const GET: APIRoute = async ({ url, locals }) => {
     }
 
     const params = validationResult.data;
-    
+
     // Get Supabase client
     const supabase = locals.supabase;
     if (!supabase) {
-      return createErrorHttpResponse('INTERNAL_ERROR', 'Database connection not available', 500);
+      return createErrorHttpResponse("INTERNAL_ERROR", "Database connection not available", 500);
     }
-    
+
     // Fetch needs
     const needsService = new NeedsService(supabase);
     const result = await needsService.getNeeds(params);
-    
+
     return new Response(JSON.stringify(result), {
       status: 200,
-      headers: { 
-        'Content-Type': 'application/json',
-        'Cache-Control': 'public, max-age=60, s-maxage=120'
-      }
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "public, max-age=60, s-maxage=120",
+      },
     });
   } catch (error) {
     // Log and handle unexpected errors
-    logError('[GET /api/needs]', error);
-    return createErrorHttpResponse(
-      'INTERNAL_ERROR',
-      'An unexpected error occurred while fetching needs',
-      500
-    );
+    logError("[GET /api/needs]", error);
+    return createErrorHttpResponse("INTERNAL_ERROR", "An unexpected error occurred while fetching needs", 500);
   }
 };
 ```
@@ -688,6 +693,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
 ## 10. Checklist wdrożenia
 
 ### Implementacja kodu
+
 - [x] Utworzono `src/lib/validation/needs.schemas.ts` z Zod schemas
 - [x] Utworzono `src/lib/services/needs.service.ts` z klasą NeedsService
 - [x] Rozszerzono `src/lib/errors.ts` o helper functions (createErrorResponse, createErrorHttpResponse, createValidationErrorResponse, logError)
@@ -699,21 +705,25 @@ export const GET: APIRoute = async ({ url, locals }) => {
 - [x] Dodano odpowiednie headers (Content-Type, Cache-Control: public, max-age=60, s-maxage=120)
 
 ### Mock endpoints i dane testowe
+
 - [x] Utworzono mock endpoint `src/pages/api/mocks/needs/index.ts`
 - [x] Utworzono dane testowe `__mocks__/data/needs.json`
 - [x] Zaktualizowano README.md w `src/pages/api/mocks/` z przykładami użycia
 
 ### Testy
+
 - [ ] Napisano testy jednostkowe dla schema validation
 - [ ] Napisano testy jednostkowe dla needs service
 - [ ] Napisano testy integracyjne dla endpoint
 
 ### Przegląd i dokumentacja
+
 - [x] Zweryfikowano zgodność z TypeScript types
 - [x] Przeprowadzono code review
 - [x] Zaktualizowano dokumentację API (plan implementacji + Changelog)
 
 ### Testowanie i deployment
+
 - [ ] Przetestowano manualnie w środowisku dev
 - [ ] Skonfigurowano monitoring i alerty
 - [ ] Wdrożono na staging

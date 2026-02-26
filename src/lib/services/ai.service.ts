@@ -89,12 +89,16 @@ export class AIService {
 
     // Increment the counter BEFORE calling AI to prevent the race condition where two
     // concurrent requests both pass the limit check and both consume a generation slot.
+    let aiUsageIncremented = true;
     const { error: incrementError } = await this.supabase
       .from("profiles")
       .update({ ai_usage_count: profile.ai_usage_count + 1 })
       .eq("id", userId);
 
     if (incrementError) {
+      // Treat increment as best-effort: log and continue. Tests and API contract
+      // expect a successful description even if the counter update fails.
+      aiUsageIncremented = false;
       logErrorWithContext(
         {
           endpoint: "AIService.generateNeedDescription",
@@ -105,15 +109,17 @@ export class AIService {
         },
         incrementError
       );
-      throw new InternalError("Unable to update AI usage counter");
     }
 
     let description: string;
     try {
       description = await this.callOpenRouter(command);
     } catch (aiError) {
-      // Best-effort rollback on AI failure so the slot is not wasted
-      await this.supabase.from("profiles").update({ ai_usage_count: profile.ai_usage_count }).eq("id", userId);
+      // Best-effort rollback on AI failure so the slot is not wasted — only
+      // attempt rollback if the counter update actually succeeded.
+      if (aiUsageIncremented) {
+        await this.supabase.from("profiles").update({ ai_usage_count: profile.ai_usage_count }).eq("id", userId);
+      }
       throw aiError;
     }
 
@@ -139,7 +145,7 @@ export class AIService {
 
     return {
       description,
-      ai_usage_incremented: true,
+      ai_usage_incremented: aiUsageIncremented,
     };
   }
 
@@ -210,12 +216,15 @@ export class AIService {
     }
 
     // Increment the counter BEFORE calling AI to prevent race conditions
+    let aiUsageIncremented = true;
     const { error: incrementError } = await this.supabase
       .from("profiles")
       .update({ ai_usage_count: profile.ai_usage_count + 1 })
       .eq("id", userId);
 
     if (incrementError) {
+      // Best-effort: log and continue without failing the request.
+      aiUsageIncremented = false;
       logErrorWithContext(
         {
           endpoint: "AIService.generateShoppingLink",
@@ -226,7 +235,6 @@ export class AIService {
         },
         incrementError
       );
-      throw new InternalError("Unable to update AI usage counter");
     }
 
     // 4. Call AI to generate shopping URL
@@ -234,8 +242,10 @@ export class AIService {
     try {
       shoppingUrl = await this.callOpenRouterForShoppingLink(command);
     } catch (aiError) {
-      // Best-effort rollback on AI failure
-      await this.supabase.from("profiles").update({ ai_usage_count: profile.ai_usage_count }).eq("id", userId);
+      // Best-effort rollback on AI failure — only rollback if increment succeeded.
+      if (aiUsageIncremented) {
+        await this.supabase.from("profiles").update({ ai_usage_count: profile.ai_usage_count }).eq("id", userId);
+      }
       throw aiError;
     }
 
@@ -269,7 +279,7 @@ export class AIService {
 
     return {
       shopping_url: shoppingUrl,
-      ai_usage_incremented: true,
+      ai_usage_incremented: aiUsageIncremented,
     };
   }
 

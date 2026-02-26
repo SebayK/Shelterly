@@ -4,10 +4,7 @@
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit"
   },
-  "cSpell.words": [
-    "Shelterly",
-    "supabase"
-  ],
+  "cSpell.words": ["Shelterly", "supabase"],
   "chat.tools.terminal.autoApprove": {
     "npx tsc": true,
     "npx eslint": true,

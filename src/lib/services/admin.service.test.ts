@@ -137,7 +137,9 @@ describe("AdminService.getPendingShelters()", () => {
   it("includes the Supabase error message in the thrown InternalError", async () => {
     service = new AdminService(buildSupabaseMock({ error: { message: "permission denied" } }));
 
-    await expect(service.getPendingShelters({ limit: 20, offset: 0 })).rejects.toThrow("permission denied");
+    await expect(service.getPendingShelters({ limit: 20, offset: 0 })).rejects.toThrow(
+      "Failed to fetch pending shelters"
+    );
   });
 
   // -------------------------------------------------------------------------
@@ -271,7 +273,9 @@ describe("AdminService.updateShelterStatus()", () => {
     const supabase = buildUpdateStatusMock({ selectError: { message: "connection timeout" } });
     service = new AdminService(supabase);
 
-    await expect(service.updateShelterStatus(SHELTER_ID, { status: "verified" })).rejects.toThrow("connection timeout");
+    await expect(service.updateShelterStatus(SHELTER_ID, { status: "verified" })).rejects.toThrow(
+      "Failed to fetch shelter"
+    );
   });
 
   it("throws InternalError when UPDATE returns a database error", async () => {
@@ -452,9 +456,7 @@ describe("AdminService.getVerificationDocument()", () => {
     });
     service = new AdminService(supabase);
 
-    await expect(service.getVerificationDocument(DOC_SHELTER_ID)).rejects.toThrow(
-      "Verification document not found"
-    );
+    await expect(service.getVerificationDocument(DOC_SHELTER_ID)).rejects.toThrow("Verification document not found");
   });
 
   // -------------------------------------------------------------------------
@@ -472,7 +474,7 @@ describe("AdminService.getVerificationDocument()", () => {
     const supabase = buildGetDocumentMock({ shelterError: { message: "connection refused" } });
     service = new AdminService(supabase);
 
-    await expect(service.getVerificationDocument(DOC_SHELTER_ID)).rejects.toThrow("connection refused");
+    await expect(service.getVerificationDocument(DOC_SHELTER_ID)).rejects.toThrow("Failed to retrieve shelter data");
   });
 
   // -------------------------------------------------------------------------
@@ -510,6 +512,8 @@ describe("AdminService.getVerificationDocument()", () => {
     const supabase = buildGetDocumentMock({ storageError: { message: "internal storage error" } });
     service = new AdminService(supabase);
 
-    await expect(service.getVerificationDocument(DOC_SHELTER_ID)).rejects.toThrow("internal storage error");
+    await expect(service.getVerificationDocument(DOC_SHELTER_ID)).rejects.toThrow(
+      "Failed to download verification document"
+    );
   });
 });

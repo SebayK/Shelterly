@@ -15,16 +15,16 @@ Endpoint `PATCH /api/needs/:id` umożliwia właścicielowi schroniska częściow
   - `Content-Type: application/json`
 - **Request Body (wszystkie pola opcjonalne, minimum jedno wymagane):**
 
-| Pole               | Typ                   | Opis                                                     |
-| :----------------- | :-------------------- | :------------------------------------------------------- |
-| `title`            | `string`              | Tytuł potrzeby (3–255 znaków)                            |
-| `description`      | `string \| null`      | Opis potrzeby (maks. 2000 znaków, null = usunięcie)      |
-| `shopping_url`     | `string \| null`      | Link zakupowy (poprawny URL, null = usunięcie)           |
-| `urgency`          | `UrgencyLevel`        | Poziom pilności: low, normal, high, urgent, critical     |
-| `current_quantity` | `number`              | Aktualna zebrana ilość (≥ 0, ≤ target_quantity)          |
-| `target_quantity`  | `number`              | Docelowa ilość (> 0)                                     |
-| `category`         | `NeedCategory`        | Kategoria potrzeby                                       |
-| `unit`             | `NeedUnit`            | Jednostka miary                                          |
+| Pole               | Typ              | Opis                                                 |
+| :----------------- | :--------------- | :--------------------------------------------------- |
+| `title`            | `string`         | Tytuł potrzeby (3–255 znaków)                        |
+| `description`      | `string \| null` | Opis potrzeby (maks. 2000 znaków, null = usunięcie)  |
+| `shopping_url`     | `string \| null` | Link zakupowy (poprawny URL, null = usunięcie)       |
+| `urgency`          | `UrgencyLevel`   | Poziom pilności: low, normal, high, urgent, critical |
+| `current_quantity` | `number`         | Aktualna zebrana ilość (≥ 0, ≤ target_quantity)      |
+| `target_quantity`  | `number`         | Docelowa ilość (> 0)                                 |
+| `category`         | `NeedCategory`   | Kategoria potrzeby                                   |
+| `unit`             | `NeedUnit`       | Jednostka miary                                      |
 
 ## 3. Wykorzystywane typy
 
@@ -67,17 +67,17 @@ Endpoint `PATCH /api/needs/:id` umożliwia właścicielowi schroniska częściow
 
 ### Odpowiedzi błędów
 
-| Kod HTTP | ErrorCode           | Opis                                                              |
-| :------- | :------------------ | :---------------------------------------------------------------- |
-| 400      | `VALIDATION_ERROR`  | Nieprawidłowe dane (puste body, nieprawidłowy format, złe typy)   |
-| 400      | `INVALID_REQUEST`   | Body nie jest poprawnym JSON-em                                   |
-| 400      | `VALIDATION_ERROR`  | `current_quantity > target_quantity` (po uwzględnieniu wartości DB)|
-| 401      | `UNAUTHORIZED`      | Brak lub nieważny token uwierzytelniający                        |
-| 403      | `FORBIDDEN`         | Użytkownik nie jest właścicielem potrzeby                         |
-| 403      | `ACCOUNT_PENDING`   | Konto schroniska oczekuje na weryfikację                         |
-| 403      | `FORBIDDEN`         | Konto nie ma statusu `verified`                                  |
-| 404      | `NOT_FOUND`         | Potrzeba nie istnieje lub jest usunięta (soft-deleted)            |
-| 500      | `INTERNAL_ERROR`    | Nieoczekiwany błąd serwera / bazy danych                         |
+| Kod HTTP | ErrorCode          | Opis                                                                |
+| :------- | :----------------- | :------------------------------------------------------------------ |
+| 400      | `VALIDATION_ERROR` | Nieprawidłowe dane (puste body, nieprawidłowy format, złe typy)     |
+| 400      | `INVALID_REQUEST`  | Body nie jest poprawnym JSON-em                                     |
+| 400      | `VALIDATION_ERROR` | `current_quantity > target_quantity` (po uwzględnieniu wartości DB) |
+| 401      | `UNAUTHORIZED`     | Brak lub nieważny token uwierzytelniający                           |
+| 403      | `FORBIDDEN`        | Użytkownik nie jest właścicielem potrzeby                           |
+| 403      | `ACCOUNT_PENDING`  | Konto schroniska oczekuje na weryfikację                            |
+| 403      | `FORBIDDEN`        | Konto nie ma statusu `verified`                                     |
+| 404      | `NOT_FOUND`        | Potrzeba nie istnieje lub jest usunięta (soft-deleted)              |
+| 500      | `INTERNAL_ERROR`   | Nieoczekiwany błąd serwera / bazy danych                            |
 
 ## 5. Przepływ danych
 
@@ -140,22 +140,22 @@ Klient → [PATCH /api/needs/:id]
 
 ### Warstwa routingu (`src/pages/api/needs/[id]/index.ts`)
 
-| Scenariusz                          | Error Class       | HTTP Status | ErrorCode           |
-| :---------------------------------- | :---------------- | :---------- | :------------------ |
-| Nieprawidłowe UUID w URL            | —                 | 400         | `VALIDATION_ERROR`  |
-| Brak klienta Supabase              | —                 | 500         | `INTERNAL_ERROR`    |
-| Brak/nieważny token                | —                 | 401         | `UNAUTHORIZED`      |
-| Profil nie znaleziony               | —                 | 404         | `NOT_FOUND`         |
-| Rola ≠ shelter                      | —                 | 403         | `FORBIDDEN`         |
-| Status = pending                    | —                 | 403         | `ACCOUNT_PENDING`   |
-| Status ≠ verified                   | —                 | 403         | `FORBIDDEN`         |
-| Body nie jest JSON-em               | —                 | 400         | `INVALID_REQUEST`   |
-| Walidacja body Zod failed           | —                 | 400         | `VALIDATION_ERROR`  |
-| Potrzeba nie istnieje / soft-deleted| `NotFoundError`   | 404         | `NOT_FOUND`         |
-| Nie jest właścicielem               | `ForbiddenError`  | 403         | `FORBIDDEN`         |
-| current_quantity > target_quantity  | `ValidationError` | 400         | `VALIDATION_ERROR`  |
-| Błąd bazy danych                    | `InternalError`   | 500         | `INTERNAL_ERROR`    |
-| Nieoczekiwany wyjątek               | `Error`           | 500         | `INTERNAL_ERROR`    |
+| Scenariusz                           | Error Class       | HTTP Status | ErrorCode          |
+| :----------------------------------- | :---------------- | :---------- | :----------------- |
+| Nieprawidłowe UUID w URL             | —                 | 400         | `VALIDATION_ERROR` |
+| Brak klienta Supabase                | —                 | 500         | `INTERNAL_ERROR`   |
+| Brak/nieważny token                  | —                 | 401         | `UNAUTHORIZED`     |
+| Profil nie znaleziony                | —                 | 404         | `NOT_FOUND`        |
+| Rola ≠ shelter                       | —                 | 403         | `FORBIDDEN`        |
+| Status = pending                     | —                 | 403         | `ACCOUNT_PENDING`  |
+| Status ≠ verified                    | —                 | 403         | `FORBIDDEN`        |
+| Body nie jest JSON-em                | —                 | 400         | `INVALID_REQUEST`  |
+| Walidacja body Zod failed            | —                 | 400         | `VALIDATION_ERROR` |
+| Potrzeba nie istnieje / soft-deleted | `NotFoundError`   | 404         | `NOT_FOUND`        |
+| Nie jest właścicielem                | `ForbiddenError`  | 403         | `FORBIDDEN`        |
+| current_quantity > target_quantity   | `ValidationError` | 400         | `VALIDATION_ERROR` |
+| Błąd bazy danych                     | `InternalError`   | 500         | `INTERNAL_ERROR`   |
+| Nieoczekiwany wyjątek                | `Error`           | 500         | `INTERNAL_ERROR`   |
 
 ### Logowanie błędów
 
@@ -192,19 +192,9 @@ export const UpdateNeedSchema = z
       .min(3, "Title must be at least 3 characters")
       .max(255, "Title must not exceed 255 characters")
       .optional(),
-    description: z
-      .string()
-      .max(2000, "Description must not exceed 2000 characters")
-      .nullable()
-      .optional(),
-    shopping_url: z
-      .string()
-      .url("Invalid URL format for shopping_url")
-      .nullable()
-      .optional(),
-    urgency: z
-      .enum(["low", "normal", "high", "urgent", "critical"] as const)
-      .optional(),
+    description: z.string().max(2000, "Description must not exceed 2000 characters").nullable().optional(),
+    shopping_url: z.string().url("Invalid URL format for shopping_url").nullable().optional(),
+    urgency: z.enum(["low", "normal", "high", "urgent", "critical"] as const).optional(),
     current_quantity: z
       .number({ invalid_type_error: "current_quantity must be a number" })
       .min(0, "current_quantity must be non-negative")
@@ -215,18 +205,11 @@ export const UpdateNeedSchema = z
       .positive("target_quantity must be greater than 0")
       .max(99999999.99, "target_quantity is too large")
       .optional(),
-    category: z
-      .enum(["food", "textiles", "cleaning", "medical", "toys", "other"] as const)
-      .optional(),
-    unit: z
-      .enum(["pcs", "kg", "g", "l", "ml", "pack"] as const)
-      .optional(),
+    category: z.enum(["food", "textiles", "cleaning", "medical", "toys", "other"] as const).optional(),
+    unit: z.enum(["pcs", "kg", "g", "l", "ml", "pack"] as const).optional(),
   })
   .strict()
-  .refine(
-    (data) => Object.keys(data).length > 0,
-    { message: "Request body must contain at least one field to update" }
-  )
+  .refine((data) => Object.keys(data).length > 0, { message: "Request body must contain at least one field to update" })
   .refine(
     (data) => {
       if (data.current_quantity !== undefined && data.target_quantity !== undefined) {

@@ -57,13 +57,13 @@ Brak — endpoint nie przyjmuje request body. Nie jest wymagany nowy Command Mod
 
 ### Odpowiedzi błędów
 
-| HTTP Status | Kod błędu         | Opis                                                              |
-|-------------|--------------------|--------------------------------------------------------------------|
-| 400         | `VALIDATION_ERROR` | `id` nie jest prawidłowym UUID                                     |
-| 401         | `UNAUTHORIZED`     | Brak tokenu / nieprawidłowy token                                  |
-| 403         | `FORBIDDEN`        | Użytkownik nie jest właścicielem potrzeby                          |
+| HTTP Status | Kod błędu          | Opis                                                                    |
+| ----------- | ------------------ | ----------------------------------------------------------------------- |
+| 400         | `VALIDATION_ERROR` | `id` nie jest prawidłowym UUID                                          |
+| 401         | `UNAUTHORIZED`     | Brak tokenu / nieprawidłowy token                                       |
+| 403         | `FORBIDDEN`        | Użytkownik nie jest właścicielem potrzeby                               |
 | 404         | `NOT_FOUND`        | Potrzeba nie istnieje, jest usunięta (soft delete) lub już zrealizowana |
-| 500         | `INTERNAL_ERROR`   | Błąd serwera / bazy danych                                       |
+| 500         | `INTERNAL_ERROR`   | Błąd serwera / bazy danych                                              |
 
 ## 5. Przepływ danych
 
@@ -108,39 +108,44 @@ Obie operacje korzystają z Supabase JS SDK (klient wstrzyknięty przez middlewa
 ## 6. Względy bezpieczeństwa
 
 ### Uwierzytelnianie
+
 - Token Bearer jest wymagany — walidowany przez `supabase.auth.getUser()`
 - Brak tokenu lub nieprawidłowy token → 401
 
 ### Autoryzacja (własność zasobu)
+
 - Po pobraniu potrzeby z bazy, porównanie `need.shelter_id` z `user.id`
 - Jeśli użytkownik nie jest właścicielem → 403 Forbidden
 - Komunikat błędu nie powinien ujawniać istnienia zasobu do innych użytkowników — rozważyć zwrócenie 404 zamiast 403 dla nieuwierzytelnionych zapytań (w tym przypadku endpoint i tak wymaga auth, więc 403 jest odpowiednie)
 
 ### Walidacja danych wejściowych
+
 - Path param `id` walidowany jako UUID przez Zod — zapobiega SQL injection i nieoczekiwanym wartościom
 - Brak request body — brak potrzeby walidacji ciała żądania
 
 ### Ochrona przed nadużyciami
+
 - Operacja jest idempotentna w sensie stanu końcowego (wielokrotne wywołanie nie zmieni stanu), ale warto rozważyć zwrócenie 404 dla potrzeby już zrealizowanej, aby zachować spójność z konwencją API
 - Rate limiting nie jest wymagany dla tego endpointu (operacja nie tworzy zasobów ani nie wywołuje kosztownych usług zewnętrznych)
 
 ### Filtrowanie soft-deleted
+
 - Potrzeby z `deleted_at IS NOT NULL` są traktowane jako nieistniejące (404)
 
 ## 7. Obsługa błędów
 
 ### Scenariusze błędów i mapowanie
 
-| Scenariusz                                           | Wyjątek w service     | HTTP Status | Error Code         |
-|------------------------------------------------------|-----------------------|-------------|---------------------|
-| `id` nie jest prawidłowym UUID                       | — (walidacja Zod)     | 400         | `VALIDATION_ERROR`  |
-| Brak/nieprawidłowy token autoryzacji                 | —                     | 401         | `UNAUTHORIZED`      |
-| Użytkownik nie jest właścicielem potrzeby             | `ForbiddenError`      | 403         | `FORBIDDEN`         |
-| Potrzeba nie istnieje (lub soft-deleted)              | `NotFoundError`       | 404         | `NOT_FOUND`         |
-| Potrzeba jest już oznaczona jako zrealizowana         | `NotFoundError`       | 404         | `NOT_FOUND`         |
-| Błąd bazy danych przy SELECT                         | `InternalError`       | 500         | `INTERNAL_ERROR`    |
-| Błąd bazy danych przy UPDATE                         | `InternalError`       | 500         | `INTERNAL_ERROR`    |
-| Nieoczekiwany błąd                                   | dowolny `Error`       | 500         | `INTERNAL_ERROR`    |
+| Scenariusz                                    | Wyjątek w service | HTTP Status | Error Code         |
+| --------------------------------------------- | ----------------- | ----------- | ------------------ |
+| `id` nie jest prawidłowym UUID                | — (walidacja Zod) | 400         | `VALIDATION_ERROR` |
+| Brak/nieprawidłowy token autoryzacji          | —                 | 401         | `UNAUTHORIZED`     |
+| Użytkownik nie jest właścicielem potrzeby     | `ForbiddenError`  | 403         | `FORBIDDEN`        |
+| Potrzeba nie istnieje (lub soft-deleted)      | `NotFoundError`   | 404         | `NOT_FOUND`        |
+| Potrzeba jest już oznaczona jako zrealizowana | `NotFoundError`   | 404         | `NOT_FOUND`        |
+| Błąd bazy danych przy SELECT                  | `InternalError`   | 500         | `INTERNAL_ERROR`   |
+| Błąd bazy danych przy UPDATE                  | `InternalError`   | 500         | `INTERNAL_ERROR`   |
+| Nieoczekiwany błąd                            | dowolny `Error`   | 500         | `INTERNAL_ERROR`   |
 
 ### Logowanie błędów
 
@@ -195,6 +200,7 @@ async fulfillNeed(needId: string, userId: string): Promise<NeedFulfillResponseDT
 8. Zwrócenie `NeedFulfillResponseDTO`
 
 **Import typów:**
+
 - Dodać `NeedFulfillResponseDTO` do importów z `@/types`
 - Dodać `ForbiddenError` do importów z `@/lib/errors`
 

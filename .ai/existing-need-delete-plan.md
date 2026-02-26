@@ -38,14 +38,14 @@
 
 ## Obsługa błędów
 
-| Scenariusz | Error class | HTTP status | Error code |
-|---|---|---|---|
-| Niepoprawny UUID | — (Zod) | 400 | VALIDATION_ERROR |
-| Brak tokenu / niepoprawny | — | 401 | UNAUTHORIZED |
-| Użytkownik nie jest właścicielem | ForbiddenError | 403 | FORBIDDEN |
-| Potrzeba nie istnieje / już usunięta | NotFoundError | 404 | NOT_FOUND |
-| Błąd bazy danych | InternalError | 500 | INTERNAL_ERROR |
-| Nieoczekiwany błąd | — | 500 | INTERNAL_ERROR |
+| Scenariusz                           | Error class    | HTTP status | Error code       |
+| ------------------------------------ | -------------- | ----------- | ---------------- |
+| Niepoprawny UUID                     | — (Zod)        | 400         | VALIDATION_ERROR |
+| Brak tokenu / niepoprawny            | —              | 401         | UNAUTHORIZED     |
+| Użytkownik nie jest właścicielem     | ForbiddenError | 403         | FORBIDDEN        |
+| Potrzeba nie istnieje / już usunięta | NotFoundError  | 404         | NOT_FOUND        |
+| Błąd bazy danych                     | InternalError  | 500         | INTERNAL_ERROR   |
+| Nieoczekiwany błąd                   | —              | 500         | INTERNAL_ERROR   |
 
 ## Zagrożenia bezpieczeństwa
 
@@ -101,13 +101,13 @@ Endpoint nie przyjmuje body, więc nie wymaga Command Model ani dodatkowych sche
 
 ### Błędy
 
-| Status | Kod | Opis |
-|--------|-----|------|
-| 400 | `VALIDATION_ERROR` | Nieprawidłowy format UUID w parametrze `:id` |
-| 401 | `UNAUTHORIZED` | Brak lub nieprawidłowy token uwierzytelniający |
-| 403 | `FORBIDDEN` | Uwierzytelniony użytkownik nie jest właścicielem potrzeby |
-| 404 | `NOT_FOUND` | Potrzeba nie istnieje lub została już usunięta (soft delete) |
-| 500 | `INTERNAL_ERROR` | Błąd bazy danych lub nieoczekiwany wyjątek |
+| Status | Kod                | Opis                                                         |
+| ------ | ------------------ | ------------------------------------------------------------ |
+| 400    | `VALIDATION_ERROR` | Nieprawidłowy format UUID w parametrze `:id`                 |
+| 401    | `UNAUTHORIZED`     | Brak lub nieprawidłowy token uwierzytelniający               |
+| 403    | `FORBIDDEN`        | Uwierzytelniony użytkownik nie jest właścicielem potrzeby    |
+| 404    | `NOT_FOUND`        | Potrzeba nie istnieje lub została już usunięta (soft delete) |
+| 500    | `INTERNAL_ERROR`   | Błąd bazy danych lub nieoczekiwany wyjątek                   |
 
 ## 5. Przepływ danych
 

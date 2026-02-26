@@ -86,9 +86,7 @@
             {
               "listen": "prerequest",
               "script": {
-                "exec": [
-                  "pm.collectionVariables.set('timestamp', Math.floor(Date.now() / 1000));"
-                ],
+                "exec": ["pm.collectionVariables.set('timestamp', Math.floor(Date.now() / 1000));"],
                 "type": "text/javascript"
               }
             },
@@ -475,9 +473,7 @@
           ],
           "request": {
             "method": "PATCH",
-            "header": [
-              { "key": "Content-Type", "value": "application/json" }
-            ],
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
             "body": {
               "mode": "raw",
               "raw": "{\n  \"title\": \"Nowy tytuł\"\n}",
@@ -561,9 +557,7 @@
                 }
               ]
             },
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
             "url": {
               "raw": "{{base_url}}/api/needs/{{need_id}}/fulfill",
               "host": ["{{base_url}}"],
@@ -596,9 +590,7 @@
                 }
               ]
             },
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
             "url": {
               "raw": "{{base_url}}/api/needs/{{need_id}}/fulfill",
               "host": ["{{base_url}}"],
@@ -612,9 +604,7 @@
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test('Status 400 for invalid UUID', () => pm.expect(pm.response.code).to.equal(400));"
-                ],
+                "exec": ["pm.test('Status 400 for invalid UUID', () => pm.expect(pm.response.code).to.equal(400));"],
                 "type": "text/javascript"
               }
             }
@@ -631,9 +621,7 @@
                 }
               ]
             },
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
             "url": {
               "raw": "{{base_url}}/api/needs/nie-uuid/fulfill",
               "host": ["{{base_url}}"],
@@ -670,9 +658,7 @@
             {
               "listen": "test",
               "script": {
-                "exec": [
-                  "pm.test('404 for non-existing need', () => pm.expect(pm.response.code).to.equal(404));"
-                ],
+                "exec": ["pm.test('404 for non-existing need', () => pm.expect(pm.response.code).to.equal(404));"],
                 "type": "text/javascript"
               }
             }
@@ -689,9 +675,7 @@
                 }
               ]
             },
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
             "url": {
               "raw": "{{base_url}}/api/needs/00000000-0000-0000-0000-000000000000/fulfill",
               "host": ["{{base_url}}"],
@@ -726,9 +710,7 @@
                 }
               ]
             },
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
             "url": {
               "raw": "{{base_url}}/api/needs/nie-uuid",
               "host": ["{{base_url}}"],
@@ -788,9 +770,7 @@
                 }
               ]
             },
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{admin_token}}" }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
             "url": {
               "raw": "{{base_url}}/api/needs/{{need_id}}",
               "host": ["{{base_url}}"],
@@ -826,9 +806,7 @@
                 }
               ]
             },
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
             "url": {
               "raw": "{{base_url}}/api/needs/{{need_id}}",
               "host": ["{{base_url}}"],
@@ -863,9 +841,7 @@
                 }
               ]
             },
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
             "url": {
               "raw": "{{base_url}}/api/needs/00000000-0000-0000-0000-000000000000",
               "host": ["{{base_url}}"],
@@ -900,9 +876,7 @@
                 }
               ]
             },
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
             "url": {
               "raw": "{{base_url}}/api/needs/{{need_id}}",
               "host": ["{{base_url}}"],
@@ -978,9 +952,7 @@
                 }
               ]
             },
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
             "url": {
               "raw": "{{base_url}}/api/profiles/me",
               "host": ["{{base_url}}"],
@@ -1098,9 +1070,7 @@
                 }
               ]
             },
-            "header": [
-              { "key": "Authorization", "value": "Bearer {{access_token}}" }
-            ],
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
             "body": {
               "mode": "formdata",
               "formdata": [

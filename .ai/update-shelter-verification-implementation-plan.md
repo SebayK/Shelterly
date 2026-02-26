@@ -18,11 +18,11 @@ Endpoint umożliwia super administratorowi aktualizację statusu weryfikacji sch
 
 ### Walidacja danych wejściowych
 
-| Pole                | Typ             | Wymagane | Walidacja                                                                                                                                |
-|:--------------------|:----------------|:---------|:-----------------------------------------------------------------------------------------------------------------------------------------|
-| `id` (path param)   | `string` (UUID) | Tak      | Musi być poprawny format UUID v4                                                                                                         |
-| `status`            | `string` (enum) | Tak      | Dozwolone: `"verified"`, `"rejected"`, `"suspended"`. Wartość `"pending"` **nie jest dozwolona** — admin nie może cofnąć statusu do pending |
-| `rejection_reason`  | `string \| null`| Nie      | Wymagany gdy `status === "rejected"` (min 3 znaki, max 500 znaków). Musi być `null` lub nieobecny dla innych statusów                    |
+| Pole               | Typ              | Wymagane | Walidacja                                                                                                                                   |
+| :----------------- | :--------------- | :------- | :------------------------------------------------------------------------------------------------------------------------------------------ |
+| `id` (path param)  | `string` (UUID)  | Tak      | Musi być poprawny format UUID v4                                                                                                            |
+| `status`           | `string` (enum)  | Tak      | Dozwolone: `"verified"`, `"rejected"`, `"suspended"`. Wartość `"pending"` **nie jest dozwolona** — admin nie może cofnąć statusu do pending |
+| `rejection_reason` | `string \| null` | Nie      | Wymagany gdy `status === "rejected"` (min 3 znaki, max 500 znaków). Musi być `null` lub nieobecny dla innych statusów                       |
 
 ## 3. Wykorzystywane typy
 
@@ -67,13 +67,13 @@ Nagłówki: `Content-Type: application/json`, `Cache-Control: no-store`
 
 ### Odpowiedzi błędów
 
-| Kod HTTP | Kod błędu          | Opis                                                 |
-|:---------|:-------------------|:-----------------------------------------------------|
+| Kod HTTP | Kod błędu          | Opis                                                                                            |
+| :------- | :----------------- | :---------------------------------------------------------------------------------------------- |
 | 400      | `VALIDATION_ERROR` | Nieprawidłowy format UUID, niepoprawna wartość statusu, brak `rejection_reason` przy `rejected` |
-| 401      | `UNAUTHORIZED`     | Brak lub niepoprawny token uwierzytelnienia           |
-| 403      | `FORBIDDEN`        | Użytkownik nie ma roli `super_admin`                  |
-| 404      | `NOT_FOUND`        | Schronisko o podanym ID nie istnieje                  |
-| 500      | `INTERNAL_ERROR`   | Błąd bazy danych lub nieoczekiwany wyjątek            |
+| 401      | `UNAUTHORIZED`     | Brak lub niepoprawny token uwierzytelnienia                                                     |
+| 403      | `FORBIDDEN`        | Użytkownik nie ma roli `super_admin`                                                            |
+| 404      | `NOT_FOUND`        | Schronisko o podanym ID nie istnieje                                                            |
+| 500      | `INTERNAL_ERROR`   | Błąd bazy danych lub nieoczekiwany wyjątek                                                      |
 
 ## 5. Przepływ danych
 
@@ -125,19 +125,19 @@ Klient → [PATCH /api/admin/shelters/:id/status]
 
 ### Scenariusze błędów i mapowanie na kody HTTP
 
-| Scenariusz                                    | Wyjątek serwisu   | HTTP | Kod błędu          | Komunikat                                              |
-|:----------------------------------------------|:-------------------|:-----|:-------------------|:-------------------------------------------------------|
-| Niepoprawny UUID w ścieżce                    | —                  | 400  | `VALIDATION_ERROR` | "Invalid shelter ID format"                            |
-| Brak pola `status` w body                     | —                  | 400  | `VALIDATION_ERROR` | "Status is required"                                   |
-| Niedozwolona wartość `status`                 | —                  | 400  | `VALIDATION_ERROR` | "Status must be one of: verified, rejected, suspended" |
-| `status === 'rejected'` bez `rejection_reason`| —                  | 400  | `VALIDATION_ERROR` | "Rejection reason is required when status is rejected" |
-| `rejection_reason` zbyt krótki/długi          | —                  | 400  | `VALIDATION_ERROR` | Wiadomość walidacji Zod                                |
-| Brak tokena / niepoprawna sesja               | —                  | 401  | `UNAUTHORIZED`     | "Authentication required"                              |
-| Użytkownik nie jest super_admin               | —                  | 403  | `FORBIDDEN`        | "Access restricted to super administrators"            |
-| Profil użytkownika nie znaleziony             | —                  | 403  | `FORBIDDEN`        | "Access restricted to super administrators"            |
-| Schronisko o podanym ID nie istnieje          | `NotFoundError`    | 404  | `NOT_FOUND`        | "Shelter not found"                                    |
-| Błąd bazy danych (SELECT/UPDATE)              | `InternalError`    | 500  | `INTERNAL_ERROR`   | "An unexpected error occurred..."                      |
-| Nieoczekiwany wyjątek                         | `Error`            | 500  | `INTERNAL_ERROR`   | "An unexpected error occurred..."                      |
+| Scenariusz                                     | Wyjątek serwisu | HTTP | Kod błędu          | Komunikat                                              |
+| :--------------------------------------------- | :-------------- | :--- | :----------------- | :----------------------------------------------------- |
+| Niepoprawny UUID w ścieżce                     | —               | 400  | `VALIDATION_ERROR` | "Invalid shelter ID format"                            |
+| Brak pola `status` w body                      | —               | 400  | `VALIDATION_ERROR` | "Status is required"                                   |
+| Niedozwolona wartość `status`                  | —               | 400  | `VALIDATION_ERROR` | "Status must be one of: verified, rejected, suspended" |
+| `status === 'rejected'` bez `rejection_reason` | —               | 400  | `VALIDATION_ERROR` | "Rejection reason is required when status is rejected" |
+| `rejection_reason` zbyt krótki/długi           | —               | 400  | `VALIDATION_ERROR` | Wiadomość walidacji Zod                                |
+| Brak tokena / niepoprawna sesja                | —               | 401  | `UNAUTHORIZED`     | "Authentication required"                              |
+| Użytkownik nie jest super_admin                | —               | 403  | `FORBIDDEN`        | "Access restricted to super administrators"            |
+| Profil użytkownika nie znaleziony              | —               | 403  | `FORBIDDEN`        | "Access restricted to super administrators"            |
+| Schronisko o podanym ID nie istnieje           | `NotFoundError` | 404  | `NOT_FOUND`        | "Shelter not found"                                    |
+| Błąd bazy danych (SELECT/UPDATE)               | `InternalError` | 500  | `INTERNAL_ERROR`   | "An unexpected error occurred..."                      |
+| Nieoczekiwany wyjątek                          | `Error`         | 500  | `INTERNAL_ERROR`   | "An unexpected error occurred..."                      |
 
 ### Logowanie błędów
 
@@ -204,6 +204,7 @@ async updateShelterStatus(
 ```
 
 Logika:
+
 1. Sprawdzenie czy profil o danym `id` istnieje i ma `role = 'shelter'` (query: `SELECT id FROM profiles WHERE id = :id AND role = 'shelter'`)
 2. Jeśli nie znaleziono — rzucenie `NotFoundError("Shelter not found")`
 3. Wykonanie `UPDATE profiles SET status = :status, updated_at = now() WHERE id = :id` z `.select("id, status, updated_at")` i `.single()`
@@ -236,6 +237,7 @@ Utworzenie nowego pliku z eksportem `PATCH: APIRoute`:
 Dodanie nowej sekcji `describe("AdminService.updateShelterStatus()")`:
 
 **Scenariusze testowe:**
+
 - Pomyślna aktualizacja statusu na `verified` — zwraca poprawne DTO
 - Pomyślna aktualizacja statusu na `rejected` — zwraca poprawne DTO
 - Pomyślna aktualizacja statusu na `suspended` — zwraca poprawne DTO
@@ -250,6 +252,7 @@ Dodanie nowej sekcji `describe("AdminService.updateShelterStatus()")`:
 Testy analogiczne do wzorca z `pending.test.ts`:
 
 **Scenariusze testowe:**
+
 - 200 — pomyślna aktualizacja z poprawnym body DTO
 - 400 — nieprawidłowy UUID w ścieżce
 - 400 — brak `status` w body

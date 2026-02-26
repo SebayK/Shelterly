@@ -17,17 +17,20 @@ Endpoint umożliwia super adminowi pobranie dokumentu weryfikacyjnego przesłane
 ## 3. Wykorzystywane typy
 
 ### Istniejące typy (bez zmian)
+
 - `ShelterIdParamSchema` z `src/lib/validation/admin.schemas.ts` — walidacja UUID path param
 - `SupabaseClient` z `src/db/supabase.client.ts`
 - `NotFoundError`, `ForbiddenError`, `InternalError` z `src/lib/errors.ts`
 - `APP_CONFIG.STORAGE_BUCKET` z `src/lib/config.ts`
 
 ### Nowe typy
+
 Nie są wymagane żadne nowe DTO ani Command Modele. Odpowiedź to plik binarny (`Blob`/`ArrayBuffer`), nie struktura JSON.
 
 ## 4. Szczegóły odpowiedzi
 
 ### Sukces (200 OK)
+
 - Ciało odpowiedzi: surowe dane pliku (binary)
 - Nagłówki:
   - `Content-Type` — wyznaczony na podstawie rozszerzenia pliku (np. `application/pdf`, `image/jpeg`, `image/png`). Domyślnie `application/octet-stream`
@@ -35,13 +38,14 @@ Nie są wymagane żadne nowe DTO ani Command Modele. Odpowiedź to plik binarny 
   - `Cache-Control: no-store` — dokument wrażliwy, nie cachować
 
 ### Błędy
-| Status | Kod błędu | Warunek |
-|--------|-----------|---------|
-| 400 | `VALIDATION_ERROR` | Parametr `id` nie jest poprawnym UUID |
-| 401 | `UNAUTHORIZED` | Brak lub niepoprawny token autentykacji |
-| 403 | `FORBIDDEN` | Zalogowany użytkownik nie ma roli `super_admin` |
-| 404 | `NOT_FOUND` | Schronisko nie istnieje, `verification_doc_path` jest null, lub plik nie istnieje w Storage |
-| 500 | `INTERNAL_ERROR` | Błąd Supabase DB lub Storage |
+
+| Status | Kod błędu          | Warunek                                                                                     |
+| ------ | ------------------ | ------------------------------------------------------------------------------------------- |
+| 400    | `VALIDATION_ERROR` | Parametr `id` nie jest poprawnym UUID                                                       |
+| 401    | `UNAUTHORIZED`     | Brak lub niepoprawny token autentykacji                                                     |
+| 403    | `FORBIDDEN`        | Zalogowany użytkownik nie ma roli `super_admin`                                             |
+| 404    | `NOT_FOUND`        | Schronisko nie istnieje, `verification_doc_path` jest null, lub plik nie istnieje w Storage |
+| 500    | `INTERNAL_ERROR`   | Błąd Supabase DB lub Storage                                                                |
 
 ## 5. Przepływ danych
 
@@ -88,19 +92,20 @@ Klient → [GET /api/admin/shelters/:id/verification-document]
 
 ## 7. Obsługa błędów
 
-| Scenariusz | Wyjątek / warunek | Kod HTTP | ErrorCode | Komunikat |
-|---|---|---|---|---|
-| Niepoprawny UUID w `:id` | Zod validation failure | 400 | `VALIDATION_ERROR` | Szczegóły walidacji z Zod |
-| Brak tokenu / niepoprawny token | `getUser()` error | 401 | `UNAUTHORIZED` | "Authentication required" |
-| Brak profilu zalogowanego użytkownika | profile query returns null | 403 | `FORBIDDEN` | "Insufficient permissions" |
-| Rola != super_admin | profile.role check | 403 | `FORBIDDEN` | "Insufficient permissions" |
-| Schronisko nie istnieje | profile query for shelter returns null | 404 | `NOT_FOUND` | "Shelter not found" |
-| `verification_doc_path` jest null | field check | 404 | `NOT_FOUND` | "Verification document not found" |
-| Plik nie istnieje w Storage | storage.download() error | 404 | `NOT_FOUND` | "Verification document file not found" |
-| Błąd DB przy pobieraniu profilu | Supabase query error | 500 | `INTERNAL_ERROR` | "Failed to retrieve shelter data" |
-| Błąd Storage przy pobieraniu pliku | storage.download() error (nie 404) | 500 | `INTERNAL_ERROR` | "Failed to download verification document" |
+| Scenariusz                            | Wyjątek / warunek                      | Kod HTTP | ErrorCode          | Komunikat                                  |
+| ------------------------------------- | -------------------------------------- | -------- | ------------------ | ------------------------------------------ |
+| Niepoprawny UUID w `:id`              | Zod validation failure                 | 400      | `VALIDATION_ERROR` | Szczegóły walidacji z Zod                  |
+| Brak tokenu / niepoprawny token       | `getUser()` error                      | 401      | `UNAUTHORIZED`     | "Authentication required"                  |
+| Brak profilu zalogowanego użytkownika | profile query returns null             | 403      | `FORBIDDEN`        | "Insufficient permissions"                 |
+| Rola != super_admin                   | profile.role check                     | 403      | `FORBIDDEN`        | "Insufficient permissions"                 |
+| Schronisko nie istnieje               | profile query for shelter returns null | 404      | `NOT_FOUND`        | "Shelter not found"                        |
+| `verification_doc_path` jest null     | field check                            | 404      | `NOT_FOUND`        | "Verification document not found"          |
+| Plik nie istnieje w Storage           | storage.download() error               | 404      | `NOT_FOUND`        | "Verification document file not found"     |
+| Błąd DB przy pobieraniu profilu       | Supabase query error                   | 500      | `INTERNAL_ERROR`   | "Failed to retrieve shelter data"          |
+| Błąd Storage przy pobieraniu pliku    | storage.download() error (nie 404)     | 500      | `INTERNAL_ERROR`   | "Failed to download verification document" |
 
 Logowanie błędów za pomocą `logErrorWithContext()` z kontekstem:
+
 - `endpoint`: `"GET /api/admin/shelters/:id/verification-document"`
 - `user_id`: ID zalogowanego admina
 - `shelter_id`: ID schroniska z parametru URL
@@ -110,7 +115,7 @@ Logowanie błędów za pomocą `logErrorWithContext()` z kontekstem:
 1. **Minimalne zapytania do DB** — endpoint wykonuje tylko 2 zapytania:
    - Pobranie profilu zalogowanego użytkownika (auth + rola)
    - Pobranie profilu schroniska (ścieżka do dokumentu)
-   
+
    Można je zoptymalizować do jednego zapytania łączącego oba profile, ale dla czytelności kodu i spójności z istniejącymi endpointami lepiej zachować dwa osobne zapytania.
 
 2. **Streaming** — Supabase Storage `download()` zwraca `Blob`. Dla dużych plików warto bezpośrednio przekazać dane do odpowiedzi bez dodatkowego buforowania. Ponieważ dokumenty weryfikacyjne to zazwyczaj pliki PDF/obrazy o rozsądnych rozmiarach, nie wymaga to specjalnej optymalizacji.
@@ -142,6 +147,7 @@ interface VerificationDocumentResult {
 ```
 
 **Wyznaczanie Content-Type na podstawie rozszerzenia pliku:**
+
 - `.pdf` → `application/pdf`
 - `.jpg`, `.jpeg` → `image/jpeg`
 - `.png` → `image/png`
@@ -169,12 +175,14 @@ export const GET: APIRoute = async ({ params, locals }) => {
 ```
 
 Wzorzec implementacji powinien być spójny z `status.ts`:
+
 - Inline autentykacja i autoryzacja (getUser + profil role check)
 - Walidacja `:id` przez `ShelterIdParamSchema`
 - Blok try/catch z mapowaniem wyjątków na kody HTTP
 - Logowanie za pomocą `logErrorWithContext()`
 
 **Szczegóły zwracania odpowiedzi z plikiem:**
+
 ```typescript
 return new Response(result.data, {
   status: 200,
@@ -192,6 +200,7 @@ return new Response(result.data, {
 **Plik:** `src/lib/services/admin.service.test.ts` (rozszerzenie istniejącego pliku)
 
 Scenariusze testowe:
+
 1. **Happy path** — profil istnieje, `verification_doc_path` ustawiony, Storage zwraca plik → zwraca `VerificationDocumentResult`
 2. **Schronisko nie istnieje** → rzuca `NotFoundError`
 3. **`verification_doc_path` jest null** → rzuca `NotFoundError`
@@ -201,6 +210,7 @@ Scenariusze testowe:
 7. **Poprawne wyznaczanie Content-Type** — testy dla `.pdf`, `.jpg`, `.png`, `.webp`, nieznane rozszerzenie
 
 Mockowanie:
+
 - `supabase.from("profiles").select().eq().maybeSingle()` — mock łańcucha zapytań DB
 - `supabase.storage.from().download()` — mock Storage API
 
@@ -210,20 +220,20 @@ Mockowanie:
 
 Scenariusze testowe (wzorowane na `status.test.ts`):
 
-| # | Scenariusz | Oczekiwany status |
-|---|---|---|
-| 1 | Niepoprawny UUID w `:id` | 400 |
-| 2 | Brak autentykacji (getUser zwraca error) | 401 |
-| 3 | Rola != super_admin | 403 |
-| 4 | Profil zalogowanego użytkownika to null | 403 |
-| 5 | Schronisko nie istnieje (NotFoundError z service) | 404 |
-| 6 | Brak dokumentu (NotFoundError z service) | 404 |
-| 7 | Błąd wewnętrzny (InternalError z service) | 500 |
-| 8 | Nieoczekiwany błąd (Error z service) | 500 |
-| 9 | Happy path — zwraca plik z poprawnymi nagłówkami | 200 |
-| 10 | Happy path — Content-Type odpowiada typowi pliku | 200 |
-| 11 | Happy path — Content-Disposition z nazwą pliku | 200 |
-| 12 | Happy path — Cache-Control: no-store | 200 |
+| #   | Scenariusz                                        | Oczekiwany status |
+| --- | ------------------------------------------------- | ----------------- |
+| 1   | Niepoprawny UUID w `:id`                          | 400               |
+| 2   | Brak autentykacji (getUser zwraca error)          | 401               |
+| 3   | Rola != super_admin                               | 403               |
+| 4   | Profil zalogowanego użytkownika to null           | 403               |
+| 5   | Schronisko nie istnieje (NotFoundError z service) | 404               |
+| 6   | Brak dokumentu (NotFoundError z service)          | 404               |
+| 7   | Błąd wewnętrzny (InternalError z service)         | 500               |
+| 8   | Nieoczekiwany błąd (Error z service)              | 500               |
+| 9   | Happy path — zwraca plik z poprawnymi nagłówkami  | 200               |
+| 10  | Happy path — Content-Type odpowiada typowi pliku  | 200               |
+| 11  | Happy path — Content-Disposition z nazwą pliku    | 200               |
+| 12  | Happy path — Cache-Control: no-store              | 200               |
 
 Wzorzec testowy: `vi.doMock` na `AdminService` z dynamicznym importem, zgodny z `status.test.ts`.
 

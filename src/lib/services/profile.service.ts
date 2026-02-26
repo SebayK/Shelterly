@@ -8,7 +8,7 @@ import type {
   NeedsSummary,
   Location,
 } from "../../types";
-import { NotFoundError, InternalError, AddressNotFoundError } from "../errors";
+import { NotFoundError, InternalError, AddressNotFoundError, logError } from "../errors";
 import { APP_CONFIG } from "../config";
 
 /**
@@ -62,7 +62,7 @@ export class ProfileService {
     const { data: profiles, error, count } = await query;
 
     if (error) {
-      console.error("Failed to fetch profiles:", error);
+      logError("[ProfileService.getVerifiedProfiles]", error);
       throw new InternalError("Unable to retrieve shelter profiles");
     }
 
@@ -272,7 +272,7 @@ export class ProfileService {
       .single();
 
     if (error) {
-      console.error("Failed to update profile:", error);
+      logError("[ProfileService.updateProfile]", error);
       throw new InternalError("Unable to update profile");
     }
 
@@ -317,7 +317,7 @@ export class ProfileService {
     });
 
     if (uploadError) {
-      console.error("Failed to upload file:", uploadError);
+      logError("[ProfileService.uploadVerificationDocument:upload]", uploadError);
       throw new InternalError("Unable to upload verification document");
     }
 
@@ -331,13 +331,13 @@ export class ProfileService {
       .eq("id", userId);
 
     if (updateError) {
-      console.error("Failed to update profile with document path:", updateError);
+      logError("[ProfileService.uploadVerificationDocument:update]", updateError);
 
       // Try to clean up the uploaded file (don't fail if cleanup fails)
       try {
         await this.supabase.storage.from(APP_CONFIG.STORAGE_BUCKET).remove([filePath]);
       } catch (cleanupError) {
-        console.error("Failed to clean up uploaded file after database error:", cleanupError);
+        logError("[ProfileService.uploadVerificationDocument:cleanup]", cleanupError);
       }
 
       throw new InternalError("Unable to save verification document reference");
@@ -393,7 +393,7 @@ export class ProfileService {
         throw error;
       }
 
-      console.error("Geocoding failed:", error);
+      logError("[ProfileService.geocodeAddress]", error);
       throw new InternalError("Unable to geocode address");
     }
   }

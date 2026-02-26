@@ -453,9 +453,7 @@ describe("NeedsService.updateNeed()", () => {
     const otherOwnerNeed = { ...EXISTING_NEED, shelter_id: OTHER_USER_ID };
     service = new NeedsService(buildUpdateMock({ selectData: otherOwnerNeed }));
 
-    await expect(service.updateNeed(NEED_ID, USER_ID, COMMAND)).rejects.toThrow(
-      "You are not the owner of this need"
-    );
+    await expect(service.updateNeed(NEED_ID, USER_ID, COMMAND)).rejects.toThrow("You are not the owner of this need");
   });
 
   // -------------------------------------------------------------------------
@@ -618,13 +616,11 @@ describe("NeedsService.deleteNeed()", () => {
     await expect(service.deleteNeed(NEED_ID, USER_ID)).rejects.toThrow(ForbiddenError);
   });
 
-  it('throws ForbiddenError with ownership message', async () => {
+  it("throws ForbiddenError with ownership message", async () => {
     const otherOwnerNeed = { ...NEED_ROW, shelter_id: "00000000-0000-0000-0000-000000000002" };
     service = new NeedsService(buildDeleteMock({ selectData: otherOwnerNeed }));
 
-    await expect(service.deleteNeed(NEED_ID, USER_ID)).rejects.toThrow(
-      "You are not the owner of this need"
-    );
+    await expect(service.deleteNeed(NEED_ID, USER_ID)).rejects.toThrow("You are not the owner of this need");
   });
 
   // -------------------------------------------------------------------------
@@ -637,16 +633,14 @@ describe("NeedsService.deleteNeed()", () => {
     await expect(service.deleteNeed(NEED_ID, USER_ID)).rejects.toThrow(InternalError);
   });
 
-  it('throws InternalError with user-friendly message on SELECT error', async () => {
+  it("throws InternalError with user-friendly message on SELECT error", async () => {
     service = new NeedsService(buildDeleteMock({ selectError: { message: "pg error" } }));
 
     await expect(service.deleteNeed(NEED_ID, USER_ID)).rejects.toThrow("Unable to retrieve need");
   });
 
   it("throws InternalError on UPDATE database error", async () => {
-    service = new NeedsService(
-      buildDeleteMock({ updateError: { message: "constraint violation", code: "23514" } })
-    );
+    service = new NeedsService(buildDeleteMock({ updateError: { message: "constraint violation", code: "23514" } }));
 
     await expect(service.deleteNeed(NEED_ID, USER_ID)).rejects.toThrow(InternalError);
   });

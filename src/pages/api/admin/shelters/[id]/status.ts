@@ -1,6 +1,9 @@
 import type { APIRoute } from "astro";
 import { AdminService } from "@/lib/services/admin.service";
-import { ShelterIdParamSchema, UpdateShelterStatusSchema } from "@/lib/validation/admin.schemas";
+import {
+  ShelterIdParamSchema,
+  UpdateShelterStatusSchemaStrict as UpdateShelterStatusSchema,
+} from "@/lib/validation/admin.schemas";
 import {
   createValidationErrorResponse,
   createErrorHttpResponse,

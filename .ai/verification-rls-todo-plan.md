@@ -10,15 +10,13 @@ Obecnie w `src/pages/api/needs/index.ts` znajduje się obejście (workaround) w 
 ```typescript
 // DEV ONLY: Auto-verify pending profiles for easier local testing
 if (import.meta.env.DEV && profile.status === "pending") {
-  const { error: verifyError } = await supabase
-    .from("profiles")
-    .update({ status: "verified" })
-    .eq("id", shelterId);
+  const { error: verifyError } = await supabase.from("profiles").update({ status: "verified" }).eq("id", shelterId);
   // ...
 }
 ```
 
 **Dlaczego to powstało:**
+
 1. Signup przez Supabase Auth tworzy profil ze statusem `pending`
 2. Tworzenie potrzeb (`POST /api/needs`) wymaga statusu `verified`
 3. Bez tego obejścia flow signup → create need nie działa w testach
@@ -82,7 +80,7 @@ Endpointy admin już istnieją i są gotowe do użycia:
 -- Purpose: Create default super admin account for local development/testing
 -- Email: admin@shelterly.dev
 -- Password: Admin123!
--- 
+--
 -- ⚠️ WARNING: This seed file is ONLY executed in local development.
 -- Production super admin must be created manually via Supabase Dashboard.
 -- ============================================================================
@@ -153,12 +151,14 @@ END $$;
 ```
 
 **Jak zastosować:**
+
 ```bash
 # Po utworzeniu pliku, zresetuj bazę lokalną
 npx supabase db reset
 ```
 
 **Credentials:**
+
 - Email: `admin@shelterly.dev`
 - Password: `Admin123!`
 
@@ -167,6 +167,7 @@ npx supabase db reset
 ### 2. Przetestować Admin API ręcznie 🟡 WAŻNE
 
 **Test 1: Login jako admin**
+
 ```bash
 curl -X POST "http://127.0.0.1:54321/auth/v1/token?grant_type=password" \
   -H "apikey: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0" \
@@ -175,12 +176,14 @@ curl -X POST "http://127.0.0.1:54321/auth/v1/token?grant_type=password" \
 ```
 
 **Test 2: GET pending shelters**
+
 ```bash
 curl "http://localhost:3003/api/admin/shelters/pending" \
   -H "Authorization: Bearer <admin_token>"
 ```
 
 **Test 3: PATCH verify shelter**
+
 ```bash
 curl -X PATCH "http://localhost:3003/api/admin/shelters/<shelter_id>/status" \
   -H "Authorization: Bearer <admin_token>" \
@@ -199,6 +202,7 @@ curl -X PATCH "http://localhost:3003/api/admin/shelters/<shelter_id>/status" \
 **Requesty do dodania:**
 
 1. **Login Admin**
+
    ```json
    {
      "name": "Login Admin",
@@ -214,30 +218,31 @@ curl -X PATCH "http://localhost:3003/api/admin/shelters/<shelter_id>/status" \
        },
        "url": "{{supabase_url}}/auth/v1/token?grant_type=password"
      },
-     "event": [{
-       "listen": "test",
-       "script": {
-         "exec": [
-           "const json = pm.response.json();",
-           "if (json.access_token) {",
-           "    pm.collectionVariables.set('admin_token', json.access_token);",
-           "    console.log('✅ Admin token zapisany');",
-           "}"
-         ]
+     "event": [
+       {
+         "listen": "test",
+         "script": {
+           "exec": [
+             "const json = pm.response.json();",
+             "if (json.access_token) {",
+             "    pm.collectionVariables.set('admin_token', json.access_token);",
+             "    console.log('✅ Admin token zapisany');",
+             "}"
+           ]
+         }
        }
-     }]
+     ]
    }
    ```
 
 2. **GET Pending Shelters**
+
    ```json
    {
      "name": "GET Pending Shelters",
      "request": {
        "method": "GET",
-       "header": [
-         { "key": "Authorization", "value": "Bearer {{admin_token}}" }
-       ],
+       "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
        "url": "{{base_url}}/api/admin/shelters/pending"
      }
    }
@@ -263,6 +268,7 @@ curl -X PATCH "http://localhost:3003/api/admin/shelters/<shelter_id>/status" \
    ```
 
 **Dodać zmienną kolekcji:**
+
 ```json
 {
   "key": "admin_token",
@@ -271,6 +277,7 @@ curl -X PATCH "http://localhost:3003/api/admin/shelters/<shelter_id>/status" \
 ```
 
 **Nowy flow w newman:**
+
 1. Signup (shelter) → `new_user_id`
 2. Login Admin → `admin_token`
 3. PATCH Verify Shelter (użyj `new_user_id`)
@@ -283,13 +290,11 @@ curl -X PATCH "http://localhost:3003/api/admin/shelters/<shelter_id>/status" \
 **Plik:** `src/pages/api/needs/index.ts`
 
 **Usunąć sekcję:**
+
 ```typescript
 // DEV ONLY: Auto-verify pending profiles for easier local testing
 if (import.meta.env.DEV && profile.status === "pending") {
-  const { error: verifyError } = await supabase
-    .from("profiles")
-    .update({ status: "verified" })
-    .eq("id", shelterId);
+  const { error: verifyError } = await supabase.from("profiles").update({ status: "verified" }).eq("id", shelterId);
 
   if (!verifyError) {
     profile.status = "verified";
@@ -300,6 +305,7 @@ if (import.meta.env.DEV && profile.status === "pending") {
 ```
 
 **Pozostawić:**
+
 ```typescript
 // Oryginalna logika biznesowa
 if (profile.status === "pending") {
@@ -317,7 +323,7 @@ if (profile.status !== "verified") {
 
 **Plik:** `supabase/README.md` (lub aktualizacja głównego README)
 
-```markdown
+````markdown
 ## Development Workflow - Shelter Verification
 
 ### Local Testing (Development Only)
@@ -326,6 +332,7 @@ if (profile.status !== "verified") {
    ```bash
    npx supabase start
    ```
+````
 
 2. **Super Admin Credentials (DEV ONLY):**
    - Email: `admin@shelterly.dev`
@@ -346,10 +353,12 @@ See: `.ai/verification-rls-todo-plan.md` → "Seed vs Production" section.
 ### Postman Collection
 
 Import `poc/Shelterly-API.postman_collection.json` and run:
+
 1. `1. Auth > Signup` - creates pending shelter
 2. `4. Admin > Login Admin` - get admin token (use DEV credentials locally)
 3. `4. Admin > PATCH Verify Shelter` - approve shelter
 4. `2. Needs > POST /api/needs` - create need (now works!)
+
 ```
 
 ---
@@ -366,9 +375,11 @@ Import `poc/Shelterly-API.postman_collection.json` and run:
 
 **Credentials dla DEV:**
 ```
+
 Email: admin@shelterly.dev
 Password: Admin123!
-```
+
+````
 
 ### 🚀 Production
 
@@ -385,9 +396,10 @@ Password: Admin123!
 ```sql
 -- Wykonaj w Supabase Dashboard → SQL Editor
 INSERT INTO auth.users (...)  -- pełny SQL jak w seed.sql
-```
+````
 
 **Opcja 3: Migration (jeśli chcesz committować w repo)**
+
 ```sql
 -- Uwaga: To zacommituje hasło do repo!
 -- Tylko jeśli używasz zmiennych środowiskowych lub vault
@@ -411,18 +423,22 @@ DROP FUNCTION create_super_admin_if_not_exists();
 ## Korzyści po implementacji
 
 ### ✅ Produkcyjny flow działa lokalnie
+
 - Testujemy dokładnie ten sam proces co w produkcji
 - Brak niespodzianek przy deploymencie
 
 ### ✅ Bezpieczeństwo
+
 - Usunięcie auto-verify eliminuje ryzyko przypadkowego pozostawienia tego w produkcji
 - RLS policies działają zgodnie z założeniami
 
 ### ✅ Testowanie Admin Panel
+
 - Możliwość testowania całego flow weryfikacji
 - Przygotowanie do implementacji UI panelu admina
 
 ### ✅ Czysty kod
+
 - Brak workaroundów i warunkowych bloków `if (import.meta.env.DEV)`
 - Łatwiejsze utrzymanie i rozwój
 
@@ -431,6 +447,7 @@ DROP FUNCTION create_super_admin_if_not_exists();
 ## Checklist implementacji
 
 ### Development (Local)
+
 - [ ] **1. Utworzyć `supabase/seed.sql`** z super adminem (DEV only)
 - [ ] **2. Zresetować bazę:** `npx supabase db reset`
 - [ ] **3. Przetestować login admin** przez curl/Postman (admin@shelterly.dev)
@@ -444,6 +461,7 @@ DROP FUNCTION create_super_admin_if_not_exists();
 - [ ] **11. Commit changes:** `git commit -m "feat: implement proper admin verification flow, remove DEV auto-verify"`
 
 ### Production (When deploying)
+
 - [ ] **P1. Nie pushować seed.sql** do produkcji (automatyczne - supabase db push pomija seed)
 - [ ] **P2. Utworzyć super admina ręcznie** przez Supabase Dashboard
 - [ ] **P3. Zweryfikować role** admina: `SELECT role FROM profiles WHERE email = 'admin@...'`
@@ -466,6 +484,7 @@ DROP FUNCTION create_super_admin_if_not_exists();
 ### Problem: "Super admin user already exists but has wrong role" (DEV only)
 
 **Rozwiązanie:**
+
 ```bash
 # Zresetuj bazę lokalną
 npx supabase db reset
@@ -476,14 +495,15 @@ docker exec -it supabase_db_Shelterly psql -U postgres -d postgres
 
 ```sql
 -- Ręczna aktualizacja roli
-UPDATE public.profiles 
-SET role = 'super_admin', status = 'verified' 
+UPDATE public.profiles
+SET role = 'super_admin', status = 'verified'
 WHERE id = '00000000-0000-0000-0000-000000000001';
 ```
 
 ### Problem: "Admin API returns 403 even with admin token"
 
 **Diagnoza:**
+
 ```sql
 -- Sprawdź rolę użytkownika
 SELECT id, email, raw_user_meta_data FROM auth.users WHERE email = 'admin@shelterly.dev';
@@ -495,6 +515,7 @@ SELECT id, role, status FROM public.profiles WHERE id = '00000000-0000-0000-0000
 ### Problem: "Newman flow breaks after removing auto-verify"
 
 **Rozwiązanie:** Upewnij się że:
+
 1. Request "PATCH Verify Shelter" wykonuje się PRZED "POST /api/needs"
 2. `{{new_user_id}}` jest prawidłowo zapisany w test script signup
 3. `{{admin_token}}` jest zapisany w test script login admin

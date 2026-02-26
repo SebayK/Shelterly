@@ -3,6 +3,7 @@ import { ProfileService } from "../../../../lib/services/profile.service";
 import { GeocodeCommandSchema } from "../../../../lib/validation/profile.schemas";
 import type { ErrorResponse } from "../../../../types";
 import { AddressNotFoundError } from "../../../../lib/errors";
+import { logError } from "../../../../lib/errors";
 
 export const prerender = false;
 
@@ -114,8 +115,7 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // eslint-disable-next-line no-console
-    console.error("Unexpected error in POST /api/profiles/me/geocode:", error);
+    logError("[POST /api/profiles/me/geocode]", error);
 
     const errorResponse: ErrorResponse = {
       error: {

@@ -67,6 +67,14 @@ async function loadRoute(options: LoadRouteOptions = {}) {
               error: authError,
             }),
           },
+          // Default profiles query chain used by the route to validate role/status
+          from: vi.fn().mockReturnValue({
+            select: vi.fn().mockReturnValue({
+              eq: vi.fn().mockReturnValue({
+                maybeSingle: vi.fn().mockResolvedValue({ data: { role: "shelter", status: "verified" }, error: null }),
+              }),
+            }),
+          }),
         };
 
   const fulfillNeed = serviceError ? vi.fn().mockRejectedValue(serviceError) : vi.fn().mockResolvedValue(serviceResult);

@@ -6,11 +6,13 @@ describe("RateLimiter", () => {
   const KEY = "shelter-uuid-123";
 
   beforeEach(() => {
-    limiter = new RateLimiter({ windowMs: 60_000, maxRequests: 3 });
     vi.useFakeTimers();
+    limiter = new RateLimiter({ windowMs: 60_000, maxRequests: 3 });
   });
 
   afterEach(() => {
+    // Stop the interval to avoid leaking timers across tests
+    limiter.destroy();
     vi.useRealTimers();
   });
 

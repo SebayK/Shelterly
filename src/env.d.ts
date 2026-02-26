@@ -6,6 +6,7 @@ declare global {
   namespace App {
     interface Locals {
       supabase: SupabaseClient;
+      correlation_id?: string;
     }
   }
 }

@@ -20,7 +20,14 @@ export const NeedCategoryEnum = z.enum([
 /**
  * Need unit enum for AI command validation
  */
-export const NeedUnitEnum = z.enum(["pcs", "kg", "g", "l", "ml", "pack"] as const satisfies readonly Enums<"need_unit">[]);
+export const NeedUnitEnum = z.enum([
+  "pcs",
+  "kg",
+  "g",
+  "l",
+  "ml",
+  "pack",
+] as const satisfies readonly Enums<"need_unit">[]);
 
 /**
  * Validation schema for POST /api/ai/generate-description request body

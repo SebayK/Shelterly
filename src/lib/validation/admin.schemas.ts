@@ -60,4 +60,24 @@ export const UpdateShelterStatusSchema = z.object({
     .optional(),
 });
 
+// Enforce cross-field rules: when status==='rejected' then rejection_reason
+// must be present (non-empty). When status !== 'rejected' rejection_reason
+// must be null/undefined.
+export const UpdateShelterStatusSchemaStrict = UpdateShelterStatusSchema.superRefine((val, ctx) => {
+  const { status, rejection_reason } = val as { status: string; rejection_reason?: string | null };
+
+  if (status === "rejected") {
+    if (rejection_reason === undefined || rejection_reason === null || rejection_reason.trim() === "") {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: "rejection_reason is required when status is 'rejected'" });
+    }
+  } else {
+    if (rejection_reason !== undefined && rejection_reason !== null) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: "rejection_reason must be omitted unless status is 'rejected'",
+      });
+    }
+  }
+});
+
 export type UpdateShelterStatusOutput = z.output<typeof UpdateShelterStatusSchema>;

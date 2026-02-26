@@ -84,6 +84,16 @@ async function loadRoute(options: LoadRouteOptions = {}) {
               data: { user: authUser },
               error: authError,
             }),
+            // Default profiles query chain used by the DELETE route to validate role/status
+            from: vi.fn().mockReturnValue({
+              select: vi.fn().mockReturnValue({
+                eq: vi.fn().mockReturnValue({
+                  maybeSingle: vi
+                    .fn()
+                    .mockResolvedValue({ data: { role: "shelter", status: "verified" }, error: null }),
+                }),
+              }),
+            }),
           },
           from: fromProfiles,
         };
@@ -521,9 +531,18 @@ async function loadDeleteRoute(options: LoadDeleteRouteOptions = {}) {
           },
         };
 
-  const deleteNeed = serviceError
-    ? vi.fn().mockRejectedValue(serviceError)
-    : vi.fn().mockResolvedValue(serviceResult);
+  // Ensure DELETE route's profile lookup has a default mock chain (only when supabase is not null)
+  if (supabase !== null && (supabase as any)?.from === undefined) {
+    (supabase as any).from = vi.fn().mockReturnValue({
+      select: vi.fn().mockReturnValue({
+        eq: vi.fn().mockReturnValue({
+          maybeSingle: vi.fn().mockResolvedValue({ data: { role: "shelter", status: "verified" }, error: null }),
+        }),
+      }),
+    });
+  }
+
+  const deleteNeed = serviceError ? vi.fn().mockRejectedValue(serviceError) : vi.fn().mockResolvedValue(serviceResult);
 
   vi.doMock("@/lib/services/needs.service", () => ({
     NeedsService: class {
