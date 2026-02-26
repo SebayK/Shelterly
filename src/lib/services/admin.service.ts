@@ -87,7 +87,7 @@ export class AdminService {
     });
 
     if (error) {
-      throw new InternalError(`Failed to fetch pending shelters: ${error.message}`);
+      throw new InternalError("Failed to fetch pending shelters");
     }
 
     const rows = (data ?? []) as PendingShelterRPCRow[];
@@ -137,7 +137,7 @@ export class AdminService {
       .maybeSingle();
 
     if (selectError) {
-      throw new InternalError(`Failed to fetch shelter: ${selectError.message}`);
+      throw new InternalError("Failed to fetch shelter");
     }
 
     if (!existing) {
@@ -153,7 +153,7 @@ export class AdminService {
       .single();
 
     if (updateError || !updated) {
-      throw new InternalError(`Failed to update shelter status: ${updateError?.message ?? "no data returned"}`);
+      throw new InternalError("Failed to update shelter status");
     }
 
     return {
@@ -181,7 +181,7 @@ export class AdminService {
       .maybeSingle();
 
     if (dbError) {
-      throw new InternalError(`Failed to retrieve shelter data: ${dbError.message}`);
+      throw new InternalError("Failed to retrieve shelter data");
     }
 
     if (!shelter) {
@@ -214,7 +214,7 @@ export class AdminService {
         throw new NotFoundError("Verification document file not found");
       }
 
-      throw new InternalError(`Failed to download verification document: ${storageError.message}`);
+      throw new InternalError("Failed to download verification document");
     }
 
     // 4. Derive metadata from the storage path

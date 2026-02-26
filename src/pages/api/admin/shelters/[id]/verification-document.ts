@@ -76,7 +76,8 @@ export const GET: APIRoute = async ({ params, locals }) => {
       status: 200,
       headers: {
         "Content-Type": result.contentType,
-        "Content-Disposition": `attachment; filename="${result.fileName}"`,
+        // RFC 5987 encoding prevents header injection from untrusted filenames
+        "Content-Disposition": `attachment; filename*=UTF-8''${encodeURIComponent(result.fileName)}`,
         "Cache-Control": "no-store",
         "X-Content-Type-Options": "nosniff",
       },
