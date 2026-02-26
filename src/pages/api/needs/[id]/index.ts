@@ -226,7 +226,31 @@ export const DELETE: APIRoute = async ({ params, locals }) => {
     return createErrorHttpResponse("UNAUTHORIZED", "Authentication required", 401);
   }
 
-  // 4. Delegate to service layer (ownership check + DB update done inside)
+  // 4. Verify role and account status — only verified shelters may delete their own needs
+  const { data: profile, error: profileError } = await supabase
+    .from("profiles")
+    .select("role, status")
+    .eq("id", user.id)
+    .maybeSingle();
+
+  if (profileError) {
+    logErrorWithContext({ endpoint: "DELETE /api/needs/:id", user_id: user.id }, profileError);
+    return createErrorHttpResponse("INTERNAL_ERROR", "Unable to retrieve shelter profile", 500);
+  }
+
+  if (!profile || profile.role !== "shelter") {
+    return createErrorHttpResponse("FORBIDDEN", "Only shelters can delete needs", 403);
+  }
+
+  if (profile.status === "pending") {
+    return createErrorHttpResponse("ACCOUNT_PENDING", "Your account is pending verification", 403);
+  }
+
+  if (profile.status !== "verified") {
+    return createErrorHttpResponse("FORBIDDEN", "Your account does not have the required status to delete needs", 403);
+  }
+
+  // 5. Delegate to service layer (ownership check + DB update done inside)
   try {
     const needsService = new NeedsService(supabase);
     const result = await needsService.deleteNeed(id, user.id);
