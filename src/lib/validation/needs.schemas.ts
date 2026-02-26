@@ -120,3 +120,76 @@ export const CreateNeedSchema = z.object({
 
 export type CreateNeedInput = z.input<typeof CreateNeedSchema>;
 export type CreateNeedOutput = z.output<typeof CreateNeedSchema>;
+
+/**
+ * Validation schema for PATCH /api/needs/:id request body
+ * All fields are optional — at least one must be provided (enforced by .refine).
+ * Cross-field validation: if both current_quantity and target_quantity are provided,
+ * current_quantity must be ≤ target_quantity.
+ * When only one is provided, the cross-field check against the DB value is done in the service layer.
+ */
+export const UpdateNeedSchema = z
+  .object({
+    title: z
+      .string()
+      .trim()
+      .min(3, "Title must be at least 3 characters")
+      .max(255, "Title must not exceed 255 characters")
+      .optional(),
+    description: z
+      .string()
+      .max(2000, "Description must not exceed 2000 characters")
+      .nullable()
+      .optional(),
+    shopping_url: z
+      .string()
+      .url("Invalid URL format for shopping_url")
+      .nullable()
+      .optional(),
+    urgency: z
+      .enum(["low", "normal", "high", "urgent", "critical"] as const satisfies readonly Enums<"urgency_level">[])
+      .optional(),
+    current_quantity: z
+      .number({ invalid_type_error: "current_quantity must be a number" })
+      .min(0, "current_quantity must be at least 0")
+      .max(99999999.99, "current_quantity is too large")
+      .optional(),
+    target_quantity: z
+      .number({ invalid_type_error: "target_quantity must be a number" })
+      .positive("target_quantity must be greater than 0")
+      .max(99999999.99, "target_quantity is too large")
+      .optional(),
+    category: z
+      .enum([
+        "food",
+        "textiles",
+        "cleaning",
+        "medical",
+        "toys",
+        "other",
+      ] as const satisfies readonly Enums<"need_category">[])
+      .optional(),
+    unit: z
+      .enum(["pcs", "kg", "g", "l", "ml", "pack"] as const satisfies readonly Enums<"need_unit">[])
+      .optional(),
+  })
+  .refine(
+    (data) => Object.keys(data).length > 0,
+    { message: "At least one field must be provided for update" }
+  )
+  .refine(
+    (data) => {
+      // Cross-field: if both quantities provided, current must not exceed target
+      if (data.current_quantity !== undefined && data.target_quantity !== undefined) {
+        return data.current_quantity <= data.target_quantity;
+      }
+      return true;
+    },
+    {
+      message: "current_quantity must be less than or equal to target_quantity",
+      path: ["current_quantity"],
+    }
+  );
+
+export type UpdateNeedInput = z.input<typeof UpdateNeedSchema>;
+export type UpdateNeedOutput = z.output<typeof UpdateNeedSchema>;

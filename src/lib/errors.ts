@@ -130,6 +130,7 @@ export interface ErrorLogContext {
   endpoint: string;
   user_id?: string;
   shelter_id?: string;
+  need_id?: string;
   /** Partial request body — omit sensitive fields before passing */
   request_body?: Record<string, unknown>;
   constraint?: string;

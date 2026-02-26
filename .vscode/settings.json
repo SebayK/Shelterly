@@ -19,6 +19,13 @@
     "mv": true,
     "mkdir": true,
     "npm run newman": true,
-    "npx newman": true
+    "npx newman": true,
+    "/^node -e \"JSON\\.parse\\(require\\('fs'\\)\\.readFileSync\\('poc/Shelterly-API\\.postman_collection\\.json','utf8'\\)\\); console\\.log\\('✅ JSON valid'\\)\"$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "node_modules/.bin/eslint": true,
+    "node_modules/.bin/vitest": true,
+    "supabase": true
   }
 }

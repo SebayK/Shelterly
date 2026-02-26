@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { CreateNeedSchema } from "./needs.schemas";
+import { CreateNeedSchema, UpdateNeedSchema } from "./needs.schemas";
 
 /** Minimal valid payload — use as base and override individual fields */
 const valid = {
@@ -184,6 +184,197 @@ describe("CreateNeedSchema", () => {
 
   it("accepts null description explicitly", () => {
     const result = CreateNeedSchema.safeParse({ ...valid, description: null });
+    expect(result.success).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// UpdateNeedSchema
+// ---------------------------------------------------------------------------
+
+describe("UpdateNeedSchema", () => {
+  // -------------------------------------------------------------------------
+  // Happy path — single fields
+  // -------------------------------------------------------------------------
+
+  it("accepts a single valid field (title)", () => {
+    const result = UpdateNeedSchema.safeParse({ title: "Nowy tytuł" });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts multiple valid fields", () => {
+    const result = UpdateNeedSchema.safeParse({
+      title: "Nowy tytuł",
+      urgency: "high",
+      current_quantity: 25,
+      target_quantity: 100,
+    });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts null for description (explicit removal)", () => {
+    const result = UpdateNeedSchema.safeParse({ description: null });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.description).toBeNull();
+  });
+
+  it("accepts null for shopping_url (explicit removal)", () => {
+    const result = UpdateNeedSchema.safeParse({ shopping_url: null });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.shopping_url).toBeNull();
+  });
+
+  it("trims whitespace from title", () => {
+    const result = UpdateNeedSchema.safeParse({ title: "  Karma  " });
+    expect(result.success).toBe(true);
+    if (result.success) expect(result.data.title).toBe("Karma");
+  });
+
+  it("accepts all valid urgency values", () => {
+    const urgencies = ["low", "normal", "high", "urgent", "critical"] as const;
+    for (const urgency of urgencies) {
+      expect(UpdateNeedSchema.safeParse({ urgency }).success).toBe(true);
+    }
+  });
+
+  it("accepts all valid category values", () => {
+    const categories = ["food", "textiles", "cleaning", "medical", "toys", "other"] as const;
+    for (const category of categories) {
+      expect(UpdateNeedSchema.safeParse({ category }).success).toBe(true);
+    }
+  });
+
+  it("accepts all valid unit values", () => {
+    const units = ["pcs", "kg", "g", "l", "ml", "pack"] as const;
+    for (const unit of units) {
+      expect(UpdateNeedSchema.safeParse({ unit }).success).toBe(true);
+    }
+  });
+
+  it("accepts current_quantity of 0 (edge case)", () => {
+    const result = UpdateNeedSchema.safeParse({ current_quantity: 0, target_quantity: 50 });
+    expect(result.success).toBe(true);
+  });
+
+  it("accepts equal current_quantity and target_quantity", () => {
+    const result = UpdateNeedSchema.safeParse({ current_quantity: 100, target_quantity: 100 });
+    expect(result.success).toBe(true);
+  });
+
+  // -------------------------------------------------------------------------
+  // At-least-one-field constraint
+  // -------------------------------------------------------------------------
+
+  it("rejects empty object (no fields provided)", () => {
+    const result = UpdateNeedSchema.safeParse({});
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      expect(result.error.errors[0].message).toMatch(/at least one field/i);
+    }
+  });
+
+  // -------------------------------------------------------------------------
+  // title validation
+  // -------------------------------------------------------------------------
+
+  it("rejects title shorter than 3 characters", () => {
+    const result = UpdateNeedSchema.safeParse({ title: "ab" });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.errors[0].message).toMatch(/3/);
+  });
+
+  it("rejects title longer than 255 characters", () => {
+    const result = UpdateNeedSchema.safeParse({ title: "a".repeat(256) });
+    expect(result.success).toBe(false);
+  });
+
+  // -------------------------------------------------------------------------
+  // quantity validation
+  // -------------------------------------------------------------------------
+
+  it("rejects negative current_quantity", () => {
+    const result = UpdateNeedSchema.safeParse({ current_quantity: -1 });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects target_quantity of 0", () => {
+    const result = UpdateNeedSchema.safeParse({ target_quantity: 0 });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects negative target_quantity", () => {
+    const result = UpdateNeedSchema.safeParse({ target_quantity: -5 });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects current_quantity exceeding max", () => {
+    const result = UpdateNeedSchema.safeParse({ current_quantity: 100_000_000 });
+    expect(result.success).toBe(false);
+  });
+
+  // -------------------------------------------------------------------------
+  // Cross-field quantity validation
+  // -------------------------------------------------------------------------
+
+  it("rejects when current_quantity > target_quantity", () => {
+    const result = UpdateNeedSchema.safeParse({ current_quantity: 150, target_quantity: 100 });
+    expect(result.success).toBe(false);
+    if (!result.success) {
+      const msg = result.error.errors[0].message;
+      expect(msg).toMatch(/current_quantity/i);
+    }
+  });
+
+  it("accepts when current_quantity < target_quantity", () => {
+    const result = UpdateNeedSchema.safeParse({ current_quantity: 50, target_quantity: 100 });
+    expect(result.success).toBe(true);
+  });
+
+  // -------------------------------------------------------------------------
+  // Enum validation
+  // -------------------------------------------------------------------------
+
+  it("rejects unknown urgency value", () => {
+    const result = UpdateNeedSchema.safeParse({ urgency: "extreme" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects unknown category value", () => {
+    const result = UpdateNeedSchema.safeParse({ category: "furniture" });
+    expect(result.success).toBe(false);
+  });
+
+  it("rejects unknown unit value", () => {
+    const result = UpdateNeedSchema.safeParse({ unit: "ton" });
+    expect(result.success).toBe(false);
+  });
+
+  // -------------------------------------------------------------------------
+  // URL validation
+  // -------------------------------------------------------------------------
+
+  it("rejects invalid URL for shopping_url", () => {
+    const result = UpdateNeedSchema.safeParse({ shopping_url: "not-a-url" });
+    expect(result.success).toBe(false);
+    if (!result.success) expect(result.error.errors[0].message).toMatch(/url/i);
+  });
+
+  it("accepts valid HTTPS URL for shopping_url", () => {
+    const result = UpdateNeedSchema.safeParse({ shopping_url: "https://example.com/product" });
+    expect(result.success).toBe(true);
+  });
+
+  // -------------------------------------------------------------------------
+  // description validation
+  // -------------------------------------------------------------------------
+
+  it("rejects description longer than 2000 characters", () => {
+    const result = UpdateNeedSchema.safeParse({ description: "x".repeat(2001) });
+    expect(result.success).toBe(false);
+  });
+
+  it("accepts description at exactly 2000 characters", () => {
+    const result = UpdateNeedSchema.safeParse({ description: "x".repeat(2000) });
     expect(result.success).toBe(true);
   });
 });
