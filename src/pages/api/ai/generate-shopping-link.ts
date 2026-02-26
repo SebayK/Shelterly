@@ -39,7 +39,17 @@ export const POST: APIRoute = async ({ request, locals }) => {
   // 3. Check rate limit
   const rateLimit = generateShoppingLinkLimiter.check(user.id);
   if (!rateLimit.allowed) {
-    return createErrorHttpResponse("RATE_LIMIT_EXCEEDED", "Too many requests. Please try again later.", 429);
+    const retryAfterSec = Math.ceil((rateLimit.resetAt - Date.now()) / 1000);
+    return new Response(
+      JSON.stringify({ error: { code: "RATE_LIMIT_EXCEEDED", message: "Too many requests. Please try again later." } }),
+      {
+        status: 429,
+        headers: {
+          "Content-Type": "application/json",
+          "Retry-After": String(retryAfterSec),
+        },
+      }
+    );
   }
 
   // 4. Parse request body
@@ -86,23 +96,20 @@ export const POST: APIRoute = async ({ request, locals }) => {
       error
     );
 
-    const errorName = error instanceof Error ? error.name : undefined;
-    const errorMessage = error instanceof Error ? error.message : "An unexpected error occurred";
-
-    if (error instanceof NotFoundError || errorName === "NotFoundError") {
-      return createErrorHttpResponse("NOT_FOUND", errorMessage, 404);
+    if (error instanceof NotFoundError) {
+      return createErrorHttpResponse("NOT_FOUND", error.message, 404);
     }
 
-    if (error instanceof ForbiddenError || errorName === "ForbiddenError") {
-      return createErrorHttpResponse("FORBIDDEN", errorMessage, 403);
+    if (error instanceof ForbiddenError) {
+      return createErrorHttpResponse("FORBIDDEN", error.message, 403);
     }
 
-    if (error instanceof UnauthorizedError || errorName === "UnauthorizedError") {
-      return createErrorHttpResponse("UNAUTHORIZED", errorMessage, 401);
+    if (error instanceof UnauthorizedError) {
+      return createErrorHttpResponse("UNAUTHORIZED", error.message, 401);
     }
 
-    if (error instanceof InternalError || errorName === "InternalError") {
-      return createErrorHttpResponse("INTERNAL_ERROR", errorMessage, 500);
+    if (error instanceof InternalError) {
+      return createErrorHttpResponse("INTERNAL_ERROR", error.message, 500);
     }
 
     return createErrorHttpResponse("INTERNAL_ERROR", "An unexpected error occurred", 500);
