@@ -44,36 +44,20 @@ export type ShelterIdParamOutput = z.output<typeof ShelterIdParamSchema>;
 /**
  * Validation schema for PATCH /api/admin/shelters/:id/status request body.
  * - `status` must be one of: verified, rejected, suspended (pending is not allowed).
- * - `rejection_reason` is required when status is "rejected" (3–500 chars).
- * - `rejection_reason` must be absent or null for other statuses.
+ * - `rejection_reason` is optional and accepted but NOT persisted — the column does not
+ *   exist in the database yet. Cross-field enforcement will be re-added once the column
+ *   is added to the schema.
  */
-export const UpdateShelterStatusSchema = z
-  .object({
-    status: z.enum(["verified", "rejected", "suspended"], {
-      errorMap: () => ({ message: "Status must be one of: verified, rejected, suspended" }),
-    }),
-    rejection_reason: z
-      .string()
-      .min(3, "Rejection reason must be at least 3 characters")
-      .max(500, "Rejection reason must not exceed 500 characters")
-      .nullable()
-      .optional(),
-  })
-  .superRefine((data, ctx) => {
-    if (data.status === "rejected" && !data.rejection_reason) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["rejection_reason"],
-        message: "Rejection reason is required when status is rejected",
-      });
-    }
-    if (data.status !== "rejected" && data.rejection_reason) {
-      ctx.addIssue({
-        code: z.ZodIssueCode.custom,
-        path: ["rejection_reason"],
-        message: "Rejection reason must be null or absent for non-rejected statuses",
-      });
-    }
-  });
+export const UpdateShelterStatusSchema = z.object({
+  status: z.enum(["verified", "rejected", "suspended"], {
+    errorMap: () => ({ message: "Status must be one of: verified, rejected, suspended" }),
+  }),
+  rejection_reason: z
+    .string()
+    .min(3, "Rejection reason must be at least 3 characters")
+    .max(500, "Rejection reason must not exceed 500 characters")
+    .nullable()
+    .optional(),
+});
 
 export type UpdateShelterStatusOutput = z.output<typeof UpdateShelterStatusSchema>;
