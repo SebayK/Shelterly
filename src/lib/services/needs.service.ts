@@ -95,7 +95,7 @@ export class NeedsService {
     }
 
     // Transform database results to DTO format
-    const needs: NeedListItemDTO[] = (data ?? []).map((need) => {
+    const needs: NeedListItemDTO[] = (data ?? []).flatMap((need) => {
       // Calculate progress percentage with safety check for division by zero
       const progress_percentage =
         need.target_quantity > 0 ? Math.round((need.current_quantity / need.target_quantity) * 100) : 0;
@@ -103,14 +103,14 @@ export class NeedsService {
       // Extract shelter info (Supabase returns nested object or array)
       const shelterData = Array.isArray(need.profiles) ? need.profiles[0] : need.profiles;
 
-      // Validate shelter data integrity
+      // Skip records with missing shelter data instead of failing the whole request
       if (!shelterData || !shelterData.id || !shelterData.name || !shelterData.city) {
         logError("[NeedsService.getNeeds] Inconsistent data", {
-          message: "Missing or incomplete shelter profile for need",
+          message: "Missing or incomplete shelter profile for need — skipping record",
           needId: need.id,
           profiles: need.profiles,
         });
-        throw new InternalError("Failed to fetch needs: missing shelter profile data for one or more needs");
+        return [];
       }
 
       const shelter: ShelterInfo = {
@@ -119,20 +119,22 @@ export class NeedsService {
         city: shelterData.city,
       };
 
-      return {
-        id: need.id,
-        shelter,
-        category: need.category,
-        title: need.title,
-        description: need.description,
-        urgency: need.urgency,
-        target_quantity: need.target_quantity,
-        current_quantity: need.current_quantity,
-        unit: need.unit,
-        progress_percentage,
-        is_fulfilled: need.is_fulfilled,
-        created_at: need.created_at,
-      };
+      return [
+        {
+          id: need.id,
+          shelter,
+          category: need.category,
+          title: need.title,
+          description: need.description,
+          urgency: need.urgency,
+          target_quantity: need.target_quantity,
+          current_quantity: need.current_quantity,
+          unit: need.unit,
+          progress_percentage,
+          is_fulfilled: need.is_fulfilled,
+          created_at: need.created_at,
+        },
+      ];
     });
 
     // Construct pagination metadata
@@ -321,7 +323,7 @@ export class NeedsService {
         {
           endpoint: "POST /api/needs/:id/fulfill",
           user_id: userId,
-          shelter_id: needId,
+          need_id: needId,
         },
         selectError
       );
@@ -356,7 +358,7 @@ export class NeedsService {
         {
           endpoint: "POST /api/needs/:id/fulfill",
           user_id: userId,
-          shelter_id: needId,
+          need_id: needId,
           constraint: (updateError as { code?: string }).code,
         },
         updateError

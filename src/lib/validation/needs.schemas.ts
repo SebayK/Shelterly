@@ -114,7 +114,7 @@ export const CreateNeedSchema = z.object({
     .number({ invalid_type_error: "target_quantity must be a number" })
     .positive("target_quantity must be greater than 0")
     .max(99999999.99, "target_quantity is too large")
-    .refine((val) => Number(val.toFixed(2)) === val || true, "target_quantity can have at most 2 decimal places"),
+    .refine((val) => Number(val.toFixed(2)) === val, "target_quantity can have at most 2 decimal places"),
   unit: z.enum(["pcs", "kg", "g", "l", "ml", "pack"] as const satisfies readonly Enums<"need_unit">[]),
 });
 
@@ -136,16 +136,8 @@ export const UpdateNeedSchema = z
       .min(3, "Title must be at least 3 characters")
       .max(255, "Title must not exceed 255 characters")
       .optional(),
-    description: z
-      .string()
-      .max(2000, "Description must not exceed 2000 characters")
-      .nullable()
-      .optional(),
-    shopping_url: z
-      .string()
-      .url("Invalid URL format for shopping_url")
-      .nullable()
-      .optional(),
+    description: z.string().max(2000, "Description must not exceed 2000 characters").nullable().optional(),
+    shopping_url: z.string().url("Invalid URL format for shopping_url").nullable().optional(),
     urgency: z
       .enum(["low", "normal", "high", "urgent", "critical"] as const satisfies readonly Enums<"urgency_level">[])
       .optional(),
@@ -169,14 +161,11 @@ export const UpdateNeedSchema = z
         "other",
       ] as const satisfies readonly Enums<"need_category">[])
       .optional(),
-    unit: z
-      .enum(["pcs", "kg", "g", "l", "ml", "pack"] as const satisfies readonly Enums<"need_unit">[])
-      .optional(),
+    unit: z.enum(["pcs", "kg", "g", "l", "ml", "pack"] as const satisfies readonly Enums<"need_unit">[]).optional(),
   })
-  .refine(
-    (data) => Object.keys(data).length > 0,
-    { message: "At least one field must be provided for update" }
-  )
+  .refine((data) => Object.values(data).some((v) => v !== undefined), {
+    message: "At least one field must be provided for update",
+  })
   .refine(
     (data) => {
       // Cross-field: if both quantities provided, current must not exceed target
