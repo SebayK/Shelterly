@@ -1,7 +1,8 @@
 {
   "info": {
     "name": "Shelterly API",
-    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Sanitized collection: secrets replaced with placeholders. Do NOT commit real keys. Replace variables before use."
   },
   "variable": [
     {
@@ -14,11 +15,11 @@
     },
     {
       "key": "anon_key",
-      "value": "SUPABASE_LOCAL_ANON_KEY"
+      "value": "REPLACE_WITH_SUPABASE_ANON_KEY"
     },
     {
       "key": "access_token",
-      "value": "WKLEJ_TOKEN_TUTAJ"
+      "value": ""
     },
     {
       "key": "need_id",
@@ -38,7 +39,7 @@
     },
     {
       "key": "service_role_key",
-      "value": "SUPABASE_LOCAL_SERVICE_ROLE_KEY"
+      "value": "REPLACE_WITH_SUPABASE_SERVICE_ROLE_KEY"
     },
     {
       "key": "admin_token",

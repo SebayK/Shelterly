@@ -99,6 +99,21 @@ WHERE schemaname = 'public';
 **Przyczyna:** RLS włączony bez policies  
 **Rozwiązanie:** Zastosuj `20260119000000_init_schema.sql` która zawiera policies
 
+## CI and Deployment Safety
+
+To prevent accidental application of development-only migrations (which disable RLS), the repository includes the following safeguards:
+
+- A GitHub Action (`.github/workflows/check-dev-migrations.yml`) runs on pull requests to `main` and will fail the check if the PR's diff contains any migration files matching `*disable_rls*.sql`. This prevents merging dev-only migration changes into `main`.
+
+- The production deployment script `scripts/deploy-production.sh` performs local checks and will refuse to proceed if dev-only migration files are present in `supabase/migrations/`. To override locally (not recommended), set the environment variable `ALLOW_DEV_MIGRATIONS=1` or pass the `--force` flag to the script. Use caution — do not use these overrides in CI or production environments.
+
+Checklist before production deploy:
+
+- Ensure no `disable_rls` migrations are present in the PR diff.
+- Use `./scripts/deploy-production.sh` which creates a curated production bundle and applies only approved migrations.
+- Verify RLS remains enabled after deployment (see "Weryfikacja RLS w produkcji").
+
+
 ### Problem: Nie mogę tworzyć needs w produkcji
 
 **Przyczyna:** User nie ma verified profile  

@@ -283,8 +283,18 @@ describe("GET /api/admin/shelters/:id/verification-document", () => {
 
     const cd = response.headers.get("Content-Disposition") || "";
     expect(cd).toContain("attachment;");
-    // Implementation uses RFC5987 filename*=UTF-8'' encoding; accept either form
-    expect(cd.includes("filename*=UTF-8") || cd.includes('filename="document.pdf"')).toBe(true);
+    // If RFC5987 `filename*` is used, decode and verify the filename.
+    // Fallback: accept standard quoted `filename="..."` for older clients.
+    const filenameStarMatch = cd.match(/filename\*=(?:UTF-8''|UTF8'')([^;\n\r]+)/i);
+    if (filenameStarMatch) {
+      const encoded = filenameStarMatch[1].trim();
+      const decoded = decodeURIComponent(encoded);
+      expect(decoded).toBe("document.pdf");
+    } else {
+      const quotedMatch = cd.match(/filename=\"([^\"]+)\"/);
+      expect(quotedMatch).not.toBeNull();
+      expect(quotedMatch![1]).toBe("document.pdf");
+    }
   });
 
   it("sets Cache-Control: no-store on successful response", async () => {

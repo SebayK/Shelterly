@@ -8,6 +8,13 @@ echo "🚀 Deploying to Supabase Production"
 echo "======================================"
 echo ""
 
+# TODO: currently this script helps with local/dev testing by keeping dev-only
+# migrations in the repo. Before using this in production, we must explicitly
+# curate which migrations are applied (or generate+apply a production bundle)
+# and ensure dev-only RLS-disabling migrations are never applied to prod.
+# See supabase/migrations/*.sql for dev-only markers. This TODO is intentionally
+# left here for a follow-up task during production rollout.
+
 # Check if supabase CLI is installed
 if ! command -v supabase &> /dev/null; then
     echo "❌ Error: Supabase CLI not found"
@@ -32,11 +39,30 @@ echo "  ✗ 20260119120000_disable_rls_policies.sql"
 echo "  ✗ 20260224000000_disable_rls.sql"
 echo ""
 
+# Strong guard: require explicit override to proceed when dev-only migration files exist
+FORCE=false
+if [ "$1" = "--force" ] || [ "$ALLOW_DEV_MIGRATIONS" = "1" ]; then
+  FORCE=true
+fi
+
 read -p "Continue with deployment? (y/N) " -n 1 -r
 echo
 if [[ ! $REPLY =~ ^[Yy]$ ]]; then
     echo "❌ Deployment cancelled"
     exit 1
+fi
+
+# Check repository for any dev-only migration files (disable_rls)
+DEV_MIGRATION_FILES=$(ls supabase/migrations/*disable_rls*.sql 2>/dev/null || true)
+if [ -n "$DEV_MIGRATION_FILES" ] && [ "$FORCE" = false ]; then
+  echo "⚠️  Found dev-only migration files in supabase/migrations/:"
+  echo "$DEV_MIGRATION_FILES"
+  echo ""
+  echo "This script will NOT apply dev-only migrations to production. To proceed anyway," \
+       "either remove or rename dev-only migrations, or run this script with" \
+       "the environment variable ALLOW_DEV_MIGRATIONS=1 or the --force flag." 
+  echo "Example: ALLOW_DEV_MIGRATIONS=1 ./scripts/deploy-production.sh"
+  exit 2
 fi
 
 echo ""
