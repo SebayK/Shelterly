@@ -87,12 +87,24 @@ Shelterly provides a centralized platform where:
 
 3. **Environment Setup**
 
-   Create a `.env.local` file in the root directory with your Supabase credentials:
+   Copy the example file and fill in your credentials:
+
+   ```bash
+   cp .env.example .env.local
+   ```
+
+   Required variables:
 
    ```env
-   PUBLIC_SUPABASE_URL=your_supabase_url
-   PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+   SUPABASE_URL=your_supabase_url
+   SUPABASE_KEY=your_supabase_anon_key
    OPENROUTER_API_KEY=your_openrouter_key
+   ```
+
+   Optional variable:
+
+   ```env
+   OPENROUTER_BASE_URL=https://openrouter.ai/api/v1
    ```
 
 4. **Start Development Server**
@@ -105,15 +117,163 @@ Shelterly provides a centralized platform where:
 
 ## Available Scripts
 
-| Script             | Description                                  |
-| ------------------ | -------------------------------------------- |
-| `npm run dev`      | Start the development server with hot reload |
-| `npm run build`    | Build the project for production             |
-| `npm run preview`  | Preview the production build locally         |
-| `npm run lint`     | Run ESLint to check code quality             |
-| `npm run lint:fix` | Automatically fix linting issues             |
-| `npm run format`   | Format code with Prettier                    |
-| `npm run astro`    | Run Astro CLI commands directly              |
+| Script                  | Description                                  |
+| ----------------------- | -------------------------------------------- |
+| `npm run dev`           | Start the development server with hot reload |
+| `npm run build`         | Build the project for production             |
+| `npm run preview`       | Preview the production build locally         |
+| `npm run lint`          | Run ESLint to check code quality             |
+| `npm run lint:fix`      | Automatically fix linting issues             |
+| `npm run format`        | Format code with Prettier                    |
+| `npm run astro`         | Run Astro CLI commands directly              |
+| `npm run test`          | Run all unit tests (Vitest)                  |
+| `npm run test:watch`    | Run tests in watch mode                      |
+| `npm run test:coverage` | Run tests with coverage report               |
+
+## Database & Deployment
+
+### Local Development
+
+The project uses **Supabase** with local development environment:
+
+```bash
+# Start local Supabase (requires Docker)
+npx supabase start
+
+# Reset database to latest migrations
+npx supabase db reset
+
+# Stop local Supabase
+npx supabase stop
+```
+
+**Note:** In local development, Row Level Security (RLS) is **disabled** for easier testing. See [supabase/DEPLOYMENT.md](supabase/DEPLOYMENT.md) for details.
+
+### Migrations
+
+Database migrations are located in `supabase/migrations/`:
+
+| Migration                                        | Environment  | Description                      |
+| ------------------------------------------------ | ------------ | -------------------------------- |
+| `20260119000000_init_schema.sql`                 | All          | Initial schema with RLS policies |
+| `20260124000000_update_handle_new_user.sql`      | All          | User metadata handling           |
+| `20260221000000_add_get_pending_shelters_fn.sql` | All          | Admin functions                  |
+| `20260119120000_disable_rls_policies.sql`        | **Dev only** | Drop RLS policies                |
+| `20260224000000_disable_rls.sql`                 | **Dev only** | Disable RLS completely           |
+
+⚠️ **Important:** Migrations marked "Dev only" should **NOT be applied in production**. RLS must remain enabled in production for security.
+
+### Production Deployment
+
+Use the provided deployment script for production:
+
+```bash
+# Deploy with RLS enabled
+./scripts/deploy-production.sh
+```
+
+This script automatically:
+
+- Excludes dev-only migrations
+- Applies production migrations with RLS enabled
+- Verifies RLS status after deployment
+
+For detailed deployment instructions, see [supabase/DEPLOYMENT.md](supabase/DEPLOYMENT.md).
+
+## Project Scope
+
+### API Endpoints
+
+#### `POST /api/needs`
+
+Creates a new resource need for the authenticated, verified shelter.
+
+**Authentication:** Required — `Authorization: Bearer <access_token>`
+
+**Request body (JSON):**
+
+| Field             | Type                                                                 | Required               | Description             |
+| ----------------- | -------------------------------------------------------------------- | ---------------------- | ----------------------- |
+| `category`        | `food` \| `textiles` \| `cleaning` \| `medical` \| `toys` \| `other` | ✅                     | Need category           |
+| `title`           | string (3–255 chars)                                                 | ✅                     | Short descriptive title |
+| `urgency`         | `low` \| `normal` \| `high` \| `urgent` \| `critical`                | ✅ (default: `normal`) | Urgency level           |
+| `target_quantity` | number > 0                                                           | ✅                     | Target donation amount  |
+| `unit`            | `pcs` \| `kg` \| `g` \| `l` \| `ml` \| `pack`                        | ✅                     | Unit of measurement     |
+| `description`     | string (max 2000) \| null                                            | ❌                     | Detailed description    |
+| `shopping_url`    | valid URL \| null                                                    | ❌                     | Direct purchase link    |
+
+**Response `201 Created`:**
+
+```json
+{
+  "id": "uuid",
+  "shelter_id": "uuid",
+  "category": "food",
+  "title": "Karma sucha dla psów",
+  "description": null,
+  "shopping_url": null,
+  "urgency": "normal",
+  "target_quantity": 100.0,
+  "current_quantity": 0.0,
+  "unit": "kg",
+  "is_fulfilled": false,
+  "created_at": "2026-01-21T10:30:00Z"
+}
+```
+
+**Error responses:**
+
+| Status | Code                  | Reason                                     |
+| ------ | --------------------- | ------------------------------------------ |
+| `400`  | `VALIDATION_ERROR`    | Missing or invalid fields                  |
+| `400`  | `INVALID_REQUEST`     | Body is not valid JSON                     |
+| `401`  | `UNAUTHORIZED`        | Missing or invalid token                   |
+| `403`  | `ACCOUNT_PENDING`     | Shelter awaiting verification              |
+| `403`  | `FORBIDDEN`           | Account suspended or rejected              |
+| `404`  | `NOT_FOUND`           | Shelter profile not found                  |
+| `429`  | `RATE_LIMIT_EXCEEDED` | Max 20 requests per 15 minutes per shelter |
+| `500`  | `INTERNAL_ERROR`      | Unexpected server error                    |
+
+**Rate limiting:** 20 requests per 15-minute sliding window per shelter. Responses include `Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, and `X-RateLimit-Reset` headers.
+
+#### `POST /api/ai/generate-description`
+
+Generates a short Polish description for an existing shelter need using OpenRouter and saves it to the need.
+
+**Authentication:** Required — `Authorization: Bearer <access_token>`
+
+**Request body (JSON):**
+
+| Field             | Type                                                                 | Required | Description         |
+| ----------------- | -------------------------------------------------------------------- | -------- | ------------------- |
+| `need_id`         | UUID                                                                 | ✅       | Need identifier     |
+| `category`        | `food` \| `textiles` \| `cleaning` \| `medical` \| `toys` \| `other` | ✅       | Need category       |
+| `title`           | string (1–200 chars)                                                 | ✅       | Need title          |
+| `target_quantity` | number > 0                                                           | ✅       | Requested quantity  |
+| `unit`            | `pcs` \| `kg` \| `g` \| `l` \| `ml` \| `pack`                        | ✅       | Unit of measurement |
+
+**Response `200 OK`:**
+
+```json
+{
+  "description": "Pilnie potrzebujemy karmy mokrej dla naszych kotów. Każda puszka się liczy.",
+  "ai_usage_incremented": true
+}
+```
+
+**Error responses:**
+
+| Status | Code                  | Reason                                         |
+| ------ | --------------------- | ---------------------------------------------- |
+| `400`  | `VALIDATION_ERROR`    | Missing or invalid fields                      |
+| `400`  | `INVALID_REQUEST`     | Body is not valid JSON                         |
+| `401`  | `UNAUTHORIZED`        | Missing or invalid token                       |
+| `403`  | `FORBIDDEN`           | Not owner of need or AI usage limit exceeded   |
+| `404`  | `NOT_FOUND`           | Need not found or soft-deleted                 |
+| `429`  | `RATE_LIMIT_EXCEEDED` | Max 10 requests per minute per user            |
+| `500`  | `INTERNAL_ERROR`      | Unexpected server error or upstream AI failure |
+
+---
 
 ## Project Scope
 

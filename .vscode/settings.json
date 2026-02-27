@@ -4,8 +4,5 @@
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit"
   },
-  "cSpell.words": [
-    "Shelterly",
-    "supabase"
-  ]
+  "cSpell.words": ["Shelterly", "supabase"]
 }

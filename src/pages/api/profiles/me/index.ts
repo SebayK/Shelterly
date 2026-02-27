@@ -3,6 +3,7 @@ import { ProfileService } from "../../../../lib/services/profile.service";
 import { UpdateProfileCommandSchema } from "../../../../lib/validation/profile.schemas";
 import type { ErrorResponse } from "../../../../types";
 import { NotFoundError } from "../../../../lib/errors";
+import { logError } from "../../../../lib/errors";
 
 export const prerender = false;
 
@@ -73,8 +74,7 @@ export const GET: APIRoute = async ({ locals }) => {
       });
     }
 
-    // eslint-disable-next-line no-console
-    console.error("Unexpected error in GET /api/profiles/me:", error);
+    logError("[GET /api/profiles/me]", error);
 
     const errorResponse: ErrorResponse = {
       error: {
@@ -216,8 +216,7 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    // eslint-disable-next-line no-console
-    console.error("Unexpected error in PATCH /api/profiles/me:", error);
+    logError("[PATCH /api/profiles/me]", error);
 
     const errorResponse: ErrorResponse = {
       error: {

@@ -2,6 +2,7 @@ import type { APIRoute } from "astro";
 import { ProfileService } from "../../../lib/services/profile.service";
 import { ProfilesQueryParamsSchema } from "../../../lib/validation/profile.schemas";
 import type { ErrorResponse } from "../../../types";
+import { logError } from "../../../lib/errors";
 
 export const prerender = false;
 
@@ -73,8 +74,7 @@ export const GET: APIRoute = async ({ url, locals }) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
-    // eslint-disable-next-line no-console
-    console.error("Unexpected error in GET /api/profiles:", error);
+    logError("[GET /api/profiles]", error);
 
     const errorResponse: ErrorResponse = {
       error: {

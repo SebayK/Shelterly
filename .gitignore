@@ -22,3 +22,11 @@ pnpm-debug.log*
 
 # jetbrains setting folder
 .idea/
+
+# supabase temporary files
+supabase/migrations/.production-bundle.sql
+supabase/.branches
+supabase/.temp
+
+# newman reports
+newman-report*.json

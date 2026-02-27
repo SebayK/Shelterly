@@ -1,0 +1,1107 @@
+{
+  "info": {
+    "name": "Shelterly API",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Sanitized collection: secrets replaced with placeholders. Do NOT commit real keys. Replace variables before use."
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3000"
+    },
+    {
+      "key": "supabase_url",
+      "value": "http://127.0.0.1:54321"
+    },
+    {
+      "key": "anon_key",
+      "value": "REPLACE_WITH_SUPABASE_ANON_KEY"
+    },
+    {
+      "key": "access_token",
+      "value": ""
+    },
+    {
+      "key": "need_id",
+      "value": ""
+    },
+    {
+      "key": "timestamp",
+      "value": ""
+    },
+    {
+      "key": "new_user_id",
+      "value": ""
+    },
+    {
+      "key": "profile_id",
+      "value": ""
+    },
+    {
+      "key": "service_role_key",
+      "value": "REPLACE_WITH_SUPABASE_SERVICE_ROLE_KEY"
+    },
+    {
+      "key": "admin_token",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Auth",
+      "item": [
+        {
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.access_token) {",
+                  "    pm.collectionVariables.set('access_token', json.access_token);",
+                  "    console.log('✅ Token zapisany automatycznie');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "apikey", "value": "{{anon_key}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"schronisko.warszawa@example.com\",\n  \"password\": \"SecurePassword123!\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{supabase_url}}/auth/v1/token?grant_type=password"
+          }
+        },
+        {
+          "name": "Signup (rejestracja)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": ["pm.collectionVariables.set('timestamp', Math.floor(Date.now() / 1000));"],
+                "type": "text/javascript"
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "try {",
+                  "    const json = pm.response.json();",
+                  "    if (json.access_token) {",
+                  "        pm.collectionVariables.set('access_token', json.access_token);",
+                  "        console.log('✅ Token zapisany automatycznie');",
+                  "    }",
+                  "    const uid = json.user?.id || json.user_id;",
+                  "    if (uid) {",
+                  "        pm.collectionVariables.set('new_user_id', uid);",
+                  "        console.log('✅ User ID zapisany:', uid);",
+                  "    }",
+                  "    pm.test('Signup returned 2xx', () => pm.expect(pm.response.code).to.be.within(200, 299));",
+                  "} catch (e) {",
+                  "    console.error('Signup error:', e);",
+                  "    pm.test('Response is JSON', () => false);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "apikey", "value": "{{anon_key}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"signup-test+{{timestamp}}@example.com\",\n  \"password\": \"TestPass123!\",\n  \"data\": {\n    \"role\": \"shelter\",\n    \"name\": \"Test Shelter\",\n    \"city\": \"Kraków\",\n    \"address\": \"ul. Testowa 1\"\n  }\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{supabase_url}}/auth/v1/signup"
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. Admin (Verification)",
+      "item": [
+        {
+          "name": "Login Admin",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.access_token) {",
+                  "    pm.collectionVariables.set('admin_token', json.access_token);",
+                  "    console.log('✅ Admin token zapisany');",
+                  "}",
+                  "pm.test('Status 200', () => pm.expect(pm.response.code).to.equal(200));",
+                  "pm.test('Has access_token', () => pm.expect(json.access_token).to.exist);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "apikey", "value": "{{anon_key}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"admin@shelterly.dev\",\n  \"password\": \"Admin123!\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{supabase_url}}/auth/v1/token?grant_type=password"
+          }
+        },
+        {
+          "name": "PATCH Verify Shelter (verify new user)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 or 401 or 404', () => pm.expect([200,401,404]).to.include(pm.response.code));",
+                  "if(pm.response.code === 200){ const json = pm.response.json(); pm.test('Has id', () => pm.expect(json.id).to.exist); pm.test('Status is verified', () => pm.expect(json.status).to.equal('verified')); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{admin_token}}" },
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"verified\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/admin/shelters/{{new_user_id}}/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "admin", "shelters", "{{new_user_id}}", "status"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. Needs",
+      "item": [
+        {
+          "name": "GET /api/needs (lista publiczna)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/needs",
+              "host": ["{{base_url}}"],
+              "path": ["api", "needs"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/needs (utwórz potrzebę)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.id) {",
+                  "    pm.collectionVariables.set('need_id', json.id);",
+                  "    console.log('✅ need_id zapisany:', json.id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"category\": \"food\",\n  \"title\": \"Karma sucha dla psów\",\n  \"description\": \"Potrzebujemy karmy dla 20 psów na miesiąc\",\n  \"urgency\": \"high\",\n  \"target_quantity\": 50,\n  \"unit\": \"kg\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": "{{base_url}}/api/needs"
+          }
+        },
+        {
+          "name": "GET /api/needs/:id (szczegóły)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/needs/{{need_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "needs", "{{need_id}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH /api/needs/:id ✅",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.expect(pm.response.code).to.equal(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('Has id', () => pm.expect(body.id).to.exist);",
+                  "pm.test('Has updated title', () => pm.expect(body.title).to.equal('Karma sucha dla psów — zaktualizowana'));",
+                  "pm.test('Has urgency', () => pm.expect(body.urgency).to.equal('urgent'));",
+                  "pm.test('Has current_quantity', () => pm.expect(body.current_quantity).to.equal(10));",
+                  "pm.test('Has progress_percentage', () => pm.expect(body.progress_percentage).to.be.a('number'));",
+                  "pm.test('Has updated_at', () => pm.expect(body.updated_at).to.exist);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Karma sucha dla psów — zaktualizowana\",\n  \"urgency\": \"urgent\",\n  \"current_quantity\": 10\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/needs/{{need_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "needs", "{{need_id}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH /api/needs/:id — 400 puste body",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 for empty body', () => pm.expect(pm.response.code).to.equal(400));",
+                  "const body = pm.response.json();",
+                  "pm.test('Error code VALIDATION_ERROR', () => pm.expect(body.error.code).to.equal('VALIDATION_ERROR'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/needs/{{need_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "needs", "{{need_id}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH /api/needs/:id — 400 current_quantity > target_quantity",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 when current > target', () => pm.expect(pm.response.code).to.equal(400));",
+                  "const body = pm.response.json();",
+                  "pm.test('Error code VALIDATION_ERROR', () => pm.expect(body.error.code).to.equal('VALIDATION_ERROR'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"current_quantity\": 9999,\n  \"target_quantity\": 1\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/needs/{{need_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "needs", "{{need_id}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH /api/needs/:id — 400 invalid UUID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 for invalid UUID', () => pm.expect(pm.response.code).to.equal(400));",
+                  "const body = pm.response.json();",
+                  "pm.test('Error code VALIDATION_ERROR', () => pm.expect(body.error.code).to.equal('VALIDATION_ERROR'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Nowy tytuł\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/needs/nie-uuid/",
+              "host": ["{{base_url}}"],
+              "path": ["api", "needs", "nie-uuid"]
+            }
+          }
+        },
+        {
+          "name": "PATCH /api/needs/:id — 401 brak tokenu",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401 when unauthenticated', () => pm.expect(pm.response.code).to.equal(401));",
+                  "const body = pm.response.json();",
+                  "pm.test('Error code UNAUTHORIZED', () => pm.expect(body.error.code).to.equal('UNAUTHORIZED'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Nowy tytuł\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/needs/{{need_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "needs", "{{need_id}}"]
+            }
+          }
+        },
+        {
+          "name": "PATCH /api/needs/:id — 404 nieistniejący need",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 for non-existing need', () => pm.expect(pm.response.code).to.equal(404));",
+                  "const body = pm.response.json();",
+                  "pm.test('Error code NOT_FOUND', () => pm.expect(body.error.code).to.equal('NOT_FOUND'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Nowy tytuł\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/needs/00000000-0000-0000-0000-000000000000",
+              "host": ["{{base_url}}"],
+              "path": ["api", "needs", "00000000-0000-0000-0000-000000000000"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/needs/:id/fulfill ✅",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.expect(pm.response.code).to.equal(200));",
+                  "const body = pm.response.json();",
+                  "pm.test('is_fulfilled true', () => pm.expect(body.is_fulfilled).to.equal(true));",
+                  "pm.test('contains id and updated_at', () => { pm.expect(body).to.have.property('id'); pm.expect(body).to.have.property('updated_at'); });"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/needs/{{need_id}}/fulfill",
+              "host": ["{{base_url}}"],
+              "path": ["api", "needs", "{{need_id}}", "fulfill"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/needs/:id/fulfill — 404 już fulfilled",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 when already fulfilled', () => pm.expect(pm.response.code).to.equal(404));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/needs/{{need_id}}/fulfill",
+              "host": ["{{base_url}}"],
+              "path": ["api", "needs", "{{need_id}}", "fulfill"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/needs/:id/fulfill — 400 invalid UUID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status 400 for invalid UUID', () => pm.expect(pm.response.code).to.equal(400));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/needs/nie-uuid/fulfill",
+              "host": ["{{base_url}}"],
+              "path": ["api", "needs", "nie-uuid", "fulfill"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/needs/:id/fulfill — 401 brak tokenu",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401 when unauthenticated', () => pm.expect(pm.response.code).to.equal(401));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/needs/{{need_id}}/fulfill",
+              "host": ["{{base_url}}"],
+              "path": ["api", "needs", "{{need_id}}", "fulfill"]
+            }
+          }
+        },
+        {
+          "name": "POST /api/needs/:id/fulfill — 404 nieistniejący need",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('404 for non-existing need', () => pm.expect(pm.response.code).to.equal(404));"],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/needs/00000000-0000-0000-0000-000000000000/fulfill",
+              "host": ["{{base_url}}"],
+              "path": ["api", "needs", "00000000-0000-0000-0000-000000000000", "fulfill"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/needs/:id — 400 invalid UUID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 400 for invalid UUID', () => pm.expect(pm.response.code).to.equal(400));",
+                  "const json = pm.response.json();",
+                  "pm.test('Error code is VALIDATION_ERROR', () => pm.expect(json.error.code).to.equal('VALIDATION_ERROR'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/needs/nie-uuid",
+              "host": ["{{base_url}}"],
+              "path": ["api", "needs", "nie-uuid"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/needs/:id — 401 brak tokenu",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 401 when unauthenticated', () => pm.expect(pm.response.code).to.equal(401));",
+                  "const json = pm.response.json();",
+                  "pm.test('Error code is UNAUTHORIZED', () => pm.expect(json.error.code).to.equal('UNAUTHORIZED'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/needs/{{need_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "needs", "{{need_id}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/needs/:id — 403 nie właściciel",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 403 when not owner', () => pm.expect(pm.response.code).to.equal(403));",
+                  "const json = pm.response.json();",
+                  "pm.test('Error code is FORBIDDEN', () => pm.expect(json.error.code).to.equal('FORBIDDEN'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{admin_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{admin_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/needs/{{need_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "needs", "{{need_id}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/needs/:id ✅",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.expect(pm.response.code).to.equal(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Has message', () => pm.expect(json.message).to.equal('Need successfully deleted'));",
+                  "pm.test('Has deleted_at', () => pm.expect(json.deleted_at).to.be.a('string'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/needs/{{need_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "needs", "{{need_id}}"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/needs/:id — 404 nieistniejący need",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 for non-existing need', () => pm.expect(pm.response.code).to.equal(404));",
+                  "const json = pm.response.json();",
+                  "pm.test('Error code is NOT_FOUND', () => pm.expect(json.error.code).to.equal('NOT_FOUND'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/needs/00000000-0000-0000-0000-000000000000",
+              "host": ["{{base_url}}"],
+              "path": ["api", "needs", "00000000-0000-0000-0000-000000000000"]
+            }
+          }
+        },
+        {
+          "name": "DELETE /api/needs/:id — 404 już usunięty (soft-delete)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 404 for already deleted need', () => pm.expect(pm.response.code).to.equal(404));",
+                  "const json = pm.response.json();",
+                  "pm.test('Error code is NOT_FOUND', () => pm.expect(json.error.code).to.equal('NOT_FOUND'));"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/needs/{{need_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "needs", "{{need_id}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. Profiles",
+      "item": [
+        {
+          "name": "GET /api/profiles (lista)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/profiles",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200', () => pm.expect(pm.response.code).to.equal(200));",
+                  "const json = pm.response.json();",
+                  "pm.test('Response has data array', () => pm.expect(Array.isArray(json.data || json)).to.be.true);"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "GET /api/profiles/:id",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 or 404', () => pm.expect([200,404]).to.include(pm.response.code));",
+                  "if(pm.response.code === 200){ const json = pm.response.json(); pm.test('Has id', () => pm.expect(json.id || json.data?.id).to.exist); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/profiles/{{new_user_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles", "{{new_user_id}}"]
+            }
+          }
+        },
+        {
+          "name": "GET /api/profiles/me",
+          "request": {
+            "method": "GET",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "url": {
+              "raw": "{{base_url}}/api/profiles/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles", "me"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 or 401', () => pm.expect([200,401]).to.include(pm.response.code));",
+                  "if(pm.response.code === 200){ const json = pm.response.json(); pm.test('Has id', () => pm.expect(json.id).to.exist); pm.collectionVariables.set('profile_id', json.id); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "PATCH /api/profiles/me (update)",
+          "request": {
+            "method": "PATCH",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Dev Shelter Updated\",\n  \"city\": \"DevCity\",\n  \"address\": \"Dev Address 1\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/profiles/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles", "me"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 or 401', () => pm.expect([200,401]).to.include(pm.response.code));",
+                  "if(pm.response.code === 200){ const json = pm.response.json(); pm.test('Has id', () => pm.expect(json.id).to.exist); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/profiles/me/geocode",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{access_token}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"address\": \"Krakowskie Przedmieście 1, Warszawa\"\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{base_url}}/api/profiles/me/geocode",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles", "me", "geocode"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200 or 401', () => pm.expect([200,401]).to.include(pm.response.code));",
+                  "if(pm.response.code === 200){ const json = pm.response.json(); pm.test('Has location', () => pm.expect(json.location || json.data?.location).to.exist); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        },
+        {
+          "name": "POST /api/profiles/me/verification-document",
+          "request": {
+            "method": "POST",
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "header": [{ "key": "Authorization", "value": "Bearer {{access_token}}" }],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/profiles/me/verification-document",
+              "host": ["{{base_url}}"],
+              "path": ["api", "profiles", "me", "verification-document"]
+            }
+          },
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status 200, 400, or 401', () => pm.expect([200,400,401]).to.include(pm.response.code));",
+                  "if(pm.response.code === 200){ const json = pm.response.json(); pm.test('Has verification_doc_path', () => pm.expect(json.verification_doc_path || json.data?.verification_doc_path).to.exist); }"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

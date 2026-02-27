@@ -4,15 +4,15 @@ Mock endpoints returning static data - use them for frontend testing without dat
 
 ## Available Endpoints
 
-| Real API | Mock API | Status |
-|----------|----------|--------|
-| `GET /api/profiles` | `GET /api/mocks/profiles` | ✅ |
-| `GET /api/profiles/:id` | `GET /api/mocks/profiles/:id` | ✅ |
-| `GET /api/profiles/me` | `GET /api/mocks/profiles/me` | ✅ |
-| `PATCH /api/profiles/me` | `PATCH /api/mocks/profiles/me` | ✅ |
-| `POST /api/profiles/me/geocode` | `POST /api/mocks/profiles/me/geocode` | ✅ |
-| `POST /api/profiles/me/verification-document` | `POST /api/mocks/profiles/me/verification-document` | ✅ |
-| `GET /api/needs` | `GET /api/mocks/needs` | ✅ |
+| Real API                                      | Mock API                                            | Status |
+| --------------------------------------------- | --------------------------------------------------- | ------ |
+| `GET /api/profiles`                           | `GET /api/mocks/profiles`                           | ✅     |
+| `GET /api/profiles/:id`                       | `GET /api/mocks/profiles/:id`                       | ✅     |
+| `GET /api/profiles/me`                        | `GET /api/mocks/profiles/me`                        | ✅     |
+| `PATCH /api/profiles/me`                      | `PATCH /api/mocks/profiles/me`                      | ✅     |
+| `POST /api/profiles/me/geocode`               | `POST /api/mocks/profiles/me/geocode`               | ✅     |
+| `POST /api/profiles/me/verification-document` | `POST /api/mocks/profiles/me/verification-document` | ✅     |
+| `GET /api/needs`                              | `GET /api/mocks/needs`                              | ✅     |
 
 ## How to Use
 
@@ -25,11 +25,13 @@ npm run dev
 ### 2. Use mock endpoints instead of real ones
 
 **Instead of:**
+
 ```bash
 GET http://localhost:4321/api/profiles
 ```
 
 **Use:**
+
 ```bash
 GET http://localhost:4321/api/mocks/profiles
 ```
@@ -37,6 +39,7 @@ GET http://localhost:4321/api/mocks/profiles
 ### 3. Test all functionalities
 
 Mock endpoints provide:
+
 - ✅ Support for common query parameters (lat, lon, urgent_only, limit, offset, category, urgency, fulfilled)
 - ✅ Basic input data validation (aims to be similar to the real API but may not enforce every rule)
 - ✅ Error handling (400, 403, 404) for common scenarios
@@ -90,7 +93,9 @@ curl -X POST http://localhost:4321/api/mocks/profiles/me/verification-document \
 ## Special Behaviors
 
 ### Geocoding
+
 Mock endpoint recognizes the following addresses:
+
 - `ul. Marszałkowska 1, Warszawa` → Returns exact coordinates
 - `ul. Floriańska 1, 31-019 Kraków` → Returns exact coordinates
 - `ul. Długa 1, Gdańsk` → Returns exact coordinates
@@ -98,7 +103,9 @@ Mock endpoint recognizes the following addresses:
 - Addresses containing "nieistniejąc" → Error 400 NOT_FOUND
 
 ### Validation
+
 Mock endpoints implement validation for common scenarios:
+
 - File type checking (PDF, JPEG, PNG only)
 - File size limit (max 5MB)
 - JSON validation
@@ -120,14 +127,15 @@ GET {{baseUrl}}/profiles
 In frontend use environment variable:
 
 ```typescript
-const API_BASE = import.meta.env.DEV 
-  ? '/api/mocks'  // Development - mocks
-  : '/api';       // Production - real API
+const API_BASE = import.meta.env.DEV
+  ? "/api/mocks" // Development - mocks
+  : "/api"; // Production - real API
 ```
 
 ## Data Sources
 
 Mock endpoints use data from:
+
 - `__mocks__/data/profiles.json` - Shelter profiles
 - `__mocks__/data/needs.json` - Shelter needs
 

@@ -3,6 +3,7 @@ import { ProfileService } from "../../../lib/services/profile.service";
 import { ProfileIdParamsSchema } from "../../../lib/validation/profile.schemas";
 import type { ErrorResponse } from "../../../types";
 import { NotFoundError } from "../../../lib/errors";
+import { logError } from "../../../lib/errors";
 
 export const prerender = false;
 
@@ -76,8 +77,7 @@ export const GET: APIRoute = async ({ params, locals }) => {
       });
     }
 
-    // eslint-disable-next-line no-console
-    console.error("Unexpected error in GET /api/profiles/:id", error);
+    logError("[GET /api/profiles/:id]", error);
 
     const errorResponse: ErrorResponse = {
       error: {
