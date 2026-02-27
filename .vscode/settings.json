@@ -4,25 +4,5 @@
   "editor.codeActionsOnSave": {
     "source.fixAll.eslint": "explicit"
   },
-  "cSpell.words": ["Shelterly", "supabase"],
-  "chat.tools.terminal.autoApprove": {
-    "npx tsc": true,
-    "npx eslint": true,
-    "npx supabase": true,
-    "npm install": true,
-    "npx vitest": true,
-    "git add": true,
-    "git commit": true,
-    "mv": true,
-    "mkdir": true,
-    "npm run newman": true,
-    "npx newman": true,
-    "/^node -e \"JSON\\.parse\\(require\\('fs'\\)\\.readFileSync\\('poc/Shelterly-API\\.postman_collection\\.json','utf8'\\)\\); console\\.log\\('✅ JSON valid'\\)\"$/": {
-      "approve": true,
-      "matchCommandLine": true
-    },
-    "node_modules/.bin/eslint": true,
-    "node_modules/.bin/vitest": true,
-    "supabase": true
-  }
+  "cSpell.words": ["Shelterly", "supabase"]
 }
