@@ -324,6 +324,30 @@ export interface PendingShelterListResponseDTO {
 }
 
 // ============================================================================
+// Auth DTOs
+// ============================================================================
+
+/**
+ * DTO 20: POST /api/auth/login - Successful login response
+ */
+export interface LoginResponseDTO {
+  user: {
+    id: string;
+    email: string;
+  };
+  session: {
+    access_token: string;
+    refresh_token: string;
+    expires_at: number;
+  };
+  profile: {
+    id: string;
+    status: ShelterStatus;
+    role: UserRole;
+  };
+}
+
+// ============================================================================
 // Command Models (Request Bodies)
 // ============================================================================
 
@@ -399,6 +423,14 @@ export interface GenerateShoppingLinkCommand {
 export interface UpdateShelterStatusCommand {
   status: ShelterStatus;
   rejection_reason?: string | null;
+}
+
+/**
+ * Command 8: POST /api/auth/login - Login request body
+ */
+export interface LoginCommand {
+  email: string;
+  password: string;
 }
 
 // ============================================================================

@@ -50,6 +50,20 @@ export class AddressNotFoundError extends Error {
   }
 }
 
+export class AccountPendingError extends Error {
+  constructor(message = "Account is pending verification") {
+    super(message);
+    this.name = "AccountPendingError";
+  }
+}
+
+export class AccountSuspendedError extends Error {
+  constructor(message = "Account has been suspended") {
+    super(message);
+    this.name = "AccountSuspendedError";
+  }
+}
+
 // ============================================================================
 // Error Response Helper Functions
 // ============================================================================
