@@ -64,6 +64,13 @@ export class AccountSuspendedError extends Error {
   }
 }
 
+export class ConflictError extends Error {
+  constructor(message = "Resource already exists") {
+    super(message);
+    this.name = "ConflictError";
+  }
+}
+
 // ============================================================================
 // Error Response Helper Functions
 // ============================================================================
@@ -120,7 +127,7 @@ export function createValidationErrorResponse(zodErrors: { path: (string | numbe
     message: err.message,
   }));
 
-  return createErrorHttpResponse("VALIDATION_ERROR", "Invalid query parameters", 400, details);
+  return createErrorHttpResponse("VALIDATION_ERROR", "Invalid request data", 400, details);
 }
 
 /**
@@ -137,7 +144,7 @@ export function logError(context: string, error: unknown): void {
   // If error is a plain object with a message property, prefer that.
   if (typeof error === "object" && error !== null && "message" in error) {
     try {
-      const msg = (error as any).message;
+      const msg = (error as { message: unknown }).message;
       console.error(`${context} Error:`, String(msg));
       return;
     } catch {
@@ -228,8 +235,8 @@ export function logErrorWithContext(context: ErrorLogContext, error: unknown): v
     console.error("[ERROR]", JSON.stringify(payload));
   } else {
     // If it's an object with a message property, use it; otherwise stringify safely
-    if (typeof error === "object" && error !== null && "message" in (error as any)) {
-      payload.error_message = String((error as any).message);
+    if (typeof error === "object" && error !== null && "message" in error) {
+      payload.error_message = String((error as { message: unknown }).message);
     } else {
       try {
         payload.error_message = JSON.stringify(error);

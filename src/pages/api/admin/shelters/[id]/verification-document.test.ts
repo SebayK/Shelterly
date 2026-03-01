@@ -291,9 +291,9 @@ describe("GET /api/admin/shelters/:id/verification-document", () => {
       const decoded = decodeURIComponent(encoded);
       expect(decoded).toBe("document.pdf");
     } else {
-      const quotedMatch = cd.match(/filename=\"([^\"]+)\"/);
+      const quotedMatch = cd.match(/filename="([^"]+)"/);
       expect(quotedMatch).not.toBeNull();
-      expect(quotedMatch![1]).toBe("document.pdf");
+      expect(quotedMatch?.[1]).toBe("document.pdf");
     }
   });
 
