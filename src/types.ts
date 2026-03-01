@@ -347,6 +347,37 @@ export interface LoginResponseDTO {
   };
 }
 
+/**
+ * DTO 21: POST /api/auth/signup - Successful registration response
+ */
+export interface SignupResponseDTO {
+  message: string;
+  user: {
+    id: string;
+    email: string;
+  };
+  profile: {
+    id: string;
+    status: ShelterStatus;
+    name: string;
+  };
+}
+
+/**
+ * DTO 22: POST /api/auth/logout - Successful logout response
+ */
+export interface LogoutResponseDTO {
+  message: string;
+}
+
+/**
+ * DTO 23: POST /api/auth/refresh - Successful token refresh response
+ */
+export interface RefreshTokenResponseDTO {
+  access_token: string;
+  expires_at: number;
+}
+
 // ============================================================================
 // Command Models (Request Bodies)
 // ============================================================================
@@ -431,6 +462,29 @@ export interface UpdateShelterStatusCommand {
 export interface LoginCommand {
   email: string;
   password: string;
+}
+
+/**
+ * Command 9: POST /api/auth/signup - Registration request body
+ */
+export interface SignupCommand {
+  email: string;
+  password: string;
+  profile: {
+    name: string;
+    nip: string;
+    city: string;
+    address: string;
+    phone_number?: string;
+    website_url?: string;
+  };
+}
+
+/**
+ * Command 10: POST /api/auth/refresh - Refresh token request body
+ */
+export interface RefreshTokenCommand {
+  refresh_token: string;
 }
 
 // ============================================================================

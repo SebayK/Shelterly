@@ -55,12 +55,14 @@ interface ProfileData {
 function buildSupabaseMock({
   authResult = { data: { user: { id: USER_ID, email: USER_EMAIL }, session: SESSION }, error: null },
   profileResult = { data: PROFILE as ProfileData, error: null },
+  signOutResult = { error: null },
 }: {
   authResult?: {
     data: { user: { id: string; email: string } | null; session: typeof SESSION | null };
     error: { message: string } | null;
   };
   profileResult?: { data: ProfileData | null; error: { message: string } | null };
+  signOutResult?: { error: { message: string } | null };
 } = {}) {
   const maybeSingle = vi.fn().mockResolvedValue(profileResult);
   const eq = vi.fn().mockReturnValue({ maybeSingle });
@@ -68,10 +70,13 @@ function buildSupabaseMock({
   const from = vi.fn().mockReturnValue({ select });
 
   const signInWithPassword = vi.fn().mockResolvedValue(authResult);
+  // signOut is called by login() when the account status is pending or suspended,
+  // to invalidate the session before throwing the domain error.
+  const signOut = vi.fn().mockResolvedValue(signOutResult);
 
   return {
     from,
-    auth: { signInWithPassword },
+    auth: { signInWithPassword, signOut },
   } as unknown as import("@/db/supabase.client").SupabaseClient;
 }
 
@@ -230,6 +235,11 @@ describe("POST /api/auth/login", () => {
     expect(response.status).toBe(403);
     const body = await response.json();
     expect(body.error.code).toBe("ACCOUNT_PENDING");
+    // Ensure session tokens are NOT returned for pending accounts
+    expect(JSON.stringify(body)).not.toContain("access_token");
+    // signOut must be called to invalidate the created session
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((supabase.auth as any).signOut).toHaveBeenCalledOnce();
   });
 
   // -------------------------------------------------------------------------
@@ -247,6 +257,11 @@ describe("POST /api/auth/login", () => {
     expect(response.status).toBe(403);
     const body = await response.json();
     expect(body.error.code).toBe("ACCOUNT_SUSPENDED");
+    // Ensure session tokens are NOT returned for suspended accounts
+    expect(JSON.stringify(body)).not.toContain("access_token");
+    // signOut must be called to invalidate the created session
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((supabase.auth as any).signOut).toHaveBeenCalledOnce();
   });
 
   // -------------------------------------------------------------------------
