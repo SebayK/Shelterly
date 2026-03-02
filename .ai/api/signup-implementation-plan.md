@@ -167,22 +167,24 @@ sequenceDiagram
         Route-->>Client: 400 VALIDATION_ERROR
     end
     Route->>Service: signup(command)
-    Service->>Supabase: auth.signUp({email, password})
-    alt Email już istnieje
-        Supabase-->>Service: AuthError (user already registered)
+    Service->>Supabase: auth.signUp({email, password, options.data: profile})
+    alt Email lub NIP już istnieje (unique constraint violation)
+        Supabase-->>Service: AuthError / DatabaseError (unique_violation)
         Service-->>Route: throw ConflictError
         Route-->>Client: 409 CONFLICT
     end
     Supabase-->>Service: {user}
-    Service->>DB: INSERT INTO profiles (id, name, nip, city, address, phone_number, website_url)
-    alt NIP już istnieje (unique constraint violation)
-        DB-->>Service: PostgrestError (23505)
-        Service-->>Route: throw ConflictError
-        Route-->>Client: 409 CONFLICT
+    Note over Supabase,DB: Trigger handle_new_user w DB tworzy rekord w profiles powiązany z user.id
+    Service->>DB: SELECT * FROM profiles WHERE id = user.id
+    alt Profil nie został utworzony (nieoczekiwany błąd triggera)
+        DB-->>Service: brak rekordu
+        Service-->>Route: throw InternalError
+        Route-->>Client: 500 INTERNAL_SERVER_ERROR
+    else Profil utworzony poprawnie
+        DB-->>Service: profile
+        Service-->>Route: SignupResponseDTO
+        Route-->>Client: 201 Created + SignupResponseDTO
     end
-    DB-->>Service: profile
-    Service-->>Route: SignupResponseDTO
-    Route-->>Client: 201 Created + SignupResponseDTO
 ```
 
 ## 6. Względy bezpieczeństwa
@@ -214,14 +216,14 @@ sequenceDiagram
 | Email już zarejestrowany                 | 409      | `CONFLICT`         | "An account with this email or NIP already exists" |
 | NIP już istnieje (unique constraint)     | 409      | `CONFLICT`         | "An account with this email or NIP already exists" |
 | Błąd Supabase Auth (inny niż duplikat)   | 500      | `INTERNAL_ERROR`   | "An internal error occurred"                       |
-| Błąd INSERT do tabeli profiles           | 500      | `INTERNAL_ERROR`   | "An internal error occurred"                       |
+| Błąd SELECT profilu po rejestracji       | 500      | `INTERNAL_ERROR`   | "An internal error occurred"                       |
 | Supabase client niedostępny              | 500      | `INTERNAL_ERROR`   | "Database connection not available"                |
 
 ## 8. Rozważania dotyczące wydajności
 
-1. **Minimalna liczba operacji:** Endpoint wykonuje dokładnie 2 operacje: `auth.signUp` i `INSERT` do `profiles`. Żadne dodatkowe zapytania nie są potrzebne.
+1. **Minimalna liczba operacji:** Endpoint wykonuje 2 operacje I/O: `auth.signUp` (który atomowo tworzy użytkownika i wywołuje trigger) oraz `SELECT` do `profiles`. Żaden jawny INSERT w kodzie serwisu nie jest potrzebny.
 
-2. **Rollback przy częściowym błędzie:** Jeśli `INSERT` do `profiles` się nie powiedzie po pomyślnym `auth.signUp`, nowy użytkownik w Supabase Auth nie będzie miał profilu. Supabase trigger `on_auth_user_created` może obsłużyć tworzenie profilu, ale w naszym przypadku robimy to jawnie w serwisie. W razie błędu INSERT logujemy kontekst i zwracamy 500 — użytkownik może spróbować ponownie (Supabase Auth wykryje duplikat emaila i sytuacja jest kontrolowana). Alternatywnie, można korzystać z Supabase trigger.
+2. **Atomowe tworzenie profilu:** Trigger `handle_new_user` tworzy rekord w `profiles` w tej samej transakcji co `auth.users` — eliminuje ryzyko zombie user (użytkownik bez profilu). Jeśli trigger się nie powiedzie, cała transakcja jest cofana i Supabase zwraca błąd.
 
 3. **Early returns:** Walidacja Zod i sprawdzenie `locals.supabase` są wykonywane przed jakąkolwiek operacją I/O.
 
@@ -278,15 +280,14 @@ Dodać `SignupCommandSchema` z pełną walidacją:
 
 Dodać metodę `signup(command: SignupCommand): Promise<SignupResponseDTO>`:
 
-1. `supabase.auth.signUp({ email: command.email, password: command.password })`
+1. `supabase.auth.signUp({ email, password, options: { data: { name, nip, city, address, ... } } })`
+   — dane profilu przekazywane jako `raw_user_meta_data`; trigger `handle_new_user` tworzy profil atomowo
 2. Przy `authError`:
-   - Jeśli komunikat zawiera "User already registered" → `throw new ConflictError("An account with this email or NIP already exists")`
+   - Jeśli komunikat zawiera `"User already registered"`, `"duplicate"` lub `"unique"` → `throw new ConflictError(...)`
    - W przeciwnym razie → `throw new InternalError("Registration failed")`
 3. Jeśli brak `user` → `throw new InternalError("Registration failed")`
-4. `supabase.from("profiles").insert({...}).select("id, status, name").single()`
-5. Przy `profileError`:
-   - Jeśli `code === "23505"` (unique violation na NIP) → `throw new ConflictError("An account with this email or NIP already exists")`
-   - W przeciwnym razie → `throw new InternalError("Failed to create profile")`
+4. `supabase.from("profiles").select("id, status, name").eq("id", user.id).single()` — odczyt profilu utworzonego przez trigger
+5. Przy `profileError` lub braku profilu → `throw new InternalError("Failed to retrieve profile after registration")`
 6. Zwrócić `SignupResponseDTO`
 
 ---

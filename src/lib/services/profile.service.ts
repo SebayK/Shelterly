@@ -8,7 +8,14 @@ import type {
   NeedsSummary,
   Location,
 } from "../../types";
-import { NotFoundError, InternalError, AddressNotFoundError, logError } from "../errors";
+import {
+  NotFoundError,
+  InternalError,
+  AddressNotFoundError,
+  logError,
+  logErrorWithContext,
+  logWarningWithContext,
+} from "../errors";
 import { APP_CONFIG } from "../config";
 
 /**
@@ -104,7 +111,10 @@ export class ProfileService {
 
         // Verify required fields exist
         if (!profile.name || !profile.city) {
-          console.warn(`Profile ${profile.id} missing required fields`);
+          logWarningWithContext(
+            { endpoint: "ProfileService.getVerifiedProfiles", shelter_id: profile.id },
+            "Profile missing required fields"
+          );
           return null;
         }
 
@@ -182,7 +192,10 @@ export class ProfileService {
 
     // Verify shelter has required fields (for verified shelters, these should never be null)
     if (!profile.name || !profile.city) {
-      console.warn(`Verified profile ${id} has missing required fields`);
+      logWarningWithContext(
+        { endpoint: "ProfileService.getProfileById", shelter_id: id },
+        "Verified profile has missing required fields"
+      );
       throw new NotFoundError("Shelter data incomplete");
     }
 
@@ -190,13 +203,19 @@ export class ProfileService {
     const location = this.parseLocation(profile.location);
 
     if (!location) {
-      console.warn(`Profile ${id} has no valid location`);
+      logWarningWithContext(
+        { endpoint: "ProfileService.getProfileById", shelter_id: id },
+        "Profile has no valid location"
+      );
       throw new NotFoundError("Shelter location data unavailable");
     }
 
     // Verify shelter has required fields (for verified shelters)
     if (!profile.name || !profile.city || !profile.address) {
-      console.warn(`Verified profile ${id} has missing required fields`);
+      logWarningWithContext(
+        { endpoint: "ProfileService.getProfileById", shelter_id: id },
+        "Verified profile has missing required fields"
+      );
       throw new NotFoundError("Shelter data incomplete");
     }
 
@@ -282,12 +301,10 @@ export class ProfileService {
 
     // Verify required fields (for regular shelters, these should never be null)
     if (!profile.name || !profile.city) {
-      console.warn(`Profile ${userId} has missing required fields`);
-      throw new NotFoundError("Profile data incomplete");
-    }
-    // Verify required fields (for regular shelters, these should never be null)
-    if (!profile.name || !profile.city) {
-      console.warn(`Profile ${userId} has missing required fields`);
+      logWarningWithContext(
+        { endpoint: "ProfileService.updateProfile", user_id: userId },
+        "Profile has missing required fields"
+      );
       throw new NotFoundError("Profile data incomplete");
     }
     return {
@@ -365,7 +382,10 @@ export class ProfileService {
       });
 
       if (!response.ok) {
-        console.error(`Geocoding service returned status ${response.status}`);
+        logErrorWithContext(
+          { endpoint: "ProfileService.geocodeAddress" },
+          new Error(`Geocoding service returned status ${response.status}`)
+        );
         throw new InternalError("Geocoding service unavailable");
       }
 
@@ -439,7 +459,7 @@ export class ProfileService {
         return { lat, lon };
       }
 
-      console.warn("Invalid GeoJSON coordinates:", { lat, lon });
+      logWarningWithContext({ endpoint: "ProfileService.parseLocation" }, "Invalid GeoJSON coordinates", { lat, lon });
       return null;
     }
 
@@ -454,14 +474,16 @@ export class ProfileService {
           return { lon, lat };
         }
 
-        console.warn("Invalid WKT coordinates:", { lat, lon });
+        logWarningWithContext({ endpoint: "ProfileService.parseLocation" }, "Invalid WKT coordinates", { lat, lon });
         return null;
       }
     }
 
     // Unable to parse location
     if (geography !== null && geography !== undefined) {
-      console.warn("Unable to parse location from geography:", typeof geography);
+      logWarningWithContext({ endpoint: "ProfileService.parseLocation" }, "Unable to parse location from geography", {
+        type: typeof geography,
+      });
     }
 
     return null;

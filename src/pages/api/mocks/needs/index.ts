@@ -37,7 +37,7 @@ export const GET: APIRoute = async ({ url }) => {
   });
 
   if (!validationResult.success) {
-    return createValidationErrorResponse(validationResult.error.errors);
+    return createValidationErrorResponse(validationResult.error.errors, "Invalid query parameters");
   }
 
   const params = validationResult.data;

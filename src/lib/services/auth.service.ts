@@ -20,6 +20,7 @@ import {
   AccountPendingError,
   AccountSuspendedError,
   ConflictError,
+  logWarningWithContext,
 } from "@/lib/errors";
 
 export class AuthService {
@@ -72,12 +73,26 @@ export class AuthService {
     // signOut() is called first to invalidate the Supabase session that was just created,
     // preventing pending/suspended accounts from holding active JWT sessions.
     if (profile.status === "pending") {
-      await this.supabase.auth.signOut();
+      const { error: signOutError } = await this.supabase.auth.signOut();
+      if (signOutError) {
+        logWarningWithContext(
+          { endpoint: "AuthService.login", user_id: user.id },
+          "Failed to sign out pending account session",
+          { error: signOutError.message }
+        );
+      }
       throw new AccountPendingError();
     }
 
     if (profile.status === "suspended") {
-      await this.supabase.auth.signOut();
+      const { error: signOutError } = await this.supabase.auth.signOut();
+      if (signOutError) {
+        logWarningWithContext(
+          { endpoint: "AuthService.login", user_id: user.id },
+          "Failed to sign out suspended account session",
+          { error: signOutError.message }
+        );
+      }
       throw new AccountSuspendedError();
     }
 
