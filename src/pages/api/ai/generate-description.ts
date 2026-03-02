@@ -5,7 +5,6 @@ import {
   createErrorHttpResponse,
   createValidationErrorResponse,
   ForbiddenError,
-  InternalError,
   NotFoundError,
   UnauthorizedError,
   logErrorWithContext,
@@ -77,6 +76,19 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
+    if (error instanceof NotFoundError) {
+      return createErrorHttpResponse("NOT_FOUND", error.message, 404);
+    }
+
+    if (error instanceof ForbiddenError) {
+      return createErrorHttpResponse("FORBIDDEN", error.message, 403);
+    }
+
+    if (error instanceof UnauthorizedError) {
+      return createErrorHttpResponse("UNAUTHORIZED", error.message, 401);
+    }
+
+    // Unexpected errors only — log with context
     logErrorWithContext(
       {
         endpoint: "POST /api/ai/generate-description",
@@ -91,22 +103,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
       },
       error
     );
-
-    if (error instanceof NotFoundError) {
-      return createErrorHttpResponse("NOT_FOUND", error.message, 404);
-    }
-
-    if (error instanceof ForbiddenError) {
-      return createErrorHttpResponse("FORBIDDEN", error.message, 403);
-    }
-
-    if (error instanceof UnauthorizedError) {
-      return createErrorHttpResponse("UNAUTHORIZED", error.message, 401);
-    }
-
-    if (error instanceof InternalError) {
-      return createErrorHttpResponse("INTERNAL_ERROR", error.message, 500);
-    }
 
     return createErrorHttpResponse("INTERNAL_ERROR", "An unexpected error occurred", 500);
   }

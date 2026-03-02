@@ -113,7 +113,6 @@ Checklist before production deploy:
 - Use `./scripts/deploy-production.sh` which creates a curated production bundle and applies only approved migrations.
 - Verify RLS remains enabled after deployment (see "Weryfikacja RLS w produkcji").
 
-
 ### Problem: Nie mogę tworzyć needs w produkcji
 
 **Przyczyna:** User nie ma verified profile  

@@ -50,6 +50,27 @@ export class AddressNotFoundError extends Error {
   }
 }
 
+export class AccountPendingError extends Error {
+  constructor(message = "Account is pending verification") {
+    super(message);
+    this.name = "AccountPendingError";
+  }
+}
+
+export class AccountSuspendedError extends Error {
+  constructor(message = "Account has been suspended") {
+    super(message);
+    this.name = "AccountSuspendedError";
+  }
+}
+
+export class ConflictError extends Error {
+  constructor(message = "Resource already exists") {
+    super(message);
+    this.name = "ConflictError";
+  }
+}
+
 // ============================================================================
 // Error Response Helper Functions
 // ============================================================================
@@ -98,15 +119,20 @@ export function createErrorHttpResponse(
 /**
  * Creates a validation error response from Zod error
  * @param zodErrors - Array of Zod errors
+ * @param message - Optional custom error message. Use "Invalid query parameters" for query-param
+ *   validation and "Invalid request data" (default) for request body validation.
  * @returns Response object with validation error details
  */
-export function createValidationErrorResponse(zodErrors: { path: (string | number)[]; message: string }[]): Response {
+export function createValidationErrorResponse(
+  zodErrors: { path: (string | number)[]; message: string }[],
+  message = "Invalid request data"
+): Response {
   const details: ErrorDetail[] = zodErrors.map((err) => ({
     field: err.path.join("."),
     message: err.message,
   }));
 
-  return createErrorHttpResponse("VALIDATION_ERROR", "Invalid query parameters", 400, details);
+  return createErrorHttpResponse("VALIDATION_ERROR", message, 400, details);
 }
 
 /**
@@ -123,7 +149,7 @@ export function logError(context: string, error: unknown): void {
   // If error is a plain object with a message property, prefer that.
   if (typeof error === "object" && error !== null && "message" in error) {
     try {
-      const msg = (error as any).message;
+      const msg = (error as { message: unknown }).message;
       console.error(`${context} Error:`, String(msg));
       return;
     } catch {
@@ -214,8 +240,8 @@ export function logErrorWithContext(context: ErrorLogContext, error: unknown): v
     console.error("[ERROR]", JSON.stringify(payload));
   } else {
     // If it's an object with a message property, use it; otherwise stringify safely
-    if (typeof error === "object" && error !== null && "message" in (error as any)) {
-      payload.error_message = String((error as any).message);
+    if (typeof error === "object" && error !== null && "message" in error) {
+      payload.error_message = String((error as { message: unknown }).message);
     } else {
       try {
         payload.error_message = JSON.stringify(error);
@@ -225,6 +251,32 @@ export function logErrorWithContext(context: ErrorLogContext, error: unknown): v
     }
     console.error("[ERROR]", JSON.stringify(payload));
   }
+}
+
+/**
+ * Logs a warning with structured context for monitoring and debugging.
+ * Use for non-fatal issues that indicate unexpected but recoverable states
+ * (e.g. missing optional fields, invalid data that can be skipped).
+ *
+ * @param context - Structured context metadata
+ * @param message - Warning message
+ * @param meta - Optional additional non-sensitive metadata
+ */
+export function logWarningWithContext(context: ErrorLogContext, message: string, meta?: Record<string, unknown>): void {
+  const payload: Record<string, unknown> = {
+    timestamp: new Date().toISOString(),
+    endpoint: context.endpoint,
+    message,
+  };
+
+  if (context.correlation_id) payload.correlation_id = context.correlation_id;
+  if (context.user_id) payload.user_id = context.user_id;
+  if (context.shelter_id) payload.shelter_id = context.shelter_id;
+  if (context.need_id) payload.need_id = context.need_id;
+  if (context.constraint) payload.constraint = context.constraint;
+  if (meta) payload.meta = meta;
+
+  console.warn("[WARN]", JSON.stringify(payload));
 }
 
 /**

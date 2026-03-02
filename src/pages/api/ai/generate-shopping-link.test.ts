@@ -1,5 +1,4 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { ForbiddenError, InternalError, NotFoundError } from "@/lib/errors";
 
 interface LoadRouteOptions {
   authUser?: { id: string } | null;

@@ -10,7 +10,8 @@ export const onRequest = defineMiddleware((context, next) => {
   const authHeader = context.request.headers.get("authorization") ?? "";
   // Generate a correlation id for this request for easier tracing in logs
   const correlationId =
-    (globalThis as any)?.crypto?.randomUUID?.() ?? `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    (globalThis as typeof globalThis & { crypto?: { randomUUID?: () => string } }).crypto?.randomUUID?.() ??
+    `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   context.locals.correlation_id = correlationId;
 
   // Expose correlation id to downstream handlers via response header when possible

@@ -532,8 +532,11 @@ async function loadDeleteRoute(options: LoadDeleteRouteOptions = {}) {
         };
 
   // Ensure DELETE route's profile lookup has a default mock chain (only when supabase is not null)
-  if (supabase !== null && (supabase as any)?.from === undefined) {
-    (supabase as any).from = vi.fn().mockReturnValue({
+  interface SupabaseMock {
+    from?: ReturnType<typeof vi.fn>;
+  }
+  if (supabase !== null && (supabase as SupabaseMock)?.from === undefined) {
+    (supabase as SupabaseMock).from = vi.fn().mockReturnValue({
       select: vi.fn().mockReturnValue({
         eq: vi.fn().mockReturnValue({
           maybeSingle: vi.fn().mockResolvedValue({ data: { role: "shelter", status: "verified" }, error: null }),
