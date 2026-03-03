@@ -19,7 +19,7 @@ function ShelterFiltersComponent({
   onCitySearchChange,
 }: ShelterFiltersProps) {
   const [localSearch, setLocalSearch] = useState(searchQuery);
-  const debounceRef = useRef<NodeJS.Timeout | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Debounce dla wyszukiwania - 300ms
   useEffect(() => {

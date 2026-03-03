@@ -31,10 +31,12 @@ const urgencyConfig: Record<
 
 // Polish labels for units
 const unitLabels: Record<string, string> = {
+  pcs: "szt.",
   kg: "kg",
-  pieces: "szt.",
-  liters: "l",
-  packages: "op.",
+  g: "g",
+  l: "l",
+  ml: "ml",
+  pack: "op.",
 };
 
 export function NeedCard({ need }: NeedCardProps) {

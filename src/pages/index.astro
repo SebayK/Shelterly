@@ -3,6 +3,6 @@ import Layout from "../layouts/Layout.astro";
 import { ShelterExplorer } from "../components/shelter-explorer/ShelterExplorer";
 ---
 
-<Layout title="Shelterly - Znajdź schronisko i pomóż zwierzętom">
+<Layout title="Shelterly - Znajdź schronisko i pomóż zwierzętom" withLeaflet={true}>
   <ShelterExplorer client:only="react" />
 </Layout>

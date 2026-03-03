@@ -22,15 +22,6 @@ if (!id || !uuidRegex.test(id)) {
   return Astro.redirect("/404");
 }
 
-// Get Supabase client from locals
-const supabase = Astro.locals.supabase;
-
-if (!supabase) {
-  // eslint-disable-next-line no-console
-  console.error("Supabase client not available in Astro.locals");
-  return Astro.redirect("/404");
-}
-
 let shelter: ProfileDetailDTO;
 let needs: NeedListItemDTO[] = [];
 
@@ -67,6 +58,12 @@ try {
     needs = needsData.needs.filter((need) => need.shelter.id === id) as NeedListItemDTO[];
   } else {
     // Use real API in production
+    const supabase = Astro.locals.supabase;
+    if (!supabase) {
+      // eslint-disable-next-line no-console
+      console.error("Supabase client not available in Astro.locals");
+      return Astro.redirect("/404");
+    }
     const profileService = new ProfileService(supabase);
     shelter = await profileService.getProfileById(id);
 
@@ -104,7 +101,6 @@ const pageTitle = `${shelter.name} - Shelterly`;
         websiteUrl={shelter.website_url}
       />
 
-      <!-- Needs Summary Section -->
       <!-- Needs Summary Section -->
       <NeedsSummarySection summary={shelter.needs_summary} />
 
