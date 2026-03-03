@@ -58,13 +58,13 @@ login.astro (strona Astro)
 - **Obsługiwana walidacja:**
   - Email: wymagany, poprawny format email (`regex`), max 255 znaków
   - Hasło: wymagane, min 1 znak, max 128 znaków
-- **Typy:** `LoginFormState`, `LoginFieldErrors`, `LoginCommand`, `LoginResponseDTO`, `ErrorResponse`
+- **Typy:** `LoginFormState`, `LoginFieldErrors`, `LoginCommand`, `ErrorResponse`
 - **Propsy:**
   - `returnUrl?: string` — URL do przekierowania po zalogowaniu (domyślnie `"/dashboard"`)
 
 ### `FormErrorAlert`
 
-- **Opis:** Komponent prezentujący komunikat błędu ogólnego (z API) nad polami formularza. Wykorzystuje atrybut `role="alert"` dla dostępności (co automatycznie zapewnia `aria-live="assertive"`).
+- **Opis:** Komponent prezentujący komunikat błędu ogólnego (z API) nad polami formularza. Wykorzystuje atrybut `role="alert"` dla dostępności, który zgodnie ze specyfikacją WAI-ARIA implikuje `aria-live="assertive"` i `aria-atomic="true"`.
 - **Główne elementy:** `<div>` z klasami Tailwind (bg-destructive/10, border-destructive, text-destructive, rounded, padding), ikona ostrzeżenia, tekst komunikatu.
 - **Obsługiwane interakcje:** Brak — komponent czysto prezentacyjny.
 - **Obsługiwana walidacja:** Brak.
@@ -83,16 +83,12 @@ interface LoginCommand {
   password: string;
 }
 
-// Odpowiedź sukcesu
-interface LoginResponseDTO {
+// Odpowiedź sukcesu - tylko dane użytkownika i profilu
+// Tokeny są zarządzane automatycznie przez @supabase/ssr jako HttpOnly cookies
+interface LoginResponse {
   user: {
     id: string;
     email: string;
-  };
-  session: {
-    access_token: string;
-    refresh_token: string;
-    expires_at: number;
   };
   profile: {
     id: string;
@@ -100,9 +96,6 @@ interface LoginResponseDTO {
     role: UserRole;
   };
 }
-
-// Uwaga: W rzeczywistości pole `session` nie jest zwracane w body odpowiedzi
-// — tokeny są ustawiane jako HttpOnly cookies. Klient otrzymuje tylko `user` i `profile`.
 
 // Odpowiedź błędu
 interface ErrorResponse {
@@ -208,7 +201,23 @@ Typ: `LoginCommand`
 
 ### Odpowiedź sukces (200 OK)
 
-Typ: `LoginResponseDTO`
+Typ: Dane użytkownika i profilu (bez tokenów)
+
+```json
+{
+  "user": {
+    "id": "uuid",
+    "email": "shelter@example.com"
+  },
+  "profile": {
+    "id": "uuid",
+    "status": "verified",
+    "role": "shelter"
+  }
+}
+```
+
+**Uwaga:** Tokeny sesji (`access_token`, `refresh_token`) są automatycznie ustawiane jako HttpOnly cookies przez `@supabase/ssr` i **nie pojawiają się w body odpowiedzi**.
 
 ### Odpowiedzi błędów
 
@@ -231,9 +240,9 @@ const response = await fetch("/api/auth/login", {
 });
 
 if (response.ok) {
-  // Tokeny są automatycznie zapisane w HttpOnly cookies przez serwer.
-  // Odpowiedź zawiera tylko dane użytkownika i profilu.
-  const data = await response.json();
+  // @supabase/ssr automatycznie zarządza HttpOnly cookies (sb-access-token, sb-refresh-token)
+  // poprzez cookie adapter w middleware. Odpowiedź zawiera TYLKO dane użytkownika i profilu.
+  const data: { user: { id: string; email: string }; profile: { id: string; status: string; role: string } } = await response.json();
   // Przekierowanie na returnUrl lub /dashboard
   window.location.href = returnUrl || "/dashboard";
 } else {
@@ -244,7 +253,14 @@ if (response.ok) {
 
 ### Obsługa tokenu po zalogowaniu
 
-Po otrzymaniu odpowiedzi z statusem 200, serwer automatycznie ustawia tokeny sesji (`access_token`, `refresh_token`) jako HttpOnly cookies w nagłówkach `Set-Cookie`. Tokeny **nie są** dostępne dla JavaScript (co chroni przed XSS), a klient otrzymuje tylko dane użytkownika i profilu w body odpowiedzi. Po otrzymaniu odpowiedzi sukcesu następuje przekierowanie na `returnUrl` lub `/dashboard` za pomocą `window.location.href`.
+Po otrzymaniu odpowiedzi z statusem 200, `@supabase/ssr` automatycznie zarządza ciasteczkami sesji poprzez cookie adapter skonfigurowany w middleware. Biblioteka:
+
+1. **Automatycznie ustawia** HttpOnly cookies (`sb-access-token`, `sb-refresh-token`) gdy storage się zmieni
+2. **Automatycznie odświeża** tokeny gdy są bliskie wygaśnięcia
+3. **Zarządza chunkowaniem** cookies dla dużych sesji
+4. **Używa Base64-URL** encoding dla bezpiecznych wartości
+
+Tokeny **nie są** dostępne dla JavaScript (ochrona przed XSS). Klient otrzymuje **tylko dane użytkownika i profilu** w body odpowiedzi. Po otrzymaniu odpowiedzi sukcesu następuje przekierowanie na `returnUrl` lub `/dashboard` za pomocą `window.location.href`.
 
 ## 8. Interakcje użytkownika
 
@@ -320,7 +336,7 @@ Wszystkie komunikaty wyświetlane są w komponencie `FormErrorAlert` nad polami 
    }
    ```
 
-6. **Wspólny helper dla ciasteczek** — Utworzyć `src/lib/auth-cookies.ts` z funkcjami `buildAuthCookieHeaders` i `buildClearAuthCookieHeaders`. Użyć ich w endpointach `login.ts`, `refresh.ts` i `logout.ts` zamiast duplikować logikę tworzenia ciasteczek.
+6. **~~Wspólny helper dla ciasteczek~~** — ❌ **NIE JEST POTRZEBNY**: `@supabase/ssr` automatycznie zarządza ciasteczkami przez cookie adapter skonfigurowany w middleware. Biblioteka sama ustawia i odświeża `sb-access-token` i `sb-refresh-token` bez potrzeby ręcznej logiki.
 
 7. **Styling i responsywność** — Zastosowanie klas Tailwind do centrowania formularza, odpowiedniej szerokości karty (`max-w-md`, `w-full`), spacingu i responsywnego layoutu. Zapewnienie poprawnego wyświetlania na urządzeniach mobilnych.
 
