@@ -5,8 +5,10 @@ export const prerender = false;
 
 /**
  * Dashboard — protected page.
- * Access is validated server-side using the Supabase session cookie (sb-access-token).
- * When no valid session exists, the user is redirected to /auth/login.
+ * Access is validated server-side by calling getUser(), which verifies the session
+ * with the Supabase Auth server. The session is read from HttpOnly cookies managed
+ * automatically by @supabase/ssr. When no valid session exists, the user is redirected
+ * to /auth/login.
  */
 const { data, error } = await Astro.locals.supabase.auth.getUser();
 
