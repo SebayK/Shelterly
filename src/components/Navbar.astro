@@ -1,0 +1,56 @@
+---
+import { UserAvatarMenu } from "@/components/UserAvatarMenu";
+import { MobileNavMenu } from "@/components/MobileNavMenu";
+import type { NavbarUser } from "@/types";
+
+interface Props {
+  user: NavbarUser | null;
+}
+
+const { user } = Astro.props;
+---
+
+<header class="sticky top-0 z-50 h-14 border-b bg-background">
+  <nav
+    aria-label="Nawigacja główna"
+    class="mx-auto flex h-full max-w-screen-xl items-center justify-between px-4 md:px-6"
+  >
+    <!-- Logo -->
+    <a
+      href="/"
+      class="text-lg font-bold tracking-tight text-foreground hover:opacity-80 transition-opacity"
+      aria-label="Shelterly — strona główna"
+    >
+      Shelterly
+    </a>
+
+    <!-- Desktop: anonymous links or user menu -->
+    <div class="hidden md:flex items-center gap-4">
+      {
+        !user ? (
+          <>
+            <a
+              href="/auth/login"
+              class="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Zaloguj się
+            </a>
+            <a
+              href="/auth/register"
+              class="text-sm font-medium text-foreground underline-offset-4 hover:underline transition-colors"
+            >
+              Zarejestruj schronisko
+            </a>
+          </>
+        ) : (
+          <UserAvatarMenu name={user.name} role={user.role} client:load />
+        )
+      }
+    </div>
+
+    <!-- Mobile: hamburger menu -->
+    <div class="md:hidden">
+      <MobileNavMenu user={user} client:load />
+    </div>
+  </nav>
+</header>

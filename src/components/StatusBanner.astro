@@ -1,0 +1,104 @@
+---
+import type { ShelterStatus } from "@/types";
+
+interface Props {
+  status: ShelterStatus;
+}
+
+const { status } = Astro.props;
+
+type BannerConfig = {
+  containerClass: string;
+  message: string;
+  icon: "clock" | "ban" | "x-circle";
+};
+
+const configs: Partial<Record<ShelterStatus, BannerConfig>> = {
+  pending: {
+    containerClass: "bg-yellow-50 border-yellow-200 text-yellow-800",
+    message:
+      "Twoje konto czeka na weryfikację przez administratora. Możliwość korzystania z pełnej funkcjonalności zostanie odblokowana po zatwierdzeniu.",
+    icon: "clock",
+  },
+  suspended: {
+    containerClass: "bg-red-50 border-red-200 text-red-800",
+    message:
+      "Twoje konto zostało zawieszone. Skontaktuj się z administratorem, aby uzyskać więcej informacji.",
+    icon: "ban",
+  },
+  rejected: {
+    containerClass: "bg-red-50 border-red-200 text-red-800",
+    message:
+      "Twoje konto zostało odrzucone. Skontaktuj się z administratorem, aby uzyskać więcej informacji.",
+    icon: "x-circle",
+  },
+};
+
+const config = configs[status];
+---
+
+{
+  config && (
+    <div
+      role="alert"
+      class={`flex items-start gap-3 border px-4 py-3 text-sm ${config.containerClass}`}
+    >
+      {config.icon === "clock" && (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="mt-0.5 shrink-0"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <polyline points="12 6 12 12 16 14" />
+        </svg>
+      )}
+      {config.icon === "ban" && (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="mt-0.5 shrink-0"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <line x1="4.93" y1="4.93" x2="19.07" y2="19.07" />
+        </svg>
+      )}
+      {config.icon === "x-circle" && (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          class="mt-0.5 shrink-0"
+          aria-hidden="true"
+        >
+          <circle cx="12" cy="12" r="10" />
+          <line x1="15" y1="9" x2="9" y2="15" />
+          <line x1="9" y1="9" x2="15" y2="15" />
+        </svg>
+      )}
+      <span>{config.message}</span>
+    </div>
+  )
+}
