@@ -29,8 +29,7 @@ function ShelterMarkerComponent({ shelter, isSelected, onSelect }: ShelterMarker
           background-color: ${color};
           border: 3px solid white;
           border-radius: 50%;
-          box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-          ${selected ? "box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.3);" : ""}
+          box-shadow: 0 2px 8px rgba(0,0,0,0.3)${selected ? ", 0 0 0 4px rgba(37, 99, 235, 0.3)" : ""};
           transition: all 0.2s ease;
         "></div>
       `,
@@ -60,6 +59,7 @@ function ShelterMarkerComponent({ shelter, isSelected, onSelect }: ShelterMarker
           <div className="space-y-1 text-sm text-gray-600">
             <p className="flex items-center gap-2">
               <svg
+                aria-hidden="true"
                 xmlns="http://www.w3.org/2000/svg"
                 width="14"
                 height="14"
@@ -77,6 +77,7 @@ function ShelterMarkerComponent({ shelter, isSelected, onSelect }: ShelterMarker
             </p>
             <p className="flex items-center gap-2">
               <svg
+                aria-hidden="true"
                 xmlns="http://www.w3.org/2000/svg"
                 width="14"
                 height="14"

@@ -40,7 +40,8 @@ const unitLabels: Record<string, string> = {
 };
 
 export function NeedCard({ need }: NeedCardProps) {
-  const progressPercentage = (need.current_quantity / need.target_quantity) * 100;
+  const progressPercentage =
+    need.target_quantity > 0 ? Math.max(0, Math.min(100, (need.current_quantity / need.target_quantity) * 100)) : 0;
   const isFulfilled = need.is_fulfilled;
   const urgencyInfo = urgencyConfig[need.urgency];
 
@@ -84,6 +85,7 @@ export function NeedCard({ need }: NeedCardProps) {
           {isFulfilled && (
             <div className="flex items-center gap-2 text-green-600 bg-green-50 p-2 rounded-md">
               <svg
+                aria-hidden="true"
                 className="w-5 h-5"
                 fill="none"
                 stroke="currentColor"
