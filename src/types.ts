@@ -562,3 +562,36 @@ export type ErrorCode =
   | "RATE_LIMIT_EXCEEDED"
   | "INTERNAL_ERROR"
   | "SERVICE_UNAVAILABLE";
+
+// ============================================================================
+// ViewModel Types (Frontend navigation / layout)
+// ============================================================================
+
+/**
+ * ViewModel dla komponentu Navbar — dane użytkownika potrzebne do nawigacji.
+ * Przekazywany z layoutów Astro do Navbar i dalej do React islands.
+ */
+export interface NavbarUser {
+  /** Nazwa schroniska (lub null dla super_admin bez nazwy) */
+  name: string | null;
+  /** Rola użytkownika: 'shelter' | 'super_admin' */
+  role: UserRole;
+}
+
+/**
+ * Propsy dla UserAvatarMenu — React island dropdown menu avatara
+ */
+export interface UserAvatarMenuProps {
+  /** Nazwa schroniska do wyświetlenia inicjałów w awatarze */
+  name: string | null;
+  /** Rola użytkownika determinująca pozycje menu */
+  role: UserRole;
+}
+
+/**
+ * Propsy dla MobileNavMenu — React island menu hamburger
+ */
+export interface MobileNavMenuProps {
+  /** Dane użytkownika lub null dla anonimowego */
+  user: NavbarUser | null;
+}

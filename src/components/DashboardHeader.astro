@@ -1,0 +1,91 @@
+---
+import { Badge } from "@/components/ui/badge";
+import { APP_CONFIG } from "@/lib/config";
+import type { ShelterStatus } from "@/types";
+
+interface Props {
+  name: string | null;
+  status: ShelterStatus;
+  aiUsageCount: number;
+}
+
+const { name, status, aiUsageCount } = Astro.props;
+
+type BadgeConfig = {
+  label: string;
+  variant: "default" | "secondary" | "destructive" | "outline";
+  className: string;
+};
+
+const badgeConfigs: Record<ShelterStatus, BadgeConfig> = {
+  verified: {
+    label: "Zweryfikowane",
+    variant: "default",
+    className: "bg-green-100 text-green-800 border-green-200 hover:bg-green-100",
+  },
+  pending: {
+    label: "Oczekuje",
+    variant: "outline",
+    className: "bg-yellow-50 text-yellow-800 border-yellow-200 hover:bg-yellow-50",
+  },
+  suspended: {
+    label: "Zawieszone",
+    variant: "destructive",
+    className: "",
+  },
+  rejected: {
+    label: "Odrzucone",
+    variant: "destructive",
+    className: "",
+  },
+};
+
+const badge = badgeConfigs[status];
+const AI_LIMIT = APP_CONFIG.AI.USAGE_LIMIT;
+---
+
+<header class="border-b px-6 py-4">
+  <div class="flex flex-wrap items-center justify-between gap-3">
+    <div class="flex flex-wrap items-center gap-3">
+      <h1 class="text-xl font-semibold">
+        {name ?? "Dashboard"}
+      </h1>
+      <Badge variant={badge.variant} class={badge.className}>
+        {badge.label}
+      </Badge>
+    </div>
+
+    <div
+      class="flex items-center gap-1.5 text-sm text-muted-foreground"
+      title={`Wykorzystanie AI: ${aiUsageCount} z ${AI_LIMIT}`}
+    >
+      <!-- Sparkles icon (Lucide inline SVG) -->
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="15"
+        height="15"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path
+          d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"
+        ></path>
+        <path d="M20 3v4"></path>
+        <path d="M22 5h-4"></path>
+        <path d="M4 17v2"></path>
+        <path d="M5 18H3"></path>
+      </svg>
+      <span>
+        Użycia AI: <span
+          class={aiUsageCount >= AI_LIMIT ? "text-destructive font-medium" : ""}
+          >{aiUsageCount}</span
+        >/{AI_LIMIT}
+      </span>
+    </div>
+  </div>
+</header>

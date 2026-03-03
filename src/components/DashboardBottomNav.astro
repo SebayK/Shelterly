@@ -1,0 +1,77 @@
+---
+interface Props {
+  currentPath: string;
+}
+
+const { currentPath } = Astro.props;
+
+const isNeeds = currentPath === "/dashboard";
+const isProfile = currentPath.startsWith("/dashboard/profile");
+---
+
+<nav
+  class="md:hidden fixed bottom-0 inset-x-0 h-16 border-t bg-background z-50"
+  aria-label="Nawigacja dashboardu"
+>
+  <div class="flex h-full items-stretch">
+    <a
+      href="/dashboard"
+      aria-current={isNeeds ? "page" : undefined}
+      class={`flex flex-1 flex-col items-center justify-center gap-1 text-xs transition-colors ${
+        isNeeds ? "text-primary" : "text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      <!-- ClipboardList icon (Lucide inline SVG) -->
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect>
+        <path
+          d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"
+        ></path>
+        <path d="M12 11h4"></path>
+        <path d="M12 16h4"></path>
+        <path d="M8 11h.01"></path>
+        <path d="M8 16h.01"></path>
+      </svg>
+      <span>Potrzeby</span>
+    </a>
+
+    <a
+      href="/dashboard/profile"
+      aria-current={isProfile ? "page" : undefined}
+      class={`flex flex-1 flex-col items-center justify-center gap-1 text-xs transition-colors ${
+        isProfile
+          ? "text-primary"
+          : "text-muted-foreground hover:text-foreground"
+      }`}
+    >
+      <!-- User icon (Lucide inline SVG) -->
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="20"
+        height="20"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+        aria-hidden="true"
+      >
+        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+        <circle cx="12" cy="7" r="4"></circle>
+      </svg>
+      <span>Profil</span>
+    </a>
+  </div>
+</nav>
