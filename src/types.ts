@@ -372,9 +372,13 @@ export interface LogoutResponseDTO {
 
 /**
  * DTO 23: POST /api/auth/refresh - Successful token refresh response
+ * Note: the new access_token (and rotated refresh_token) are set as HttpOnly
+ * cookies by the server. The response body only carries expires_at so the
+ * client can schedule the next refresh without reading the token itself.
  */
 export interface RefreshTokenResponseDTO {
   access_token: string;
+  refresh_token: string;
   expires_at: number;
 }
 

@@ -1,0 +1,32 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import LoginForm from "@/components/auth/LoginForm";
+
+export const prerender = false;
+
+/**
+ * Guard against open-redirect attacks: only allow relative paths that start
+ * with "/" and do not start with "//" (which browsers treat as protocol-relative).
+ */
+function sanitizeReturnUrl(raw: string | null): string {
+  if (!raw) return "/dashboard";
+  const trimmed = raw.trim();
+  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) return trimmed;
+  return "/dashboard";
+}
+
+const returnUrl = sanitizeReturnUrl(Astro.url.searchParams.get("return"));
+
+// Server-side session guard: if the HttpOnly access-token cookie is present,
+// the user is already authenticated — redirect immediately without rendering the form.
+const cookieHeader = Astro.request.headers.get("cookie") ?? "";
+if (/(?:^|;\s*)sb-access-token=[^;]+/.test(cookieHeader)) {
+  return Astro.redirect(returnUrl);
+}
+---
+
+<Layout title="Zaloguj się — Shelterly">
+  <main class="flex min-h-screen items-center justify-center bg-background px-4">
+    <LoginForm returnUrl={returnUrl} client:idle />
+  </main>
+</Layout>

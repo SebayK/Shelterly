@@ -27,6 +27,21 @@ export class AuthService {
   constructor(private supabase: SupabaseClient) {}
 
   /**
+   * Signs out the current session and logs a warning if signOut itself fails.
+   * Used to invalidate sessions for pending/suspended accounts before throwing.
+   */
+  private async signOutAndWarn(userId: string): Promise<void> {
+    const { error: signOutError } = await this.supabase.auth.signOut();
+    if (signOutError) {
+      logWarningWithContext(
+        { endpoint: "AuthService.login", user_id: userId },
+        "Failed to sign out non-active account session",
+        { error: signOutError.message }
+      );
+    }
+  }
+
+  /**
    * Authenticates a user with email and password.
    *
    * Flow:
@@ -73,26 +88,12 @@ export class AuthService {
     // signOut() is called first to invalidate the Supabase session that was just created,
     // preventing pending/suspended accounts from holding active JWT sessions.
     if (profile.status === "pending") {
-      const { error: signOutError } = await this.supabase.auth.signOut();
-      if (signOutError) {
-        logWarningWithContext(
-          { endpoint: "AuthService.login", user_id: user.id },
-          "Failed to sign out pending account session",
-          { error: signOutError.message }
-        );
-      }
+      await this.signOutAndWarn(user.id);
       throw new AccountPendingError();
     }
 
     if (profile.status === "suspended") {
-      const { error: signOutError } = await this.supabase.auth.signOut();
-      if (signOutError) {
-        logWarningWithContext(
-          { endpoint: "AuthService.login", user_id: user.id },
-          "Failed to sign out suspended account session",
-          { error: signOutError.message }
-        );
-      }
+      await this.signOutAndWarn(user.id);
       throw new AccountSuspendedError();
     }
 
@@ -258,6 +259,7 @@ export class AuthService {
 
     return {
       access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
       expires_at: data.session.expires_at ?? 0,
     };
   }

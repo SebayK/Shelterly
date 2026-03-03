@@ -30,11 +30,14 @@ export const POST: APIRoute = async ({ locals }) => {
     // 3. Log successful logout
     logSuccess("POST /api/auth/logout");
 
-    // 4. Return 200 OK with confirmation message
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    // 4. Clear HttpOnly session cookies so the browser discards stored tokens.
+    const isProduction = import.meta.env.PROD;
+    const secure = isProduction ? "; Secure" : "";
+    const headers = new Headers({ "Content-Type": "application/json" });
+    for (const name of ["sb-access-token", "sb-refresh-token"]) {
+      headers.append("Set-Cookie", `${name}=; HttpOnly${secure}; SameSite=Strict; Path=/; Max-Age=0`);
+    }
+    return new Response(JSON.stringify(result), { status: 200, headers });
   } catch (error) {
     // 401 — unauthenticated request (missing/expired/invalid token)
     if (error instanceof UnauthorizedError) {

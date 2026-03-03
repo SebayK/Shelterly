@@ -1,25 +1,18 @@
 import type { APIRoute } from "astro";
 import { AuthService } from "@/lib/services/auth.service";
-import { RefreshTokenCommandSchema } from "@/lib/validation/auth.schemas";
-import {
-  createErrorHttpResponse,
-  createValidationErrorResponse,
-  logErrorWithContext,
-  logSuccess,
-  UnauthorizedError,
-} from "@/lib/errors";
+import { createErrorHttpResponse, logErrorWithContext, logSuccess, UnauthorizedError } from "@/lib/errors";
 
 export const prerender = false;
 
 /**
  * POST /api/auth/refresh
  *
- * Refreshes the access token using a valid refresh token.
- * Returns a new access_token and its expires_at timestamp.
- * The refresh token itself is managed internally by Supabase (rotated automatically).
+ * Refreshes the session using the HttpOnly sb-refresh-token cookie.
+ * On success, replaces both auth cookies (access + refresh) and returns
+ * { expires_at } so the client can schedule the next refresh without ever
+ * reading the raw token from JavaScript.
  *
- * Request body: { refresh_token: string }
- * Response: RefreshTokenResponseDTO (200 OK)
+ * Response: { expires_at: number } (200 OK)
  */
 export const POST: APIRoute = async ({ request, locals }) => {
   // 1. Verify Supabase client is available (injected by middleware)
@@ -28,49 +21,49 @@ export const POST: APIRoute = async ({ request, locals }) => {
     return createErrorHttpResponse("INTERNAL_ERROR", "Database connection not available", 500);
   }
 
-  // 2. Parse JSON body — catch malformed payloads early
-  let rawBody: unknown;
-  try {
-    rawBody = await request.json();
-  } catch {
-    return createErrorHttpResponse("INVALID_REQUEST", "Request body must be valid JSON", 400);
+  // 2. Read refresh token from HttpOnly cookie — never from the request body.
+  const cookieHeader = request.headers.get("cookie") ?? "";
+  const match = cookieHeader.match(/(?:^|;\s*)sb-refresh-token=([^;]+)/);
+  const refreshToken = match ? match[1] : null;
+
+  if (!refreshToken) {
+    return createErrorHttpResponse("UNAUTHORIZED", "No refresh token provided", 401);
   }
 
-  // 3. Validate request body with Zod schema
-  const validationResult = RefreshTokenCommandSchema.safeParse(rawBody);
-  if (!validationResult.success) {
-    return createValidationErrorResponse(validationResult.error.errors);
-  }
-
-  const command = validationResult.data;
-
   try {
-    // 4. Delegate business logic to the service layer
+    // 3. Delegate business logic to the service layer
     const authService = new AuthService(supabase);
-    const result = await authService.refreshToken(command);
+    const result = await authService.refreshToken({ refresh_token: refreshToken });
 
-    // 5. Log successful token refresh for monitoring
+    // 4. Log successful token refresh for monitoring
     logSuccess("POST /api/auth/refresh");
 
-    // 6. Return 200 OK with the RefreshTokenResponseDTO
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    // 5. Rotate cookies — both access and refresh tokens are replaced.
+    const isProduction = import.meta.env.PROD;
+    const secure = isProduction ? "; Secure" : "";
+    const maxAgeAccess = Math.max(0, result.expires_at - Math.floor(Date.now() / 1000));
+    const maxAgeRefresh = 60 * 60 * 24 * 30;
+
+    const headers = new Headers({ "Content-Type": "application/json" });
+    headers.append(
+      "Set-Cookie",
+      `sb-access-token=${result.access_token}; HttpOnly${secure}; SameSite=Strict; Path=/; Max-Age=${maxAgeAccess}`
+    );
+    headers.append(
+      "Set-Cookie",
+      `sb-refresh-token=${result.refresh_token}; HttpOnly${secure}; SameSite=Strict; Path=/; Max-Age=${maxAgeRefresh}`
+    );
+
+    // 6. Return only expires_at — the new token is in the cookie, not the body.
+    return new Response(JSON.stringify({ expires_at: result.expires_at }), { status: 200, headers });
   } catch (error) {
     // Map domain errors to appropriate HTTP responses
     if (error instanceof UnauthorizedError) {
       return createErrorHttpResponse("UNAUTHORIZED", error.message, 401);
     }
 
-    // Unexpected errors — log with context (refresh_token is redacted automatically)
-    logErrorWithContext(
-      {
-        endpoint: "POST /api/auth/refresh",
-      },
-      error
-    );
-
+    // Unexpected errors — log with context
+    logErrorWithContext({ endpoint: "POST /api/auth/refresh" }, error);
     return createErrorHttpResponse("INTERNAL_ERROR", "An internal error occurred", 500);
   }
 };

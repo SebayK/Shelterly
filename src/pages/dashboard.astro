@@ -1,0 +1,25 @@
+---
+import Layout from "@/layouts/Layout.astro";
+
+export const prerender = false;
+
+/**
+ * Dashboard — protected page.
+ * Token validation is client-side (localStorage); the client-side guard in the
+ * React islands will redirect to /auth/login when no valid token is present.
+ * A server-side check can be added here once a session cookie strategy is adopted.
+ */
+---
+
+<Layout title="Dashboard — Shelterly">
+  <main class="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4">
+    <h1 class="text-3xl font-bold">Dashboard</h1>
+    <p class="text-muted-foreground">Zalogowano pomyślnie. Panel zarządzania schroniskiem będzie dostępny tutaj.</p>
+    <a
+      href="/auth/login"
+      class="text-sm font-medium text-primary underline-offset-4 hover:underline"
+    >
+      Wyloguj się
+    </a>
+  </main>
+</Layout>

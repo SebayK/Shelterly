@@ -10,6 +10,29 @@ import {
   AccountPendingError,
   AccountSuspendedError,
 } from "@/lib/errors";
+import type { LoginResponseDTO } from "@/types";
+
+// ---------------------------------------------------------------------------
+// Cookie helpers
+// ---------------------------------------------------------------------------
+
+function buildAuthCookieHeaders(session: LoginResponseDTO["session"], isProduction: boolean): Headers {
+  const secure = isProduction ? "; Secure" : "";
+  const maxAgeAccess = Math.max(0, session.expires_at - Math.floor(Date.now() / 1000));
+  // Refresh tokens typically live 30 days; honour Supabase's default.
+  const maxAgeRefresh = 60 * 60 * 24 * 30;
+
+  const headers = new Headers({ "Content-Type": "application/json" });
+  headers.append(
+    "Set-Cookie",
+    `sb-access-token=${session.access_token}; HttpOnly${secure}; SameSite=Strict; Path=/; Max-Age=${maxAgeAccess}`
+  );
+  headers.append(
+    "Set-Cookie",
+    `sb-refresh-token=${session.refresh_token}; HttpOnly${secure}; SameSite=Strict; Path=/; Max-Age=${maxAgeRefresh}`
+  );
+  return headers;
+}
 
 export const prerender = false;
 
@@ -54,11 +77,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // 5. Log successful login for monitoring
     logSuccess("POST /api/auth/login", { user_id: result.user.id });
 
-    // 6. Return 200 OK with the LoginResponseDTO
-    return new Response(JSON.stringify(result), {
-      status: 200,
-      headers: { "Content-Type": "application/json" },
-    });
+    // 6. Set HttpOnly session cookies and return user/profile data only.
+    //    Tokens are never exposed in the response body — they live in HttpOnly
+    //    cookies inaccessible to JavaScript, mitigating XSS token theft.
+    const { session, ...clientResponse } = result;
+    const headers = buildAuthCookieHeaders(session, import.meta.env.PROD);
+    return new Response(JSON.stringify(clientResponse), { status: 200, headers });
   } catch (error) {
     // Map domain errors to appropriate HTTP responses
     if (error instanceof UnauthorizedError) {

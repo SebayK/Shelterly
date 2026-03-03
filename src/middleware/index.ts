@@ -6,8 +6,21 @@ import { supabaseClient } from "../db/supabase.client";
 const supabaseUrl = import.meta.env.SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.SUPABASE_KEY;
 
+/**
+ * Extracts the access token from the sb-access-token HttpOnly cookie.
+ * Returns an empty string when the cookie is absent.
+ */
+function getTokenFromCookie(cookieHeader: string): string {
+  const match = cookieHeader.match(/(?:^|;\s*)sb-access-token=([^;]+)/);
+  return match ? match[1] : "";
+}
+
 export const onRequest = defineMiddleware((context, next) => {
-  const authHeader = context.request.headers.get("authorization") ?? "";
+  // Prefer explicit Authorization header (e.g. server-to-server calls), then
+  // fall back to the HttpOnly session cookie set by POST /api/auth/login.
+  const explicitAuth = context.request.headers.get("authorization") ?? "";
+  const cookieToken = getTokenFromCookie(context.request.headers.get("cookie") ?? "");
+  const authHeader = explicitAuth || (cookieToken ? `Bearer ${cookieToken}` : "");
   // Generate a correlation id for this request for easier tracing in logs
   const correlationId =
     (globalThis as typeof globalThis & { crypto?: { randomUUID?: () => string } }).crypto?.randomUUID?.() ??
