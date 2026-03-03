@@ -34,10 +34,10 @@ login.astro (strona Astro)
 
 ### `login.astro`
 
-- **Opis:** Strona Astro stanowiąca punkt wejścia dla ścieżki `/auth/login`. Renderuje layout aplikacji z osadzonym komponentem React `LoginForm` jako wyspą interaktywną (`client:load`). Odczytuje opcjonalny parametr `return` z query string i przekazuje go do `LoginForm`.
+- **Opis:** Strona Astro stanowiąca punkt wejścia dla ścieżki `/auth/login`. Renderuje layout aplikacji z osadzonym komponentem React `LoginForm` jako wyspą interaktywną (`client:load`). Odczytuje opcjonalny parametr `return` z query string i przekazuje go do `LoginForm`. Implementuje server-side guard, który sprawdza ważność sesji Supabase i przekierowuje zalogowanych użytkowników.
 - **Główne elementy:** `<Layout>` z tytułem strony „Zaloguj się — Shelterly", `<main>` z klasami Tailwind centrującymi zawartość (flex, items-center, justify-center, min-h-screen), `<LoginForm>` z dyrektywą `client:load`.
 - **Obsługiwane interakcje:** Brak — logika delegowana do `LoginForm`.
-- **Obsługiwana walidacja:** Brak.
+- **Obsługiwana walidacja:** Server-side sprawdzenie sesji przez `supabase.auth.getUser()`.
 - **Typy:** Brak.
 - **Propsy:** Brak (strona Astro).
 
@@ -64,7 +64,7 @@ login.astro (strona Astro)
 
 ### `FormErrorAlert`
 
-- **Opis:** Komponent prezentujący komunikat błędu ogólnego (z API) nad polami formularza. Wykorzystuje atrybuty `role="alert"` i `aria-live="polite"` dla dostępności.
+- **Opis:** Komponent prezentujący komunikat błędu ogólnego (z API) nad polami formularza. Wykorzystuje atrybut `role="alert"` dla dostępności (co automatycznie zapewnia `aria-live="assertive"`).
 - **Główne elementy:** `<div>` z klasami Tailwind (bg-destructive/10, border-destructive, text-destructive, rounded, padding), ikona ostrzeżenia, tekst komunikatu.
 - **Obsługiwane interakcje:** Brak — komponent czysto prezentacyjny.
 - **Obsługiwana walidacja:** Brak.
@@ -100,6 +100,9 @@ interface LoginResponseDTO {
     role: UserRole;
   };
 }
+
+// Uwaga: W rzeczywistości pole `session` nie jest zwracane w body odpowiedzi
+// — tokeny są ustawiane jako HttpOnly cookies. Klient otrzymuje tylko `user` i `profile`.
 
 // Odpowiedź błędu
 interface ErrorResponse {
@@ -228,8 +231,11 @@ const response = await fetch("/api/auth/login", {
 });
 
 if (response.ok) {
-  const data: LoginResponseDTO = await response.json();
-  // Zapisanie tokenu i przekierowanie
+  // Tokeny są automatycznie zapisane w HttpOnly cookies przez serwer.
+  // Odpowiedź zawiera tylko dane użytkownika i profilu.
+  const data = await response.json();
+  // Przekierowanie na returnUrl lub /dashboard
+  window.location.href = returnUrl || "/dashboard";
 } else {
   const errorData: ErrorResponse = await response.json();
   // Mapowanie błędu na komunikat
@@ -238,7 +244,7 @@ if (response.ok) {
 
 ### Obsługa tokenu po zalogowaniu
 
-Po otrzymaniu odpowiedzi z tokenami sesji (`access_token`, `refresh_token`), tokeny powinny być zapisane w sposób umożliwiający ich użycie w kolejnych żądaniach (np. `localStorage` lub cookie). Następnie następuje przekierowanie na `returnUrl` lub `/dashboard` za pomocą `window.location.href`.
+Po otrzymaniu odpowiedzi z statusem 200, serwer automatycznie ustawia tokeny sesji (`access_token`, `refresh_token`) jako HttpOnly cookies w nagłówkach `Set-Cookie`. Tokeny **nie są** dostępne dla JavaScript (co chroni przed XSS), a klient otrzymuje tylko dane użytkownika i profilu w body odpowiedzi. Po otrzymaniu odpowiedzi sukcesu następuje przekierowanie na `returnUrl` lub `/dashboard` za pomocą `window.location.href`.
 
 ## 8. Interakcje użytkownika
 
@@ -286,7 +292,7 @@ Walidacja po stronie serwera korzysta ze schematu Zod `LoginCommandSchema` (w `s
 | Błąd sieci / brak połączenia | N/A (fetch reject) | „Nie udało się połączyć z serwerem. Sprawdź połączenie internetowe." |
 | Nieoczekiwany błąd parsowania odpowiedzi | N/A | „Wystąpił nieoczekiwany błąd. Spróbuj ponownie." |
 
-Wszystkie komunikaty wyświetlane są w komponencie `FormErrorAlert` nad polami formularza z atrybutem `aria-live="polite"`, aby czytniki ekranu automatycznie ogłosiły zmianę.
+Wszystkie komunikaty wyświetlane są w komponencie `FormErrorAlert` nad polami formularza z atrybutem `role="alert"`, aby czytniki ekranu automatycznie ogłosiły zmianę (role="alert" implikuje aria-live="assertive").
 
 ## 11. Kroki implementacji
 
@@ -294,17 +300,17 @@ Wszystkie komunikaty wyświetlane są w komponencie `FormErrorAlert` nad polami 
 
 2. **Instalacja komponentu Label z shadcn/ui** — Uruchomienie `npx shadcn@latest add label` w celu dodania komponentu `Label` do `src/components/ui/label.tsx`, potrzebnego dla pól formularza.
 
-3. **Utworzenie komponentu `FormErrorAlert`** — `src/components/auth/FormErrorAlert.tsx` — prosty komponent prezentacyjny z propsem `message: string`, renderujący komunikat błędu z atrybutami `role="alert"` i `aria-live="polite"`.
+3. **Utworzenie komponentu `FormErrorAlert`** — `src/components/auth/FormErrorAlert.tsx` — prosty komponent prezentacyjny z propsem `message: string`, renderujący komunikat błędu z atrybutem `role="alert"` (co automatycznie zapewnia odpowiednią dostępność dla czytników ekranu).
 
 4. **Utworzenie komponentu `LoginForm`** — `src/components/auth/LoginForm.tsx`:
    - Zdefiniowanie typów `LoginFieldErrors` i `LoginFormState`.
    - Implementacja stanu formularza (`useState` dla poszczególnych pól i flag).
    - Implementacja funkcji walidacji pól (`validateEmail`, `validatePassword`) odzwierciedlających reguły ze schematu `LoginCommandSchema`.
-   - Implementacja handlera `onSubmit` — walidacja, wywołanie `fetch` do `/api/auth/login`, obsługa odpowiedzi (sukces → zapis tokenu + redirect, błąd → mapowanie kodu na komunikat).
+   - Implementacja handlera `onSubmit` — walidacja, wywołanie `fetch` do `/api/auth/login`, obsługa odpowiedzi (sukces → redirect, błąd → mapowanie kodu na komunikat). Tokeny są automatycznie zapisywane jako HttpOnly cookies przez serwer.
    - Implementacja handlerów `onChange` i `onBlur` dla pól.
    - Toggle widoczności hasła (przycisk z ikoną oka).
    - Renderowanie: `Card` > `CardHeader` > formularz z polami > `CardFooter` z przyciskiem submit i linkiem do rejestracji.
-   - Zapewnienie dostępności: `htmlFor`/`id` na etykietach, `aria-describedby` łączący pola z komunikatami błędów, `aria-invalid` na polach z błędami, `aria-live="polite"` na komunikatach.
+   - Zapewnienie dostępności: `htmlFor`/`id` na etykietach, `aria-describedby` łączący pola z komunikatami błędów, `aria-invalid` na polach z błędami, `role="alert"` na komunikatach.
 
 5. **Dodanie rate limitera do endpointu login** — W pliku `src/pages/api/auth/login.ts` dodać konfigurację rate limitera (5 prób / 15 min / IP) z wykorzystaniem istniejącej klasy `RateLimiter`. Dodać odpowiednią konfigurację do `src/lib/config.ts` w sekcji `RATE_LIMITING`:
    ```typescript
@@ -314,7 +320,7 @@ Wszystkie komunikaty wyświetlane są w komponencie `FormErrorAlert` nad polami 
    }
    ```
 
-6. **Obsługa tokenów sesji** — W `LoginForm`, po otrzymaniu odpowiedzi 200, zapisać `access_token` i `refresh_token` (np. w `localStorage`) lub polegać na cookies set przez backend. Następnie przekierować na `returnUrl` lub `/dashboard`.
+6. **Wspólny helper dla ciasteczek** — Utworzyć `src/lib/auth-cookies.ts` z funkcjami `buildAuthCookieHeaders` i `buildClearAuthCookieHeaders`. Użyć ich w endpointach `login.ts`, `refresh.ts` i `logout.ts` zamiast duplikować logikę tworzenia ciasteczek.
 
 7. **Styling i responsywność** — Zastosowanie klas Tailwind do centrowania formularza, odpowiedniej szerokości karty (`max-w-md`, `w-full`), spacingu i responsywnego layoutu. Zapewnienie poprawnego wyświetlania na urządzeniach mobilnych.
 

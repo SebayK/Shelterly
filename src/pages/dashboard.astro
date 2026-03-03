@@ -5,21 +5,27 @@ export const prerender = false;
 
 /**
  * Dashboard — protected page.
- * Token validation is client-side (localStorage); the client-side guard in the
- * React islands will redirect to /auth/login when no valid token is present.
- * A server-side check can be added here once a session cookie strategy is adopted.
+ * Access is validated server-side using the Supabase session cookie (sb-access-token).
+ * When no valid session exists, the user is redirected to /auth/login.
  */
+const { data, error } = await Astro.locals.supabase.auth.getUser();
+
+if (error || !data?.user) {
+  return Astro.redirect("/auth/login");
+}
 ---
 
 <Layout title="Dashboard — Shelterly">
   <main class="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4">
     <h1 class="text-3xl font-bold">Dashboard</h1>
     <p class="text-muted-foreground">Zalogowano pomyślnie. Panel zarządzania schroniskiem będzie dostępny tutaj.</p>
-    <a
-      href="/auth/login"
-      class="text-sm font-medium text-primary underline-offset-4 hover:underline"
-    >
-      Wyloguj się
-    </a>
+    <form method="post" action="/api/auth/logout">
+      <button
+        type="submit"
+        class="text-sm font-medium text-primary underline-offset-4 hover:underline bg-transparent border-none cursor-pointer p-0"
+      >
+        Wyloguj się
+      </button>
+    </form>
   </main>
 </Layout>

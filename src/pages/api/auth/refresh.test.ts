@@ -17,21 +17,15 @@ const SESSION = {
 
 /**
  * Creates a minimal Astro context.
- * Tokens are passed via HttpOnly cookie, not via request body.
+ * With @supabase/ssr, tokens are managed automatically via the cookie adapter in middleware.
  */
 function buildContext({
-  cookie = `sb-refresh-token=${REFRESH_TOKEN}`,
   supabase,
 }: {
-  cookie?: string | null;
   supabase?: unknown;
 }) {
-  const headers: Record<string, string> = {};
-  if (cookie) headers["Cookie"] = cookie;
-
   const request = new Request("http://localhost/api/auth/refresh", {
     method: "POST",
-    headers,
   });
 
   return {
@@ -85,22 +79,7 @@ describe("POST /api/auth/refresh", () => {
   });
 
   // -------------------------------------------------------------------------
-  // 2. Missing sb-refresh-token cookie
-  // -------------------------------------------------------------------------
-
-  it("returns 401 UNAUTHORIZED when sb-refresh-token cookie is absent", async () => {
-    const supabase = buildSupabaseMock();
-    const ctx = buildContext({ cookie: null, supabase });
-
-    const response = await POST(ctx);
-
-    expect(response.status).toBe(401);
-    const body = await response.json();
-    expect(body.error.code).toBe("UNAUTHORIZED");
-  });
-
-  // -------------------------------------------------------------------------
-  // 3. Supabase returns authError (invalid/expired token)
+  // 2. Supabase returns authError (invalid/expired token)
   // -------------------------------------------------------------------------
 
   it("returns 401 UNAUTHORIZED when Supabase returns an authError", async () => {
@@ -117,11 +96,11 @@ describe("POST /api/auth/refresh", () => {
     expect(response.status).toBe(401);
     const body = await response.json();
     expect(body.error.code).toBe("UNAUTHORIZED");
-    expect(body.error.message).toBe("Invalid or expired refresh token");
+    expect(body.error.message).toBe("Unable to refresh session");
   });
 
   // -------------------------------------------------------------------------
-  // 4. Supabase returns session: null without authError
+  // 3. Supabase returns session: null without authError
   // -------------------------------------------------------------------------
 
   it("returns 401 UNAUTHORIZED when Supabase returns session: null without error", async () => {
@@ -138,11 +117,11 @@ describe("POST /api/auth/refresh", () => {
     expect(response.status).toBe(401);
     const body = await response.json();
     expect(body.error.code).toBe("UNAUTHORIZED");
-    expect(body.error.message).toBe("Invalid or expired refresh token");
+    expect(body.error.message).toBe("Unable to refresh session");
   });
 
   // -------------------------------------------------------------------------
-  // 5. Unexpected error thrown by service (e.g. network failure)
+  // 4. Unexpected error thrown by service (e.g. network failure)
   // -------------------------------------------------------------------------
 
   it("returns 500 INTERNAL_ERROR on unexpected service error", async () => {
@@ -162,7 +141,7 @@ describe("POST /api/auth/refresh", () => {
   });
 
   // -------------------------------------------------------------------------
-  // 6. Successful refresh — response body contains only expires_at
+  // 5. Successful refresh — response body contains only expires_at
   // -------------------------------------------------------------------------
 
   it("returns 200 OK with expires_at in body on successful refresh", async () => {
@@ -176,27 +155,25 @@ describe("POST /api/auth/refresh", () => {
 
     const body = await response.json();
     expect(body.expires_at).toBe(EXPIRES_AT);
-    // Tokens must not appear in the response body — only in HttpOnly cookies.
+    // Tokens must not appear in the response body.
+    // With @supabase/ssr, cookies are managed automatically by the middleware adapter.
     expect(JSON.stringify(body)).not.toContain("access_token");
     expect(JSON.stringify(body)).not.toContain("refresh_token");
     expect(Object.keys(body)).toEqual(["expires_at"]);
   });
 
   // -------------------------------------------------------------------------
-  // 7. Successful refresh — rotated tokens are set as HttpOnly cookies
+  // 6. Successful refresh — calls refreshSession
   // -------------------------------------------------------------------------
 
-  it("sets HttpOnly sb-access-token and sb-refresh-token cookies on successful refresh", async () => {
+  it("calls supabase.auth.refreshSession on successful request", async () => {
     const supabase = buildSupabaseMock();
     const ctx = buildContext({ supabase });
 
-    const response = await POST(ctx);
+    await POST(ctx);
 
-    expect(response.status).toBe(200);
-    const cookies = response.headers.getSetCookie();
-    expect(cookies.some((c) => c.startsWith(`sb-access-token=${ACCESS_TOKEN}`))).toBe(true);
-    expect(cookies.some((c) => c.startsWith(`sb-refresh-token=${SESSION.refresh_token}`))).toBe(true);
-    // All auth cookies must carry the HttpOnly flag.
-    expect(cookies.every((c) => c.toLowerCase().includes("httponly"))).toBe(true);
+    expect(supabase.auth.refreshSession).toHaveBeenCalledTimes(1);
+    // With @supabase/ssr, cookies are automatically read/written by the adapter,
+    // so we don't need to verify Set-Cookie headers in unit tests.
   });
 });

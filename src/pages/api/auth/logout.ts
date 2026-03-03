@@ -8,7 +8,7 @@ export const prerender = false;
  * POST /api/auth/logout
  *
  * Ends the current user session by invalidating auth tokens.
- * Requires a valid access_token in the Authorization header.
+ * Supabase SSR automatically clears HttpOnly session cookies via the cookie adapter.
  *
  * Response: { message: "Logout successful" } (200 OK)
  * Errors:
@@ -23,21 +23,18 @@ export const POST: APIRoute = async ({ locals }) => {
   }
 
   try {
-    // 2. Delegate to service layer
+    // 2. Delegate to service layer - Supabase automatically clears cookies
     const authService = new AuthService(supabase);
     const result = await authService.logout();
 
     // 3. Log successful logout
     logSuccess("POST /api/auth/logout");
 
-    // 4. Clear HttpOnly session cookies so the browser discards stored tokens.
-    const isProduction = import.meta.env.PROD;
-    const secure = isProduction ? "; Secure" : "";
-    const headers = new Headers({ "Content-Type": "application/json" });
-    for (const name of ["sb-access-token", "sb-refresh-token"]) {
-      headers.append("Set-Cookie", `${name}=; HttpOnly${secure}; SameSite=Strict; Path=/; Max-Age=0`);
-    }
-    return new Response(JSON.stringify(result), { status: 200, headers });
+    // 4. Return success - cookies are automatically cleared by Supabase SSR
+    return new Response(JSON.stringify(result), { 
+      status: 200,
+      headers: { "Content-Type": "application/json" }
+    });
   } catch (error) {
     // 401 — unauthenticated request (missing/expired/invalid token)
     if (error instanceof UnauthorizedError) {

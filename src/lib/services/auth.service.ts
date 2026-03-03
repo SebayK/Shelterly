@@ -12,7 +12,6 @@ import type {
   SignupResponseDTO,
   LogoutResponseDTO,
   RefreshTokenCommand,
-  RefreshTokenResponseDTO,
 } from "@/types";
 import {
   UnauthorizedError,
@@ -242,13 +241,19 @@ export class AuthService {
    * Flow:
    * 1. Calls Supabase Auth `refreshSession` with the provided refresh token.
    * 2. If authError or session is null — throws UnauthorizedError.
-   * 3. Returns RefreshTokenResponseDTO with new access_token and expires_at.
+   * 3. Returns session data with new access_token, refresh_token and expires_at.
+   *    Note: The calling endpoint is responsible for setting cookies and returning
+   *    only expires_at in the response body.
    *
    * @param command - Refresh token command ({ refresh_token })
-   * @returns RefreshTokenResponseDTO with new access token and expiry
+   * @returns Session data with new tokens (for use by endpoint, not DTO)
    * @throws UnauthorizedError if refresh token is invalid or expired
    */
-  async refreshToken(command: RefreshTokenCommand): Promise<RefreshTokenResponseDTO> {
+  async refreshToken(command: RefreshTokenCommand): Promise<{
+    access_token: string;
+    refresh_token: string;
+    expires_at: number;
+  }> {
     const { data, error: authError } = await this.supabase.auth.refreshSession({
       refresh_token: command.refresh_token,
     });

@@ -1,5 +1,4 @@
 import type { APIRoute } from "astro";
-import { AuthService } from "@/lib/services/auth.service";
 import { createErrorHttpResponse, logErrorWithContext, logSuccess, UnauthorizedError } from "@/lib/errors";
 
 export const prerender = false;
@@ -7,55 +6,37 @@ export const prerender = false;
 /**
  * POST /api/auth/refresh
  *
- * Refreshes the session using the HttpOnly sb-refresh-token cookie.
- * On success, replaces both auth cookies (access + refresh) and returns
- * { expires_at } so the client can schedule the next refresh without ever
- * reading the raw token from JavaScript.
+ * With @supabase/ssr, token refresh is handled automatically by the client.
+ * This endpoint is maintained for backwards compatibility but typically not needed.
+ * The SSR adapter automatically refreshes tokens when they're close to expiring.
  *
+ * If explicitly called, attempts to refresh the session using cookies.
  * Response: { expires_at: number } (200 OK)
  */
-export const POST: APIRoute = async ({ request, locals }) => {
+export const POST: APIRoute = async ({ locals }) => {
   // 1. Verify Supabase client is available (injected by middleware)
   const supabase = locals.supabase;
   if (!supabase) {
     return createErrorHttpResponse("INTERNAL_ERROR", "Database connection not available", 500);
   }
 
-  // 2. Read refresh token from HttpOnly cookie — never from the request body.
-  const cookieHeader = request.headers.get("cookie") ?? "";
-  const match = cookieHeader.match(/(?:^|;\s*)sb-refresh-token=([^;]+)/);
-  const refreshToken = match ? match[1] : null;
-
-  if (!refreshToken) {
-    return createErrorHttpResponse("UNAUTHORIZED", "No refresh token provided", 401);
-  }
-
   try {
-    // 3. Delegate business logic to the service layer
-    const authService = new AuthService(supabase);
-    const result = await authService.refreshToken({ refresh_token: refreshToken });
+    // 2. Refresh session - Supabase SSR reads refresh token from cookies automatically
+    const { data, error } = await supabase.auth.refreshSession();
 
-    // 4. Log successful token refresh for monitoring
+    if (error || !data.session) {
+      return createErrorHttpResponse("UNAUTHORIZED", "Unable to refresh session", 401);
+    }
+
+    // 3. Log successful token refresh for monitoring
     logSuccess("POST /api/auth/refresh");
 
-    // 5. Rotate cookies — both access and refresh tokens are replaced.
-    const isProduction = import.meta.env.PROD;
-    const secure = isProduction ? "; Secure" : "";
-    const maxAgeAccess = Math.max(0, result.expires_at - Math.floor(Date.now() / 1000));
-    const maxAgeRefresh = 60 * 60 * 24 * 30;
-
-    const headers = new Headers({ "Content-Type": "application/json" });
-    headers.append(
-      "Set-Cookie",
-      `sb-access-token=${result.access_token}; HttpOnly${secure}; SameSite=Strict; Path=/; Max-Age=${maxAgeAccess}`
-    );
-    headers.append(
-      "Set-Cookie",
-      `sb-refresh-token=${result.refresh_token}; HttpOnly${secure}; SameSite=Strict; Path=/; Max-Age=${maxAgeRefresh}`
-    );
-
-    // 6. Return only expires_at — the new token is in the cookie, not the body.
-    return new Response(JSON.stringify({ expires_at: result.expires_at }), { status: 200, headers });
+    // 4. Cookies are automatically updated by Supabase SSR adapter
+    // Return only expires_at
+    return new Response(JSON.stringify({ expires_at: data.session.expires_at }), {
+      status: 200,
+      headers: { "Content-Type": "application/json" },
+    });
   } catch (error) {
     // Map domain errors to appropriate HTTP responses
     if (error instanceof UnauthorizedError) {

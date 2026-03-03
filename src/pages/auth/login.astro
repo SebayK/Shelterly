@@ -17,16 +17,22 @@ function sanitizeReturnUrl(raw: string | null): string {
 
 const returnUrl = sanitizeReturnUrl(Astro.url.searchParams.get("return"));
 
-// Server-side session guard: if the HttpOnly access-token cookie is present,
-// the user is already authenticated — redirect immediately without rendering the form.
-const cookieHeader = Astro.request.headers.get("cookie") ?? "";
-if (/(?:^|;\s*)sb-access-token=[^;]+/.test(cookieHeader)) {
+// Server-side session guard: if a valid Supabase session exists,
+// redirect immediately without rendering the form.
+// With @supabase/ssr, the auth state is automatically read from cookies.
+const { data, error } = await Astro.locals.supabase.auth.getUser();
+
+if (error) {
+  console.error("Failed to validate Supabase user on /auth/login:", error);
+}
+
+if (data?.user) {
   return Astro.redirect(returnUrl);
 }
 ---
 
 <Layout title="Zaloguj się — Shelterly">
   <main class="flex min-h-screen items-center justify-center bg-background px-4">
-    <LoginForm returnUrl={returnUrl} client:idle />
+    <LoginForm returnUrl={returnUrl} client:load />
   </main>
 </Layout>

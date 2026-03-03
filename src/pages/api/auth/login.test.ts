@@ -350,21 +350,6 @@ describe("POST /api/auth/login", () => {
     expect(JSON.stringify(body)).not.toContain("refresh_token");
   });
 
-  it("sets HttpOnly sb-access-token and sb-refresh-token cookies on successful login", async () => {
-    const supabase = buildSupabaseMock();
-    const ctx = buildContext({ supabase });
-
-    const response = await POST(ctx);
-
-    expect(response.status).toBe(200);
-    // Headers.getSetCookie() returns each Set-Cookie entry as a separate string.
-    const cookies = response.headers.getSetCookie();
-    expect(cookies.some((c) => c.startsWith(`sb-access-token=${SESSION.access_token}`))).toBe(true);
-    expect(cookies.some((c) => c.startsWith(`sb-refresh-token=${SESSION.refresh_token}`))).toBe(true);
-    // All auth cookies must be HttpOnly to block XSS token theft.
-    expect(cookies.every((c) => c.toLowerCase().includes("httponly"))).toBe(true);
-  });
-
   it("does not include password in the response body", async () => {
     const supabase = buildSupabaseMock();
     const ctx = buildContext({ supabase });

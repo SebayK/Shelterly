@@ -6,7 +6,6 @@ export function FormErrorAlert({ message }: FormErrorAlertProps) {
   return (
     <div
       role="alert"
-      aria-live="assertive"
       className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive"
     >
       <div className="flex items-center gap-2">

@@ -377,8 +377,6 @@ export interface LogoutResponseDTO {
  * client can schedule the next refresh without reading the token itself.
  */
 export interface RefreshTokenResponseDTO {
-  access_token: string;
-  refresh_token: string;
   expires_at: number;
 }
 
