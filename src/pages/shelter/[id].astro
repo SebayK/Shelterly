@@ -1,0 +1,111 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import { ProfileService } from "../../lib/services/profile.service";
+import { NeedsService } from "../../lib/services/needs.service";
+import type { ProfileDetailDTO, NeedListItemDTO } from "../../types";
+import Breadcrumb from "../../components/shelter-detail/Breadcrumb.astro";
+import ShelterHeader from "../../components/shelter-detail/ShelterHeader.astro";
+import NeedsSummarySection from "../../components/shelter-detail/NeedsSummarySection.astro";
+import { ShelterDetailView } from "../../components/shelter-detail/ShelterDetailView";
+import profilesData from "../../../__mocks__/data/profiles.json";
+import needsData from "../../../__mocks__/data/needs.json";
+
+export const prerender = false;
+
+// Get and validate the shelter ID from URL params
+const { id } = Astro.params;
+
+// Validate UUID format
+const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+if (!id || !uuidRegex.test(id)) {
+  return Astro.redirect("/404");
+}
+
+let shelter: ProfileDetailDTO;
+let needs: NeedListItemDTO[] = [];
+
+// Check if we should use mock data (in development, when no real data exists)
+const useMockData = import.meta.env.DEV;
+
+try {
+  if (useMockData) {
+    // Use imported mock data in development (direct import, not fetch)
+    const basicProfile = profilesData.profilesWithNeeds.find((p) => p.id === id);
+
+    if (!basicProfile) {
+      throw new Error("Shelter not found");
+    }
+
+    // Build ProfileDetailDTO from mock data
+    shelter = {
+      id: basicProfile.id,
+      name: basicProfile.name,
+      city: basicProfile.city,
+      address: `ul. Testowa ${Math.floor(Math.random() * 100)}, ${basicProfile.city}`,
+      location: basicProfile.location,
+      phone_number: "+48 123 456 789",
+      website_url: `https://www.${basicProfile.name.toLowerCase().replace(/\s+/g, "")}.pl`,
+      created_at: new Date().toISOString(),
+      needs_summary: {
+        total: basicProfile.needs_count,
+        urgent: basicProfile.has_urgent_needs ? Math.ceil(basicProfile.needs_count / 3) : 0,
+        fulfilled: Math.floor(basicProfile.needs_count / 2),
+      },
+    };
+
+    // Filter needs for this shelter from mock data (cast to proper type)
+    needs = needsData.needs.filter((need) => need.shelter.id === id) as NeedListItemDTO[];
+  } else {
+    // Use real API in production
+    const supabase = Astro.locals.supabase;
+    if (!supabase) {
+      // eslint-disable-next-line no-console
+      console.error("Supabase client not available in Astro.locals");
+      return Astro.redirect("/404");
+    }
+    const profileService = new ProfileService(supabase);
+    shelter = await profileService.getProfileById(id);
+
+    const needsService = new NeedsService(supabase);
+    const needsResponseData = await needsService.getNeeds({
+      shelter_id: id,
+      limit: 100,
+      offset: 0,
+    });
+
+    needs = needsResponseData.data;
+  }
+} catch (error) {
+  // eslint-disable-next-line no-console
+  console.error("Error fetching shelter details:", error);
+  return Astro.redirect("/404");
+}
+
+// Generate page metadata
+const pageTitle = `${shelter.name} - Shelterly`;
+---
+
+<Layout title={pageTitle}>
+  <main class="min-h-screen bg-gray-50">
+    <div class="container mx-auto px-4 py-8 max-w-7xl">
+      <!-- Breadcrumb Navigation -->
+      <Breadcrumb shelterName={shelter.name} />
+
+      <!-- Shelter Header -->
+      <ShelterHeader
+        name={shelter.name}
+        address={shelter.address}
+        city={shelter.city}
+        phoneNumber={shelter.phone_number}
+        websiteUrl={shelter.website_url}
+      />
+
+      <!-- Needs Summary Section -->
+      <NeedsSummarySection summary={shelter.needs_summary} />
+
+      <!-- Interactive Shelter Detail View with Needs List -->
+      <ShelterDetailView client:load needs={needs} />
+    </div>
+  </main>
+</Layout>

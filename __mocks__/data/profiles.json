@@ -1,0 +1,244 @@
+{
+  "profilesWithNeeds": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440001",
+      "name": "Schronisko dla Zwierząt w Warszawie",
+      "city": "Warszawa",
+      "location": {
+        "lat": 52.2297,
+        "lon": 21.0122
+      },
+      "needs_count": 5,
+      "has_urgent_needs": true,
+      "urgent_needs_count": 2
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440002",
+      "name": "Schronisko Na Paluchu",
+      "city": "Warszawa",
+      "location": {
+        "lat": 52.2464,
+        "lon": 20.9378
+      },
+      "needs_count": 8,
+      "has_urgent_needs": true,
+      "urgent_needs_count": 3
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440003",
+      "name": "Azyl w Korabiewicach",
+      "city": "Korabiewice",
+      "location": {
+        "lat": 51.7592,
+        "lon": 19.456
+      },
+      "needs_count": 12,
+      "has_urgent_needs": true,
+      "urgent_needs_count": 4
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440004",
+      "name": "TOZ Schronisko dla Zwierząt",
+      "city": "Kraków",
+      "location": {
+        "lat": 50.0647,
+        "lon": 19.945
+      },
+      "needs_count": 3,
+      "has_urgent_needs": false,
+      "urgent_needs_count": 0
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440005",
+      "name": "Schronisko dla Zwierząt w Gdańsku",
+      "city": "Gdańsk",
+      "location": {
+        "lat": 54.352,
+        "lon": 18.6466
+      },
+      "needs_count": 6,
+      "has_urgent_needs": true,
+      "urgent_needs_count": 2
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440006",
+      "name": "Schronisko Canis w Poznaniu",
+      "city": "Poznań",
+      "location": {
+        "lat": 52.4064,
+        "lon": 16.9252
+      },
+      "needs_count": 4,
+      "has_urgent_needs": false,
+      "urgent_needs_count": 0
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440007",
+      "name": "Schronisko dla Zwierząt we Wrocławiu",
+      "city": "Wrocław",
+      "location": {
+        "lat": 51.1079,
+        "lon": 17.0385
+      },
+      "needs_count": 7,
+      "has_urgent_needs": true,
+      "urgent_needs_count": 3
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440008",
+      "name": "Schronisko dla Zwierząt Celestynów",
+      "city": "Celestynów",
+      "location": {
+        "lat": 52.0535,
+        "lon": 21.3094
+      },
+      "needs_count": 9,
+      "has_urgent_needs": true,
+      "urgent_needs_count": 3
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440009",
+      "name": "Fundacja Centaurus",
+      "city": "Łódź",
+      "location": {
+        "lat": 51.7592,
+        "lon": 19.456
+      },
+      "needs_count": 2,
+      "has_urgent_needs": false,
+      "urgent_needs_count": 0
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440010",
+      "name": "Schronisko dla Bezdomnych Zwierząt",
+      "city": "Katowice",
+      "location": {
+        "lat": 50.2649,
+        "lon": 19.0238
+      },
+      "needs_count": 5,
+      "has_urgent_needs": false,
+      "urgent_needs_count": 0
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440011",
+      "name": "Schronisko Larum",
+      "city": "Bydgoszcz",
+      "location": {
+        "lat": 53.1235,
+        "lon": 18.0084
+      },
+      "needs_count": 10,
+      "has_urgent_needs": true,
+      "urgent_needs_count": 3
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440012",
+      "name": "Schronisko dla Zwierząt w Szczecinie",
+      "city": "Szczecin",
+      "location": {
+        "lat": 53.4285,
+        "lon": 14.5528
+      },
+      "needs_count": 3,
+      "has_urgent_needs": false,
+      "urgent_needs_count": 0
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440013",
+      "name": "Schronisko Ciapkowo",
+      "city": "Gdynia",
+      "location": {
+        "lat": 54.5189,
+        "lon": 18.5305
+      },
+      "needs_count": 11,
+      "has_urgent_needs": true,
+      "urgent_needs_count": 4
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440014",
+      "name": "Schronisko Ada",
+      "city": "Lublin",
+      "location": {
+        "lat": 51.2465,
+        "lon": 22.5684
+      },
+      "needs_count": 6,
+      "has_urgent_needs": true,
+      "urgent_needs_count": 2
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440015",
+      "name": "Schronisko dla Zwierząt w Białymstoku",
+      "city": "Białystok",
+      "location": {
+        "lat": 53.1325,
+        "lon": 23.1688
+      },
+      "needs_count": 4,
+      "has_urgent_needs": false,
+      "urgent_needs_count": 0
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440016",
+      "name": "Schronisko Psie Pole",
+      "city": "Olsztyn",
+      "location": {
+        "lat": 53.7784,
+        "lon": 20.4801
+      },
+      "needs_count": 0,
+      "has_urgent_needs": false,
+      "urgent_needs_count": 0
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440017",
+      "name": "Schronisko TOZ w Rzeszowie",
+      "city": "Rzeszów",
+      "location": {
+        "lat": 50.0412,
+        "lon": 21.9991
+      },
+      "needs_count": 7,
+      "has_urgent_needs": true,
+      "urgent_needs_count": 3
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440018",
+      "name": "Schronisko dla Zwierząt w Kielcach",
+      "city": "Kielce",
+      "location": {
+        "lat": 50.8661,
+        "lon": 20.6286
+      },
+      "needs_count": 5,
+      "has_urgent_needs": false,
+      "urgent_needs_count": 0
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440019",
+      "name": "Schronisko Przytulisko",
+      "city": "Częstochowa",
+      "location": {
+        "lat": 50.8118,
+        "lon": 19.1203
+      },
+      "needs_count": 8,
+      "has_urgent_needs": true,
+      "urgent_needs_count": 3
+    },
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440020",
+      "name": "Fundacja Zwierzęta Lubią",
+      "city": "Radom",
+      "location": {
+        "lat": 51.4027,
+        "lon": 21.1471
+      },
+      "needs_count": 3,
+      "has_urgent_needs": false,
+      "urgent_needs_count": 0
+    }
+  ]
+}

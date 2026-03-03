@@ -18,10 +18,10 @@ export const GET: APIRoute = async ({ params }) => {
 
   const { id } = params;
 
-  // Znajdź profil
-  const profile = profilesData.profiles.find((p) => p.id === id && p.status === "verified");
+  // Znajdź profil w profilesWithNeeds
+  const basicProfile = profilesData.profilesWithNeeds.find((p) => p.id === id);
 
-  if (!profile) {
+  if (!basicProfile) {
     return new Response(
       JSON.stringify({
         error: {
@@ -36,20 +36,20 @@ export const GET: APIRoute = async ({ params }) => {
     );
   }
 
-  // Zwróć dane w formacie ProfileDetailDTO
+  // Zwróć dane w formacie ProfileDetailDTO z mockowymi danymi dla brakujących pól
   const response = {
-    id: profile.id,
-    name: profile.name,
-    city: profile.city,
-    address: profile.address,
-    location: profile.location,
-    phone_number: profile.phone_number,
-    website_url: profile.website_url,
-    created_at: profile.created_at,
+    id: basicProfile.id,
+    name: basicProfile.name,
+    city: basicProfile.city,
+    address: `ul. Testowa ${Math.floor(Math.random() * 100)}, ${basicProfile.city}`,
+    location: basicProfile.location,
+    phone_number: "+48 123 456 789",
+    website_url: `https://www.${basicProfile.name.toLowerCase().replace(/\s+/g, '')}.pl`,
+    created_at: new Date().toISOString(),
     needs_summary: {
-      total: 12,
-      urgent: 3,
-      fulfilled: 5,
+      total: basicProfile.needs_count,
+      urgent: basicProfile.has_urgent_needs ? Math.ceil(basicProfile.needs_count / 3) : 0,
+      fulfilled: Math.floor(basicProfile.needs_count / 2),
     },
   };
 
