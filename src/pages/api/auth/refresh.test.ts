@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { POST } from "./refresh";
-import type { RefreshTokenResponseDTO } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Helpers & fixtures
@@ -17,19 +16,16 @@ const SESSION = {
 };
 
 /**
- * Creates a minimal Astro context with an optional supabase mock.
+ * Creates a minimal Astro context.
+ * With @supabase/ssr, tokens are managed automatically via the cookie adapter in middleware.
  */
 function buildContext({
-  body = JSON.stringify({ refresh_token: REFRESH_TOKEN }),
   supabase,
 }: {
-  body?: string | null;
   supabase?: unknown;
 }) {
   const request = new Request("http://localhost/api/auth/refresh", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: body ?? undefined,
   });
 
   return {
@@ -40,8 +36,6 @@ function buildContext({
 
 /**
  * Builds a Supabase mock that simulates auth.refreshSession.
- *
- * @param refreshResult - What `refreshSession` resolves to
  */
 function buildSupabaseMock({
   refreshResult = {
@@ -81,80 +75,11 @@ describe("POST /api/auth/refresh", () => {
     expect(response.status).toBe(500);
     const body = await response.json();
     expect(body.error.code).toBe("INTERNAL_ERROR");
-    // createErrorHttpResponse always sanitizes INTERNAL_ERROR messages
     expect(body.error.message).toBe("An internal error occurred");
   });
 
   // -------------------------------------------------------------------------
-  // 2. Invalid JSON body
-  // -------------------------------------------------------------------------
-
-  it("returns 400 INVALID_REQUEST when body is not valid JSON", async () => {
-    const supabase = buildSupabaseMock();
-    const request = new Request("http://localhost/api/auth/refresh", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: "not-json{{{",
-    });
-    const ctx = { request, locals: { supabase } } as Parameters<typeof POST>[0];
-
-    const response = await POST(ctx);
-
-    expect(response.status).toBe(400);
-    const body = await response.json();
-    expect(body.error.code).toBe("INVALID_REQUEST");
-    expect(body.error.message).toBe("Request body must be valid JSON");
-  });
-
-  // -------------------------------------------------------------------------
-  // 3. Missing refresh_token field (empty object)
-  // -------------------------------------------------------------------------
-
-  it("returns 400 VALIDATION_ERROR when refresh_token field is missing", async () => {
-    const supabase = buildSupabaseMock();
-    const ctx = buildContext({ body: JSON.stringify({}), supabase });
-
-    const response = await POST(ctx);
-
-    expect(response.status).toBe(400);
-    const body = await response.json();
-    expect(body.error.code).toBe("VALIDATION_ERROR");
-    expect(body.error.details.some((d: { field: string }) => d.field === "refresh_token")).toBe(true);
-  });
-
-  // -------------------------------------------------------------------------
-  // 4. Empty string refresh_token
-  // -------------------------------------------------------------------------
-
-  it("returns 400 VALIDATION_ERROR when refresh_token is an empty string", async () => {
-    const supabase = buildSupabaseMock();
-    const ctx = buildContext({ body: JSON.stringify({ refresh_token: "" }), supabase });
-
-    const response = await POST(ctx);
-
-    expect(response.status).toBe(400);
-    const body = await response.json();
-    expect(body.error.code).toBe("VALIDATION_ERROR");
-    expect(body.error.details.some((d: { field: string }) => d.field === "refresh_token")).toBe(true);
-  });
-
-  // -------------------------------------------------------------------------
-  // 5. refresh_token is not a string (number)
-  // -------------------------------------------------------------------------
-
-  it("returns 400 VALIDATION_ERROR when refresh_token is not a string", async () => {
-    const supabase = buildSupabaseMock();
-    const ctx = buildContext({ body: JSON.stringify({ refresh_token: 12345 }), supabase });
-
-    const response = await POST(ctx);
-
-    expect(response.status).toBe(400);
-    const body = await response.json();
-    expect(body.error.code).toBe("VALIDATION_ERROR");
-  });
-
-  // -------------------------------------------------------------------------
-  // 6. Supabase returns authError (invalid/expired token)
+  // 2. Supabase returns authError (invalid/expired token)
   // -------------------------------------------------------------------------
 
   it("returns 401 UNAUTHORIZED when Supabase returns an authError", async () => {
@@ -171,11 +96,11 @@ describe("POST /api/auth/refresh", () => {
     expect(response.status).toBe(401);
     const body = await response.json();
     expect(body.error.code).toBe("UNAUTHORIZED");
-    expect(body.error.message).toBe("Invalid or expired refresh token");
+    expect(body.error.message).toBe("Unable to refresh session");
   });
 
   // -------------------------------------------------------------------------
-  // 7. Supabase returns session: null without authError
+  // 3. Supabase returns session: null without authError
   // -------------------------------------------------------------------------
 
   it("returns 401 UNAUTHORIZED when Supabase returns session: null without error", async () => {
@@ -192,11 +117,11 @@ describe("POST /api/auth/refresh", () => {
     expect(response.status).toBe(401);
     const body = await response.json();
     expect(body.error.code).toBe("UNAUTHORIZED");
-    expect(body.error.message).toBe("Invalid or expired refresh token");
+    expect(body.error.message).toBe("Unable to refresh session");
   });
 
   // -------------------------------------------------------------------------
-  // 8. Unexpected error thrown by service (e.g. network failure)
+  // 4. Unexpected error thrown by service (e.g. network failure)
   // -------------------------------------------------------------------------
 
   it("returns 500 INTERNAL_ERROR on unexpected service error", async () => {
@@ -216,10 +141,10 @@ describe("POST /api/auth/refresh", () => {
   });
 
   // -------------------------------------------------------------------------
-  // 9. Successful refresh — full RefreshTokenResponseDTO validation
+  // 5. Successful refresh — response body contains only expires_at
   // -------------------------------------------------------------------------
 
-  it("returns 200 OK with correct RefreshTokenResponseDTO on successful refresh", async () => {
+  it("returns 200 OK with expires_at in body on successful refresh", async () => {
     const supabase = buildSupabaseMock();
     const ctx = buildContext({ supabase });
 
@@ -228,37 +153,27 @@ describe("POST /api/auth/refresh", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe("application/json");
 
-    const body: RefreshTokenResponseDTO = await response.json();
-    expect(body.access_token).toBe(ACCESS_TOKEN);
+    const body = await response.json();
     expect(body.expires_at).toBe(EXPIRES_AT);
+    // Tokens must not appear in the response body.
+    // With @supabase/ssr, cookies are managed automatically by the middleware adapter.
+    expect(JSON.stringify(body)).not.toContain("access_token");
+    expect(JSON.stringify(body)).not.toContain("refresh_token");
+    expect(Object.keys(body)).toEqual(["expires_at"]);
   });
 
   // -------------------------------------------------------------------------
-  // 10. Response must NOT contain refresh_token
+  // 6. Successful refresh — calls refreshSession
   // -------------------------------------------------------------------------
 
-  it("does not include refresh_token in the response body", async () => {
+  it("calls supabase.auth.refreshSession on successful request", async () => {
     const supabase = buildSupabaseMock();
     const ctx = buildContext({ supabase });
 
-    const response = await POST(ctx);
-    const body = await response.json();
-    const bodyStr = JSON.stringify(body);
+    await POST(ctx);
 
-    expect(bodyStr).not.toContain("refresh_token");
-  });
-
-  // -------------------------------------------------------------------------
-  // 11. Response contains exactly access_token and expires_at
-  // -------------------------------------------------------------------------
-
-  it("response contains exactly access_token and expires_at fields", async () => {
-    const supabase = buildSupabaseMock();
-    const ctx = buildContext({ supabase });
-
-    const response = await POST(ctx);
-    const body = await response.json();
-
-    expect(Object.keys(body)).toEqual(["access_token", "expires_at"]);
+    expect(supabase.auth.refreshSession).toHaveBeenCalledTimes(1);
+    // With @supabase/ssr, cookies are automatically read/written by the adapter,
+    // so we don't need to verify Set-Cookie headers in unit tests.
   });
 });

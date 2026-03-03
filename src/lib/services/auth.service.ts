@@ -12,7 +12,6 @@ import type {
   SignupResponseDTO,
   LogoutResponseDTO,
   RefreshTokenCommand,
-  RefreshTokenResponseDTO,
 } from "@/types";
 import {
   UnauthorizedError,
@@ -25,6 +24,21 @@ import {
 
 export class AuthService {
   constructor(private supabase: SupabaseClient) {}
+
+  /**
+   * Signs out the current session and logs a warning if signOut itself fails.
+   * Used to invalidate sessions for pending/suspended accounts before throwing.
+   */
+  private async signOutAndWarn(userId: string): Promise<void> {
+    const { error: signOutError } = await this.supabase.auth.signOut();
+    if (signOutError) {
+      logWarningWithContext(
+        { endpoint: "AuthService.login", user_id: userId },
+        "Failed to sign out non-active account session",
+        { error: signOutError.message }
+      );
+    }
+  }
 
   /**
    * Authenticates a user with email and password.
@@ -73,26 +87,12 @@ export class AuthService {
     // signOut() is called first to invalidate the Supabase session that was just created,
     // preventing pending/suspended accounts from holding active JWT sessions.
     if (profile.status === "pending") {
-      const { error: signOutError } = await this.supabase.auth.signOut();
-      if (signOutError) {
-        logWarningWithContext(
-          { endpoint: "AuthService.login", user_id: user.id },
-          "Failed to sign out pending account session",
-          { error: signOutError.message }
-        );
-      }
+      await this.signOutAndWarn(user.id);
       throw new AccountPendingError();
     }
 
     if (profile.status === "suspended") {
-      const { error: signOutError } = await this.supabase.auth.signOut();
-      if (signOutError) {
-        logWarningWithContext(
-          { endpoint: "AuthService.login", user_id: user.id },
-          "Failed to sign out suspended account session",
-          { error: signOutError.message }
-        );
-      }
+      await this.signOutAndWarn(user.id);
       throw new AccountSuspendedError();
     }
 
@@ -241,13 +241,19 @@ export class AuthService {
    * Flow:
    * 1. Calls Supabase Auth `refreshSession` with the provided refresh token.
    * 2. If authError or session is null — throws UnauthorizedError.
-   * 3. Returns RefreshTokenResponseDTO with new access_token and expires_at.
+   * 3. Returns session data with new access_token, refresh_token and expires_at.
+   *    Note: The calling endpoint is responsible for setting cookies and returning
+   *    only expires_at in the response body.
    *
    * @param command - Refresh token command ({ refresh_token })
-   * @returns RefreshTokenResponseDTO with new access token and expiry
+   * @returns Session data with new tokens (for use by endpoint, not DTO)
    * @throws UnauthorizedError if refresh token is invalid or expired
    */
-  async refreshToken(command: RefreshTokenCommand): Promise<RefreshTokenResponseDTO> {
+  async refreshToken(command: RefreshTokenCommand): Promise<{
+    access_token: string;
+    refresh_token: string;
+    expires_at: number;
+  }> {
     const { data, error: authError } = await this.supabase.auth.refreshSession({
       refresh_token: command.refresh_token,
     });
@@ -258,6 +264,7 @@ export class AuthService {
 
     return {
       access_token: data.session.access_token,
+      refresh_token: data.session.refresh_token,
       expires_at: data.session.expires_at ?? 0,
     };
   }

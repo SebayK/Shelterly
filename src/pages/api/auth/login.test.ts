@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { POST } from "./login";
-import type { LoginResponseDTO, ShelterStatus, UserRole } from "@/types";
+import type { ShelterStatus, UserRole } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Helpers & fixtures
@@ -326,10 +326,10 @@ describe("POST /api/auth/login", () => {
   });
 
   // -------------------------------------------------------------------------
-  // 14. Successful login — full LoginResponseDTO validation
+  // 14. Successful login — response validation
   // -------------------------------------------------------------------------
 
-  it("returns 200 OK with correct LoginResponseDTO on successful login", async () => {
+  it("returns 200 OK with user and profile data on successful login", async () => {
     const supabase = buildSupabaseMock();
     const ctx = buildContext({ supabase });
 
@@ -338,16 +338,16 @@ describe("POST /api/auth/login", () => {
     expect(response.status).toBe(200);
     expect(response.headers.get("Content-Type")).toBe("application/json");
 
-    const body: LoginResponseDTO = await response.json();
+    const body = await response.json();
 
     expect(body.user.id).toBe(USER_ID);
     expect(body.user.email).toBe(USER_EMAIL);
-    expect(body.session.access_token).toBe(SESSION.access_token);
-    expect(body.session.refresh_token).toBe(SESSION.refresh_token);
-    expect(body.session.expires_at).toBe(SESSION.expires_at);
     expect(body.profile.id).toBe(USER_ID);
     expect(body.profile.status).toBe("verified");
     expect(body.profile.role).toBe("shelter");
+    // Session tokens must NOT appear in the JSON body — they are set as HttpOnly cookies.
+    expect(JSON.stringify(body)).not.toContain("access_token");
+    expect(JSON.stringify(body)).not.toContain("refresh_token");
   });
 
   it("does not include password in the response body", async () => {

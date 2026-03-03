@@ -1,0 +1,33 @@
+---
+import Layout from "@/layouts/Layout.astro";
+
+export const prerender = false;
+
+/**
+ * Dashboard — protected page.
+ * Access is validated server-side by calling getUser(), which verifies the session
+ * with the Supabase Auth server. The session is read from HttpOnly cookies managed
+ * automatically by @supabase/ssr. When no valid session exists, the user is redirected
+ * to /auth/login.
+ */
+const { data, error } = await Astro.locals.supabase.auth.getUser();
+
+if (error || !data?.user) {
+  return Astro.redirect("/auth/login");
+}
+---
+
+<Layout title="Dashboard — Shelterly">
+  <main class="flex min-h-screen flex-col items-center justify-center gap-4 bg-background px-4">
+    <h1 class="text-3xl font-bold">Dashboard</h1>
+    <p class="text-muted-foreground">Zalogowano pomyślnie. Panel zarządzania schroniskiem będzie dostępny tutaj.</p>
+    <form method="post" action="/api/auth/logout">
+      <button
+        type="submit"
+        class="text-sm font-medium text-primary underline-offset-4 hover:underline bg-transparent border-none cursor-pointer p-0"
+      >
+        Wyloguj się
+      </button>
+    </form>
+  </main>
+</Layout>
