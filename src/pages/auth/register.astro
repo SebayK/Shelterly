@@ -1,0 +1,24 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import RegisterForm from "@/components/auth/RegisterForm";
+
+export const prerender = false;
+
+// Server-side session guard: if a valid Supabase session exists,
+// redirect immediately without rendering the form.
+const { data, error } = await Astro.locals.supabase.auth.getUser();
+
+if (error) {
+  console.error("Failed to validate Supabase user on /auth/register:", error);
+}
+
+if (data?.user) {
+  return Astro.redirect("/dashboard");
+}
+---
+
+<Layout title="Zarejestruj się — Shelterly">
+  <main class="flex min-h-screen items-center justify-center bg-background px-4 py-8 sm:px-8 lg:px-12">
+    <RegisterForm client:load />
+  </main>
+</Layout>
