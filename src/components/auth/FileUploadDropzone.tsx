@@ -114,7 +114,7 @@ export default function FileUploadDropzone({
   const hasError = Boolean(error);
 
   return (
-    <div className="space-y-1">
+    <div ref={dropzoneRef} tabIndex={-1} className="space-y-1 focus:outline-none">
       {/* Hidden file input */}
       <input
         ref={inputRef}
@@ -177,7 +177,6 @@ export default function FileUploadDropzone({
           tabIndex={disabled ? -1 : 0}
           aria-label="Obszar wgrywania dokumentu. Naciśnij Enter lub Spację, aby wybrać plik."
           aria-describedby={`${descId}${hasError ? ` ${errorId}` : ""}`}
-          ref={dropzoneRef}
           aria-disabled={disabled}
           onClick={handleClick}
           onKeyDown={handleKeyDown}
