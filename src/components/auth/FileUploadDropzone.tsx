@@ -22,13 +22,21 @@ interface FileUploadDropzoneProps {
   onFileSelect: (file: File | null) => void;
   error?: string;
   disabled?: boolean;
+  /** Forwarded ref attached to the interactive dropzone div (for programmatic focus). */
+  dropzoneRef?: React.RefObject<HTMLDivElement | null>;
 }
 
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
 
-export default function FileUploadDropzone({ file, onFileSelect, error, disabled }: FileUploadDropzoneProps) {
+export default function FileUploadDropzone({
+  file,
+  onFileSelect,
+  error,
+  disabled,
+  dropzoneRef,
+}: FileUploadDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -169,6 +177,7 @@ export default function FileUploadDropzone({ file, onFileSelect, error, disabled
           tabIndex={disabled ? -1 : 0}
           aria-label="Obszar wgrywania dokumentu. Naciśnij Enter lub Spację, aby wybrać plik."
           aria-describedby={`${descId}${hasError ? ` ${errorId}` : ""}`}
+          ref={dropzoneRef}
           aria-disabled={disabled}
           onClick={handleClick}
           onKeyDown={handleKeyDown}
@@ -224,6 +233,3 @@ export default function FileUploadDropzone({ file, onFileSelect, error, disabled
     </div>
   );
 }
-
-// Re-export validation constants for use in RegisterForm
-export { ACCEPTED_TYPES, MAX_SIZE_BYTES };

@@ -1,48 +1,33 @@
-import { useState, useCallback, useMemo, useId } from "react";
+import { useState, useCallback, useMemo, useId, useRef } from "react";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormErrorAlert } from "@/components/auth/FormErrorAlert";
 import PasswordStrengthIndicator from "@/components/auth/PasswordStrengthIndicator";
-import FileUploadDropzone, { ACCEPTED_TYPES, MAX_SIZE_BYTES } from "@/components/auth/FileUploadDropzone";
+import FileUploadDropzone from "@/components/auth/FileUploadDropzone";
 import type { SignupCommand, ErrorResponse } from "@/types";
+import {
+  type RegisterFormData,
+  type RegisterFieldErrors,
+  validateAll,
+  hasErrors,
+  validateEmail,
+  validatePassword,
+  validateConfirmPassword,
+  validateName,
+  validateNip,
+  validateCity,
+  validateAddress,
+  validatePhone,
+  validateWebsite,
+  validateFile,
+} from "@/lib/validation/register.schemas";
 
-// ---------------------------------------------------------------------------
-// Types
-// ---------------------------------------------------------------------------
-
-interface RegisterFormData {
-  email: string;
-  password: string;
-  confirmPassword: string;
-  name: string;
-  nip: string;
-  city: string;
-  address: string;
-  phone_number: string;
-  website_url: string;
-  file: File | null;
-}
-
-interface RegisterFieldErrors {
-  email?: string;
-  password?: string;
-  confirmPassword?: string;
-  name?: string;
-  nip?: string;
-  city?: string;
-  address?: string;
-  phone_number?: string;
-  website_url?: string;
-  file?: string;
-}
+// Types are imported from @/lib/validation/register.schemas
 
 // ---------------------------------------------------------------------------
 // Constants
 // ---------------------------------------------------------------------------
-
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_REGEX = /^\+?[0-9\s-]{7,20}$/;
 
 const INITIAL_FORM_DATA: RegisterFormData = {
   email: "",
@@ -58,107 +43,35 @@ const INITIAL_FORM_DATA: RegisterFormData = {
 };
 
 // ---------------------------------------------------------------------------
-// Validation helpers
+// API helpers
 // ---------------------------------------------------------------------------
 
-function validateEmail(value: string): string | undefined {
-  if (!value.trim()) return "Adres e-mail jest wymagany.";
-  if (!EMAIL_REGEX.test(value)) return "Podaj poprawny adres e-mail.";
-  if (value.length > 255) return "Adres e-mail może mieć maksymalnie 255 znaków.";
-  return undefined;
+const SIGNUP_TIMEOUT_MS = 30_000;
+const UPLOAD_TIMEOUT_MS = 60_000;
+
+function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  return fetch(url, { ...options, signal: controller.signal }).finally(() => clearTimeout(timeoutId));
 }
 
-function validatePassword(value: string): string | undefined {
-  if (!value) return "Hasło jest wymagane.";
-  if (value.length < 8) return "Hasło musi mieć co najmniej 8 znaków.";
-  if (value.length > 128) return "Hasło może mieć maksymalnie 128 znaków.";
-  if (!/[a-z]/.test(value)) return "Hasło musi zawierać co najmniej jedną małą literę.";
-  if (!/[A-Z]/.test(value)) return "Hasło musi zawierać co najmniej jedną wielką literę.";
-  if (!/[0-9]/.test(value)) return "Hasło musi zawierać co najmniej jedną cyfrę.";
-  if (!/[^a-zA-Z0-9]/.test(value)) return "Hasło musi zawierać co najmniej jeden znak specjalny.";
-  return undefined;
-}
-
-function validateConfirmPassword(password: string, confirm: string): string | undefined {
-  if (!confirm) return "Powtórzenie hasła jest wymagane.";
-  if (password !== confirm) return "Hasła nie są identyczne.";
-  return undefined;
-}
-
-function validateName(value: string): string | undefined {
-  if (!value.trim()) return "Nazwa schroniska jest wymagana.";
-  if (value.trim().length < 2) return "Nazwa schroniska musi mieć co najmniej 2 znaki.";
-  if (value.length > 255) return "Nazwa schroniska może mieć maksymalnie 255 znaków.";
-  return undefined;
-}
-
-function validateNip(value: string): string | undefined {
-  if (!value.trim()) return "NIP jest wymagany.";
-  if (!/^\d{10}$/.test(value)) return "NIP musi składać się z dokładnie 10 cyfr.";
-
-  // Checksum validation: weights [6,5,7,2,3,4,5,6,7]
-  const weights = [6, 5, 7, 2, 3, 4, 5, 6, 7];
-  const digits = value.split("").map(Number);
-  const sum = weights.reduce((acc, w, i) => acc + w * digits[i], 0);
-  if (sum % 11 !== digits[9]) return "Podany NIP jest nieprawidłowy (błąd sumy kontrolnej).";
-
-  return undefined;
-}
-
-function validateCity(value: string): string | undefined {
-  if (!value.trim()) return "Miasto jest wymagane.";
-  if (value.trim().length < 2) return "Miasto musi mieć co najmniej 2 znaki.";
-  if (value.length > 100) return "Nazwa miasta może mieć maksymalnie 100 znaków.";
-  return undefined;
-}
-
-function validateAddress(value: string): string | undefined {
-  if (!value.trim()) return "Adres jest wymagany.";
-  if (value.trim().length < 5) return "Adres musi mieć co najmniej 5 znaków.";
-  if (value.length > 255) return "Adres może mieć maksymalnie 255 znaków.";
-  return undefined;
-}
-
-function validatePhone(value: string): string | undefined {
-  if (!value.trim()) return undefined; // optional
-  if (!PHONE_REGEX.test(value.trim())) return "Podaj poprawny numer telefonu.";
-  return undefined;
-}
-
-function validateWebsite(value: string): string | undefined {
-  if (!value.trim()) return undefined; // optional
+async function safeParseApiError(response: Response): Promise<string> {
   try {
-    new URL(value.trim());
-    return undefined;
+    const data: unknown = await response.json();
+    if (
+      data &&
+      typeof data === "object" &&
+      "error" in data &&
+      data.error &&
+      typeof data.error === "object" &&
+      "code" in data.error
+    ) {
+      return mapApiError(data as ErrorResponse);
+    }
   } catch {
-    return "Podaj poprawny adres URL.";
+    // Response body is not valid JSON — fall through to generic message
   }
-}
-
-function validateFile(file: File | null): string | undefined {
-  if (!file) return "Dokument weryfikacyjny jest wymagany.";
-  if (!ACCEPTED_TYPES.includes(file.type)) return "Akceptowane formaty: PDF, JPG, PNG.";
-  if (file.size > MAX_SIZE_BYTES) return "Plik nie może przekraczać 5 MB.";
-  return undefined;
-}
-
-function validateAll(data: RegisterFormData): RegisterFieldErrors {
-  return {
-    email: validateEmail(data.email),
-    password: validatePassword(data.password),
-    confirmPassword: validateConfirmPassword(data.password, data.confirmPassword),
-    name: validateName(data.name),
-    nip: validateNip(data.nip),
-    city: validateCity(data.city),
-    address: validateAddress(data.address),
-    phone_number: validatePhone(data.phone_number),
-    website_url: validateWebsite(data.website_url),
-    file: validateFile(data.file),
-  };
-}
-
-function hasErrors(errors: RegisterFieldErrors): boolean {
-  return Object.values(errors).some(Boolean);
+  return "Wystąpił nieoczekiwany błąd. Spróbuj ponownie.";
 }
 
 // ---------------------------------------------------------------------------
@@ -287,6 +200,7 @@ export default function RegisterForm() {
   const [hasSubmitted, setHasSubmitted] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const dropzoneRef = useRef<HTMLDivElement | null>(null);
 
   // Generate stable unique IDs for all form fields
   const baseId = useId();
@@ -431,9 +345,13 @@ export default function RegisterForm() {
       if (hasErrors(errors)) {
         // Focus the first field with an error
         const firstErrorField = (Object.keys(errors) as (keyof RegisterFieldErrors)[]).find((key) => errors[key]);
-        if (firstErrorField && firstErrorField !== "file") {
-          const el = document.getElementById(ids[firstErrorField as keyof typeof ids]);
-          el?.focus();
+        if (firstErrorField) {
+          if (firstErrorField === "file") {
+            dropzoneRef.current?.focus();
+          } else {
+            const el = document.getElementById(ids[firstErrorField as keyof typeof ids]);
+            el?.focus();
+          }
         }
         return;
       }
@@ -456,39 +374,41 @@ export default function RegisterForm() {
           },
         };
 
-        const signupResponse = await fetch("/api/auth/signup", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(command),
-        });
+        const signupResponse = await fetchWithTimeout(
+          "/api/auth/signup",
+          { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(command) },
+          SIGNUP_TIMEOUT_MS
+        );
 
         if (!signupResponse.ok) {
-          const errorData: ErrorResponse = await signupResponse.json();
-          setApiError(mapApiError(errorData));
+          setApiError(await safeParseApiError(signupResponse));
           return;
         }
 
         // Step 2: Upload verification document (if file selected)
+        let uploadFailed = false;
         if (formData.file) {
           const uploadFormData = new FormData();
           uploadFormData.append("file", formData.file);
 
           try {
-            const uploadResponse = await fetch("/api/profiles/me/verification-document", {
-              method: "POST",
-              body: uploadFormData,
-            });
+            const uploadResponse = await fetchWithTimeout(
+              "/api/profiles/me/verification-document",
+              { method: "POST", body: uploadFormData },
+              UPLOAD_TIMEOUT_MS
+            );
 
             if (!uploadResponse.ok) {
-              // Account created but upload failed — redirect anyway
+              uploadFailed = true;
             }
           } catch {
             // Network error during upload — account already created, redirect anyway
+            uploadFailed = true;
           }
         }
 
-        // Step 3: Redirect to pending page
-        window.location.href = "/auth/pending";
+        // Step 3: Redirect to pending page (include flag when upload failed)
+        window.location.href = uploadFailed ? "/auth/pending?upload_failed=1" : "/auth/pending";
       } catch {
         setApiError("Nie można połączyć się z serwerem. Sprawdź połączenie internetowe.");
       } finally {
@@ -728,6 +648,7 @@ export default function RegisterForm() {
               onFileSelect={handleFileSelect}
               error={fieldErrors.file}
               disabled={isSubmitting}
+              dropzoneRef={dropzoneRef}
             />
           </fieldset>
         </CardContent>
