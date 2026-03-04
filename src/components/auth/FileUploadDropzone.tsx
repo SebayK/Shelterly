@@ -1,12 +1,5 @@
 import { useRef, useState, useCallback, useId } from "react";
 
-// ---------------------------------------------------------------------------
-// Constants
-// ---------------------------------------------------------------------------
-
-const ACCEPTED_TYPES = ["application/pdf", "image/jpeg", "image/png"];
-const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
-
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
@@ -24,6 +17,8 @@ interface FileUploadDropzoneProps {
   disabled?: boolean;
   /** Forwarded ref attached to the interactive dropzone div (for programmatic focus). */
   dropzoneRef?: React.RefObject<HTMLDivElement | null>;
+  /** Forwarded ref attached to the remove-file button (for programmatic focus when a file is selected). */
+  removeButtonRef?: React.RefObject<HTMLButtonElement | null>;
 }
 
 // ---------------------------------------------------------------------------
@@ -36,6 +31,7 @@ export default function FileUploadDropzone({
   error,
   disabled,
   dropzoneRef,
+  removeButtonRef,
 }: FileUploadDropzoneProps) {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isDragOver, setIsDragOver] = useState(false);
@@ -124,7 +120,7 @@ export default function FileUploadDropzone({
         className="sr-only"
         onChange={handleInputChange}
         disabled={disabled}
-        aria-describedby={hasError ? errorId : descId}
+        aria-describedby={hasError ? errorId : file ? undefined : descId}
         aria-invalid={hasError}
         tabIndex={-1}
       />
@@ -153,6 +149,7 @@ export default function FileUploadDropzone({
             </div>
           </div>
           <button
+            ref={removeButtonRef}
             type="button"
             onClick={handleRemove}
             disabled={disabled}

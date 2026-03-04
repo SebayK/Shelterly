@@ -233,9 +233,10 @@ describe("validateWebsite", () => {
 // validateFile
 // ---------------------------------------------------------------------------
 
+// Minimal mock of the File shape used by validateFile (name, type, size).
+// Avoids allocating large Blobs in Node tests for size-boundary checks.
 function makeFile(name: string, type: string, size: number): File {
-  const blob = new Blob(["x".repeat(size)], { type });
-  return new File([blob], name, { type });
+  return { name, type, size } as File;
 }
 
 describe("validateFile", () => {

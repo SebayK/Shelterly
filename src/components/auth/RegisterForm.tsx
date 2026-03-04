@@ -201,6 +201,7 @@ export default function RegisterForm() {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const dropzoneRef = useRef<HTMLDivElement | null>(null);
+  const removeButtonRef = useRef<HTMLButtonElement | null>(null);
 
   // Generate stable unique IDs for all form fields
   const baseId = useId();
@@ -347,7 +348,10 @@ export default function RegisterForm() {
         const firstErrorField = (Object.keys(errors) as (keyof RegisterFieldErrors)[]).find((key) => errors[key]);
         if (firstErrorField) {
           if (firstErrorField === "file") {
-            dropzoneRef.current?.focus();
+            // If a file is already selected (invalid), focus the remove button;
+            // otherwise focus the dropzone wrapper.
+            const fileTarget = formData.file ? removeButtonRef.current : dropzoneRef.current;
+            (fileTarget ?? dropzoneRef.current)?.focus();
           } else {
             const el = document.getElementById(ids[firstErrorField as keyof typeof ids]);
             el?.focus();
@@ -653,6 +657,7 @@ export default function RegisterForm() {
               error={fieldErrors.file}
               disabled={isSubmitting}
               dropzoneRef={dropzoneRef}
+              removeButtonRef={removeButtonRef}
             />
           </fieldset>
         </CardContent>

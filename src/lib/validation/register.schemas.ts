@@ -33,7 +33,7 @@ export interface RegisterFieldErrors {
 // ---------------------------------------------------------------------------
 
 export const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-export const PHONE_REGEX = /^\+?[0-9\s-]{7,20}$/;
+export const PHONE_REGEX = /^\+?(?=.*\d)[0-9\s-]{7,20}$/;
 export const ACCEPTED_FILE_TYPES = ["application/pdf", "image/jpeg", "image/png"];
 export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 
