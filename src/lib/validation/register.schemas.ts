@@ -108,7 +108,10 @@ export function validatePhone(value: string): string | undefined {
 export function validateWebsite(value: string): string | undefined {
   if (!value.trim()) return undefined; // optional
   try {
-    new URL(value.trim());
+    const url = new URL(value.trim());
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      return "Podaj poprawny adres URL.";
+    }
     return undefined;
   } catch {
     return "Podaj poprawny adres URL.";

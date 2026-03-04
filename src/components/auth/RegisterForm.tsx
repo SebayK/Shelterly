@@ -386,7 +386,6 @@ export default function RegisterForm() {
         }
 
         // Step 2: Upload verification document (if file selected)
-        let uploadFailed = false;
         if (formData.file) {
           const uploadFormData = new FormData();
           uploadFormData.append("file", formData.file);
@@ -399,16 +398,21 @@ export default function RegisterForm() {
             );
 
             if (!uploadResponse.ok) {
-              uploadFailed = true;
+              // Treat upload failure as a blocking error so the user can retry
+              setApiError("Nie udało się przesłać dokumentu weryfikacyjnego. Spróbuj ponownie.");
+              return;
             }
           } catch {
-            // Network error during upload — account already created, redirect anyway
-            uploadFailed = true;
+            // Network error during upload — do not redirect silently; allow retry
+            setApiError(
+              "Wystąpił błąd podczas przesyłania dokumentu weryfikacyjnego. Sprawdź połączenie internetowe i spróbuj ponownie."
+            );
+            return;
           }
         }
 
-        // Step 3: Redirect to pending page (include flag when upload failed)
-        window.location.href = uploadFailed ? "/auth/pending?upload_failed=1" : "/auth/pending";
+        // Step 3: Redirect to pending page after successful registration and upload
+        window.location.href = "/auth/pending";
       } catch {
         setApiError("Nie można połączyć się z serwerem. Sprawdź połączenie internetowe.");
       } finally {
