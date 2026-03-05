@@ -15,6 +15,7 @@
     "npx shadcn@latest": true,
     "npm install": true,
     "git add": true,
-    "npx tsc": true
+    "npx tsc": true,
+    "supabase": true
   }
 }

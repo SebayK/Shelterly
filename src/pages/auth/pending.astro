@@ -1,0 +1,95 @@
+---
+import Layout from "@/layouts/Layout.astro";
+import type { ShelterStatus, UserRole } from "@/types";
+
+export const prerender = false;
+
+// Server-side guard: redirect users who no longer need this page
+try {
+  const {
+    data: { user },
+    error: authError,
+  } = await Astro.locals.supabase.auth.getUser();
+
+  if (authError) {
+    console.error("[pending] Failed to get user session:", authError);
+  }
+
+  if (user) {
+    const { data: profile, error: profileError } = await Astro.locals.supabase
+      .from("profiles")
+      .select("status, role")
+      .eq("id", user.id)
+      .single<{ status: ShelterStatus; role: UserRole }>();
+
+    if (profileError) {
+      console.error("[pending] Failed to fetch profile:", profileError);
+    }
+
+    if (profile) {
+      if (profile.role === "super_admin") {
+        return Astro.redirect("/admin");
+      }
+      if (profile.status === "verified") {
+        return Astro.redirect("/dashboard");
+      }
+    }
+  }
+} catch (err) {
+  console.error("[pending] Unexpected error during session check:", err);
+}
+---
+
+<Layout title="Oczekiwanie na weryfikację — Shelterly">
+  <section
+    class="flex min-h-[calc(100vh-3.5rem)] flex-col items-center justify-center px-4 py-12 text-center"
+    aria-labelledby="pending-heading"
+  >
+    <div class="flex max-w-md flex-col items-center gap-6">
+      <!-- Clock icon -->
+      <div
+        class="flex h-20 w-20 items-center justify-center rounded-full bg-amber-100 text-amber-600"
+        aria-hidden="true"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="40"
+          height="40"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="12" cy="12" r="10"></circle>
+          <polyline points="12 6 12 12 16 14"></polyline>
+        </svg>
+      </div>
+
+      <!-- Heading -->
+      <h1 id="pending-heading" class="text-2xl font-semibold tracking-tight text-foreground">
+        Konto oczekuje na weryfikację
+      </h1>
+
+      <!-- Description -->
+      <p class="text-base leading-relaxed text-muted-foreground">
+        Twoje zgłoszenie zostało przyjęte. Administrator zweryfikuje dostarczone dane i dokument potwierdzający
+        działalność schroniska. Proces weryfikacji może potrwać do&nbsp;48&nbsp;godzin.
+      </p>
+
+      <p class="text-sm text-muted-foreground">
+        Po pozytywnej weryfikacji otrzymasz dostęp do panelu zarządzania schroniskiem. W razie pytań skontaktuj się z
+        nami.
+      </p>
+
+      <!-- Back to home link -->
+      <a
+        href="/"
+        class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        Wróć na stronę główną
+      </a>
+    </div>
+  </section>
+</Layout>
