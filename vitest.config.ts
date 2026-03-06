@@ -5,11 +5,11 @@ export default getViteConfig({
   test: {
     globals: true,
     environment: "node",
-    include: ["src/**/*.test.ts"],
+    include: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     coverage: {
       provider: "v8",
-      include: ["src/lib/**", "src/pages/api/**"],
-      exclude: ["src/**/*.test.ts"],
+      include: ["src/lib/**", "src/pages/api/**", "src/components/**"],
+      exclude: ["src/**/*.test.ts", "src/**/*.test.tsx"],
     },
   },
 });
