@@ -1,20 +1,22 @@
 ---
-import DashboardLayout from "@/layouts/DashboardLayout.astro";
+import DashboardShell from "@/layouts/DashboardShell.astro";
+import { logError, UnauthorizedError } from "@/lib/errors";
 import { ProfileService } from "@/lib/services/profile.service";
 import ProfileForm from "@/components/profile/ProfileForm";
 import type { ProfileMeDTO } from "@/types";
 
 export const prerender = false;
 
-// DashboardLayout skips its auth check when a profile prop is provided,
-// so this page is responsible for loading the session and profile data.
+const currentPath = Astro.url.pathname;
+
+// This page loads its own authenticated profile data and renders the shared dashboard shell.
 const {
   data: { user },
   error: authError,
 } = await Astro.locals.supabase.auth.getUser();
 
 if (authError || !user) {
-  return Astro.redirect(`/auth/login?return=/dashboard/profile`);
+  return Astro.redirect(`/auth/login?return=${currentPath}`);
 }
 
 let profile: ProfileMeDTO;
@@ -22,11 +24,15 @@ try {
   const profileService = new ProfileService(Astro.locals.supabase);
   profile = await profileService.getAuthenticatedProfile(user.id);
 } catch (err) {
-  console.error("[profile.astro] Failed to fetch profile:", err);
-  return Astro.redirect(`/auth/login?return=/dashboard/profile`);
+  logError("[profile.astro] Failed to fetch profile", err);
+  if (err instanceof UnauthorizedError) {
+    return Astro.redirect(`/auth/login?return=${currentPath}`);
+  }
+
+  throw err;
 }
 ---
 
-<DashboardLayout title="Edycja profilu — Shelterly" profile={profile}>
+<DashboardShell title="Edycja profilu — Shelterly" profile={profile} currentPath={currentPath}>
   <ProfileForm profile={profile} client:load />
-</DashboardLayout>
+</DashboardShell>

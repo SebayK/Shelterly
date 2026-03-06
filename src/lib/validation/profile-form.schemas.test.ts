@@ -62,12 +62,16 @@ describe("validatePhone", () => {
     expect(validatePhone("   ")).toBeUndefined();
   });
 
-  it("returns error for invalid format", () => {
-    expect(validatePhone("123 456 789")).toBe("Podaj poprawny numer telefonu (format: +48123456789).");
-    expect(validatePhone("abc")).toBe("Podaj poprawny numer telefonu (format: +48123456789).");
+  it("returns error for values longer than 20 chars", () => {
+    expect(validatePhone(`+${"1".repeat(20)}`)).toBe("Numer telefonu może mieć maksymalnie 20 znaków.");
   });
 
-  it("returns undefined for valid E.164 value", () => {
+  it("returns error for invalid format", () => {
+    expect(validatePhone("123 456 789")).toBe("Podaj poprawny numer telefonu (np. +48123456789 lub 48123456789).");
+    expect(validatePhone("abc")).toBe("Podaj poprawny numer telefonu (np. +48123456789 lub 48123456789).");
+  });
+
+  it("returns undefined for accepted phone formats", () => {
     expect(validatePhone("+48123456789")).toBeUndefined();
     expect(validatePhone("48123456789")).toBeUndefined();
   });
@@ -118,7 +122,7 @@ describe("validateUploadFile", () => {
   });
 
   it("returns undefined for accepted file types", () => {
-    expect(ACCEPTED_FILE_TYPES).toEqual(["application/pdf", "image/jpeg", "image/png"]);
+    expect(ACCEPTED_FILE_TYPES).toEqual(["application/pdf", "image/jpeg", "image/jpg", "image/png"]);
     const file = new File(["hello"], "document.png", { type: "image/png" });
     expect(validateUploadFile(file)).toBeUndefined();
   });
@@ -138,7 +142,7 @@ describe("validateProfileForm", () => {
       name: "Nazwa schroniska jest wymagana.",
       city: "Miasto jest wymagane.",
       address: "Adres jest wymagany.",
-      phone_number: "Podaj poprawny numer telefonu (format: +48123456789).",
+      phone_number: "Podaj poprawny numer telefonu (np. +48123456789 lub 48123456789).",
       website_url: "Podaj poprawny adres URL.",
     });
   });

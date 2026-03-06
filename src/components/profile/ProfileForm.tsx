@@ -160,19 +160,13 @@ function Field({ id, errorId, label, required = true, error, children }: FieldPr
 
 export default function ProfileForm({ profile }: ProfileFormProps) {
   // ---- Form state ----------------------------------------------------------
-  const initialFormData = useMemo<ProfileFormData>(
-    () => ({
-      name: profile.name ?? "",
-      city: profile.city ?? "",
-      address: profile.address ?? "",
-      phone_number: profile.phone_number ?? "",
-      website_url: profile.website_url ?? "",
-    }),
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    [] // intentionally static: initializes once from server-provided prop
-  );
-
-  const [formData, setFormData] = useState<ProfileFormData>(initialFormData);
+  const [formData, setFormData] = useState<ProfileFormData>(() => ({
+    name: profile.name ?? "",
+    city: profile.city ?? "",
+    address: profile.address ?? "",
+    phone_number: profile.phone_number ?? "",
+    website_url: profile.website_url ?? "",
+  }));
   const [fieldErrors, setFieldErrors] = useState<ProfileFieldErrors>({});
   const [apiError, setApiError] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -204,10 +198,7 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
   );
   const errorIds = useMemo(
     () =>
-      Object.fromEntries(Object.entries(ids).map(([k, v]) => [k, `${v}-error`])) as Record<
-        keyof typeof ids,
-        string
-      >,
+      Object.fromEntries(Object.entries(ids).map(([k, v]) => [k, `${v}-error`])) as Record<keyof typeof ids, string>,
     [ids]
   );
 
@@ -257,9 +248,7 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
       setFieldErrors(errors);
 
       if (hasProfileErrors(errors)) {
-        const firstErrorKey = (Object.keys(errors) as (keyof ProfileFieldErrors)[]).find(
-          (k) => errors[k]
-        );
+        const firstErrorKey = (Object.keys(errors) as (keyof ProfileFieldErrors)[]).find((k) => errors[k]);
         if (firstErrorKey && firstErrorKey in ids) {
           const el = document.getElementById(ids[firstErrorKey as keyof typeof ids]);
           el?.focus();
@@ -269,12 +258,18 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
 
       setIsSaving(true);
       try {
+        const trimmedName = formData.name.trim();
+        const trimmedCity = formData.city.trim();
+        const trimmedAddress = formData.address.trim();
+        const normalizedPhoneNumber = formData.phone_number.trim() ? formData.phone_number.trim() : "";
+        const normalizedWebsiteUrl = formData.website_url.trim() ? formData.website_url.trim() : "";
+
         const command: UpdateProfileCommand = {
-          name: formData.name.trim() || undefined,
-          city: formData.city.trim() || undefined,
-          address: formData.address.trim() || undefined,
-          phone_number: formData.phone_number.trim() ? formData.phone_number.trim() : null,
-          website_url: formData.website_url.trim() ? formData.website_url.trim() : null,
+          name: trimmedName || undefined,
+          city: trimmedCity || undefined,
+          address: trimmedAddress || undefined,
+          phone_number: normalizedPhoneNumber || null,
+          website_url: normalizedWebsiteUrl || null,
         };
 
         const response = await fetchWithTimeout(
@@ -302,11 +297,13 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
         }
 
         const result = (await response.json()) as ProfileUpdateResponseDTO;
-        setFormData((prev) => ({
-          ...prev,
+        setFormData({
           name: result.name,
           city: result.city,
-        }));
+          address: trimmedAddress,
+          phone_number: normalizedPhoneNumber,
+          website_url: normalizedWebsiteUrl,
+        });
         toast.success("Profil został zapisany pomyślnie.");
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") {
@@ -409,9 +406,7 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
         if (response.status === 400) {
           try {
             const data = (await response.json()) as ErrorResponse;
-            setUploadFileError(
-              data.error.details?.[0]?.message ?? "Nieprawidłowy plik. Sprawdź format i rozmiar."
-            );
+            setUploadFileError(data.error.details?.[0]?.message ?? "Nieprawidłowy plik. Sprawdź format i rozmiar.");
           } catch {
             setUploadFileError("Nieprawidłowy plik. Sprawdź format i rozmiar.");
           }
@@ -610,8 +605,8 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
           Geokodowanie adresu
         </h3>
         <p className="mb-4 text-sm text-muted-foreground">
-          Wyznacz współrzędne geograficzne na podstawie aktualnie wpisanego adresu, aby
-          schronisko pojawiło się na mapie.
+          Wyznacz współrzędne geograficzne na podstawie aktualnie wpisanego adresu, aby schronisko pojawiło się na
+          mapie.
         </p>
 
         {/* Current coordinates */}
@@ -674,8 +669,8 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
           Dokument weryfikacyjny
         </h3>
         <p className="mb-4 text-sm text-muted-foreground">
-          Wgraj lub zaktualizuj dokument potwierdzający działalność schroniska (np. KRS,
-          zaświadczenie). Akceptowane formaty: PDF, JPG, PNG (maks. 5 MB).
+          Wgraj lub zaktualizuj dokument potwierdzający działalność schroniska (np. KRS, zaświadczenie). Akceptowane
+          formaty: PDF, JPG, PNG (maks. 5 MB).
         </p>
 
         {/* Current document status */}

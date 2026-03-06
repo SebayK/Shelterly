@@ -14,7 +14,7 @@ export interface ProfileFormData {
   city: string;
   /** Adres — wymagane, 1–500 znaków */
   address: string;
-  /** Numer telefonu — opcjonalne, format E.164 (np. +48123456789) */
+  /** Numer telefonu — opcjonalne, format zbliżony do E.164, z opcjonalnym prefiksem + (np. +48123456789 lub 48123456789) */
   phone_number: string;
   /** Adres strony www — opcjonalne, poprawny URL http/https */
   website_url: string;
@@ -34,7 +34,7 @@ export type ProfileFieldName = keyof ProfileFieldErrors;
 // Constants
 // ---------------------------------------------------------------------------
 
-/** E.164-compatible phone regex (matches the server-side schema) */
+/** E.164-like phone regex with optional + prefix (matches the server-side schema) */
 const PHONE_E164_REGEX = /^\+?[1-9]\d{1,14}$/;
 
 // ---------------------------------------------------------------------------
@@ -62,7 +62,10 @@ export function validateAddress(value: string): string | undefined {
 export function validatePhone(value: string): string | undefined {
   if (!value.trim()) return undefined; // optional
   const normalized = value.trim();
-  if (!PHONE_E164_REGEX.test(normalized)) return "Podaj poprawny numer telefonu (format: +48123456789).";
+  if (normalized.length > 20) return "Numer telefonu może mieć maksymalnie 20 znaków.";
+  if (!PHONE_E164_REGEX.test(normalized)) {
+    return "Podaj poprawny numer telefonu (np. +48123456789 lub 48123456789).";
+  }
   return undefined;
 }
 
@@ -84,7 +87,7 @@ export function validateWebsite(value: string): string | undefined {
 // File validators (reused for VerificationDocumentSection)
 // ---------------------------------------------------------------------------
 
-export const ACCEPTED_FILE_TYPES = ["application/pdf", "image/jpeg", "image/png"];
+export const ACCEPTED_FILE_TYPES = ["application/pdf", "image/jpeg", "image/jpg", "image/png"];
 export const MAX_FILE_SIZE_BYTES = 5 * 1024 * 1024; // 5 MB
 
 export function validateProfileField(field: ProfileFieldName, value: string): string | undefined {
