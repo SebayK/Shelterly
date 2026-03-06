@@ -7,33 +7,43 @@ import DashboardSidebar from "@/components/DashboardSidebar.astro";
 import DashboardBottomNav from "@/components/DashboardBottomNav.astro";
 import { ProfileService } from "@/lib/services/profile.service";
 import type { NavbarUser, ProfileMeDTO } from "@/types";
+import { Toaster } from "@/components/ui/sonner";
 
 interface Props {
   title?: string;
+  /** Pre-fetched profile from the page — skips the auth check and fetch in the layout */
+  profile?: ProfileMeDTO;
 }
 
-const { title = "Dashboard — Shelterly" } = Astro.props;
+const { title = "Dashboard — Shelterly", profile: profileProp } = Astro.props;
 
 const currentPath = Astro.url.pathname;
 
-// Auth guard — redirect to login if no valid session
-const {
-  data: { user },
-  error: authError,
-} = await Astro.locals.supabase.auth.getUser();
-
-if (authError || !user) {
-  return Astro.redirect(`/auth/login?return=${currentPath}`);
-}
-
-// Fetch full profile data
 let profile: ProfileMeDTO;
-try {
-  const profileService = new ProfileService(Astro.locals.supabase);
-  profile = await profileService.getAuthenticatedProfile(user.id);
-} catch (err) {
-  console.error("[DashboardLayout] Failed to fetch profile:", err);
-  return Astro.redirect(`/auth/login?return=${currentPath}`);
+
+if (profileProp) {
+  // Profile already fetched by the page — reuse it to avoid a double auth.getUser()
+  // call which can cause ResponseSentError when the session cookie is refreshed.
+  profile = profileProp;
+} else {
+  // Auth guard — redirect to login if no valid session
+  const {
+    data: { user },
+    error: authError,
+  } = await Astro.locals.supabase.auth.getUser();
+
+  if (authError || !user) {
+    return Astro.redirect(`/auth/login?return=${currentPath}`);
+  }
+
+  // Fetch full profile data
+  try {
+    const profileService = new ProfileService(Astro.locals.supabase);
+    profile = await profileService.getAuthenticatedProfile(user.id);
+  } catch (err) {
+    console.error("[DashboardLayout] Failed to fetch profile:", err);
+    return Astro.redirect(`/auth/login?return=${currentPath}`);
+  }
 }
 
 const navbarUser: NavbarUser = {
@@ -81,6 +91,7 @@ const navbarUser: NavbarUser = {
     </div>
 
     <DashboardBottomNav currentPath={currentPath} />
+    <Toaster client:load position="top-right" richColors />
   </body>
 </html>
 

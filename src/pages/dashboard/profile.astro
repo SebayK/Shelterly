@@ -1,0 +1,32 @@
+---
+import DashboardLayout from "@/layouts/DashboardLayout.astro";
+import { ProfileService } from "@/lib/services/profile.service";
+import ProfileForm from "@/components/profile/ProfileForm";
+import type { ProfileMeDTO } from "@/types";
+
+export const prerender = false;
+
+// DashboardLayout skips its auth check when a profile prop is provided,
+// so this page is responsible for loading the session and profile data.
+const {
+  data: { user },
+  error: authError,
+} = await Astro.locals.supabase.auth.getUser();
+
+if (authError || !user) {
+  return Astro.redirect(`/auth/login?return=/dashboard/profile`);
+}
+
+let profile: ProfileMeDTO;
+try {
+  const profileService = new ProfileService(Astro.locals.supabase);
+  profile = await profileService.getAuthenticatedProfile(user.id);
+} catch (err) {
+  console.error("[profile.astro] Failed to fetch profile:", err);
+  return Astro.redirect(`/auth/login?return=/dashboard/profile`);
+}
+---
+
+<DashboardLayout title="Edycja profilu — Shelterly" profile={profile}>
+  <ProfileForm profile={profile} client:load />
+</DashboardLayout>
