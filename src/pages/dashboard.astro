@@ -1,5 +1,5 @@
 ---
-import DashboardShell from "@/layouts/DashboardShell.astro";
+import DashboardLayout from "@/layouts/DashboardLayout.astro";
 import NeedsManager from "@/components/dashboard/NeedsManager";
 import { APP_CONFIG } from "@/lib/config";
 import { logError, UnauthorizedError } from "@/lib/errors";
@@ -34,7 +34,7 @@ try {
 }
 ---
 
-<DashboardShell title="Dashboard — Shelterly" profile={profile} currentPath={currentPath}>
+<DashboardLayout title="Dashboard — Shelterly" profile={profile} currentPath={currentPath}>
   <NeedsManager
     client:load
     profileId={profile.id}
@@ -42,4 +42,4 @@ try {
     aiUsageCount={profile.ai_usage_count}
     aiUsageLimit={APP_CONFIG.AI.USAGE_LIMIT}
   />
-</DashboardShell>
+</DashboardLayout>

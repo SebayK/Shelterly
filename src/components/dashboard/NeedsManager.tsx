@@ -6,12 +6,11 @@ import { useNeeds } from "@/components/hooks/useNeeds";
 import type { ErrorResponse, NeedCreateResponseDTO, NeedListItemDTO, NeedUpdateResponseDTO } from "@/types";
 import { ACCOUNT_STATUS_LABELS, CRUD_DISABLED_REASON, CRUD_DISABLED_SHORT_HINT } from "./constants";
 import {
-  fetchNeedMutationWithTimeout,
   getNeedMutationFailureMessage,
   getNeedMutationSuccessMessage,
   mapNeedMutationError,
 } from "./need-mutation.helpers";
-import { redirectToDashboardLogin } from "./request.helpers";
+import { fetchWithTimeout, redirectToDashboardLogin } from "./request.helpers";
 import DeleteNeedAlertDialog from "./DeleteNeedAlertDialog";
 import FulfillNeedAlertDialog from "./FulfillNeedAlertDialog";
 import NeedFormDialog from "./NeedFormDialog";
@@ -23,6 +22,7 @@ import NeedsToolbar from "./NeedsToolbar";
 import type { NeedsManagerProps } from "./types";
 
 export default function NeedsManager({ profileId, accountStatus, aiUsageCount, aiUsageLimit }: NeedsManagerProps) {
+  const mutationTimeoutMs = 15_000;
   const [localAiUsageCount, setLocalAiUsageCount] = useState(aiUsageCount);
   const [formDialogOpen, setFormDialogOpen] = useState(false);
   const [formDialogMode, setFormDialogMode] = useState<"create" | "edit">("create");
@@ -154,7 +154,7 @@ export default function NeedsManager({ profileId, accountStatus, aiUsageCount, a
 
     setIsDeleting(true);
     try {
-      const response = await fetchNeedMutationWithTimeout(`/api/needs/${deletingNeed.id}`, { method: "DELETE" });
+      const response = await fetchWithTimeout(`/api/needs/${deletingNeed.id}`, { method: "DELETE" }, mutationTimeoutMs);
 
       if (!response.ok) {
         if (response.status === 401) {
@@ -185,9 +185,13 @@ export default function NeedsManager({ profileId, accountStatus, aiUsageCount, a
 
     setIsFulfilling(true);
     try {
-      const response = await fetchNeedMutationWithTimeout(`/api/needs/${fulfillingNeed.id}/fulfill`, {
-        method: "POST",
-      });
+      const response = await fetchWithTimeout(
+        `/api/needs/${fulfillingNeed.id}/fulfill`,
+        {
+          method: "POST",
+        },
+        mutationTimeoutMs
+      );
 
       if (!response.ok) {
         if (response.status === 401) {

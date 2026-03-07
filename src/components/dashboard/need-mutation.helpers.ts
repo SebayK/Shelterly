@@ -2,21 +2,6 @@ import type { ErrorResponse } from "@/types";
 
 export type NeedMutationAction = "delete" | "fulfill";
 
-const MUTATION_TIMEOUT_MS = 15_000;
-
-export function fetchNeedMutationWithTimeout(
-  url: string,
-  options: RequestInit,
-  timeoutMs = MUTATION_TIMEOUT_MS
-): Promise<Response> {
-  const controller = new AbortController();
-  const timerId = window.setTimeout(() => controller.abort(), timeoutMs);
-
-  return fetch(url, { ...options, signal: controller.signal }).finally(() => {
-    window.clearTimeout(timerId);
-  });
-}
-
 export function mapNeedMutationError(errorData: ErrorResponse, action: NeedMutationAction): string {
   switch (errorData.error.code) {
     case "UNAUTHORIZED":

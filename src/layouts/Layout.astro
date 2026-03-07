@@ -1,6 +1,7 @@
 ---
 import "../styles/global.css";
 import Navbar from "@/components/Navbar.astro";
+import { logError } from "@/lib/errors";
 import type { NavbarUser } from "@/types";
 
 interface Props {
@@ -13,7 +14,9 @@ const { title = "Shelterly", withLeaflet = false } = Astro.props;
 let navbarUser: NavbarUser | null = null;
 
 try {
-  const { data: { user } } = await Astro.locals.supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await Astro.locals.supabase.auth.getUser();
 
   if (user) {
     const { data: profile } = await Astro.locals.supabase
@@ -27,7 +30,7 @@ try {
     }
   }
 } catch (err) {
-  console.error("[Layout] Failed to fetch user session:", err);
+  logError("[Layout] Failed to fetch user session", err);
 }
 ---
 
@@ -38,24 +41,20 @@ try {
     <meta name="viewport" content="width=device-width" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="generator" content={Astro.generator} />
-    {withLeaflet && (
-      <>
-        <link
-          rel="stylesheet"
-          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-          crossorigin="anonymous"
-        />
-        <link
-          rel="stylesheet"
-          href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css"
-        />
-        <link
-          rel="stylesheet"
-          href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css"
-        />
-      </>
-    )}
+    {
+      withLeaflet && (
+        <>
+          <link
+            rel="stylesheet"
+            href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+            integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+            crossorigin="anonymous"
+          />
+          <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+          <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+        </>
+      )
+    }
     <title>{title}</title>
   </head>
   <body>

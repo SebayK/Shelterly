@@ -44,7 +44,7 @@ export const GET: APIRoute = async ({ params }) => {
     address: `ul. Testowa ${Math.floor(Math.random() * 100)}, ${basicProfile.city}`,
     location: basicProfile.location,
     phone_number: "+48 123 456 789",
-    website_url: `https://www.${basicProfile.name.toLowerCase().replace(/\s+/g, '')}.pl`,
+    website_url: `https://www.${basicProfile.name.toLowerCase().replace(/\s+/g, "")}.pl`,
     created_at: new Date().toISOString(),
     needs_summary: {
       total: basicProfile.needs_count,

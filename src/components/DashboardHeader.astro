@@ -11,11 +11,11 @@ interface Props {
 
 const { name, status, aiUsageCount } = Astro.props;
 
-type BadgeConfig = {
+interface BadgeConfig {
   label: string;
   variant: "default" | "secondary" | "destructive" | "outline";
   className: string;
-};
+}
 
 const badgeConfigs: Record<ShelterStatus, BadgeConfig> = {
   verified: {
@@ -81,10 +81,9 @@ const AI_LIMIT = APP_CONFIG.AI.USAGE_LIMIT;
         <path d="M5 18H3"></path>
       </svg>
       <span>
-        Użycia AI: <span
-          class={aiUsageCount >= AI_LIMIT ? "text-destructive font-medium" : ""}
-          >{aiUsageCount}</span
-        >/{AI_LIMIT}
+        Użycia AI: <span class={aiUsageCount >= AI_LIMIT ? "text-destructive font-medium" : ""}>{aiUsageCount}</span>/{
+          AI_LIMIT
+        }
       </span>
     </div>
   </div>

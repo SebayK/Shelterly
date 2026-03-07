@@ -7,11 +7,11 @@ interface Props {
 
 const { status } = Astro.props;
 
-type BannerConfig = {
+interface BannerConfig {
   containerClass: string;
   message: string;
   icon: "clock" | "ban" | "x-circle";
-};
+}
 
 const configs: Partial<Record<ShelterStatus, BannerConfig>> = {
   pending: {
@@ -22,14 +22,12 @@ const configs: Partial<Record<ShelterStatus, BannerConfig>> = {
   },
   suspended: {
     containerClass: "bg-red-50 border-red-200 text-red-800",
-    message:
-      "Twoje konto zostało zawieszone. Skontaktuj się z administratorem, aby uzyskać więcej informacji.",
+    message: "Twoje konto zostało zawieszone. Skontaktuj się z administratorem, aby uzyskać więcej informacji.",
     icon: "ban",
   },
   rejected: {
     containerClass: "bg-red-50 border-red-200 text-red-800",
-    message:
-      "Twoje konto zostało odrzucone. Skontaktuj się z administratorem, aby uzyskać więcej informacji.",
+    message: "Twoje konto zostało odrzucone. Skontaktuj się z administratorem, aby uzyskać więcej informacji.",
     icon: "x-circle",
   },
 };
@@ -39,10 +37,7 @@ const config = configs[status];
 
 {
   config && (
-    <div
-      role="alert"
-      class={`flex items-start gap-3 border px-4 py-3 text-sm ${config.containerClass}`}
-    >
+    <div role="alert" class={`flex items-start gap-3 border px-4 py-3 text-sm ${config.containerClass}`}>
       {config.icon === "clock" && (
         <svg
           xmlns="http://www.w3.org/2000/svg"

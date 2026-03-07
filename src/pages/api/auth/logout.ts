@@ -31,9 +31,9 @@ export const POST: APIRoute = async ({ locals }) => {
     logSuccess("POST /api/auth/logout");
 
     // 4. Return success - cookies are automatically cleared by Supabase SSR
-    return new Response(JSON.stringify(result), { 
+    return new Response(JSON.stringify(result), {
       status: 200,
-      headers: { "Content-Type": "application/json" }
+      headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
     // 401 — unauthenticated request (missing/expired/invalid token)

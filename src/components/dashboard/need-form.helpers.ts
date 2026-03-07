@@ -13,6 +13,17 @@ import type {
 import type { NeedFormData } from "./types";
 import type { NeedFormValidationData, NeedFormValidationErrors } from "@/lib/validation/need-form.schemas";
 
+const SUPPORTED_NEED_FORM_ERROR_FIELDS = [
+  "category",
+  "title",
+  "description",
+  "shopping_url",
+  "urgency",
+  "target_quantity",
+  "current_quantity",
+  "unit",
+] as const satisfies readonly (keyof NeedFormValidationErrors)[];
+
 export const NEED_CATEGORY_OPTIONS: { value: NeedCategory; label: string }[] = [
   { value: "food", label: "Żywność" },
   { value: "textiles", label: "Tekstylia" },
@@ -117,19 +128,7 @@ export function mapNeedFormErrorDetails(details: ErrorDetail[] | undefined): Nee
 
   return details.reduce<NeedFormValidationErrors>((accumulator, detail) => {
     const fieldName = detail.field as keyof NeedFormValidationErrors;
-    if (
-      fieldName in accumulator ||
-      [
-        "category",
-        "title",
-        "description",
-        "shopping_url",
-        "urgency",
-        "target_quantity",
-        "current_quantity",
-        "unit",
-      ].includes(detail.field)
-    ) {
+    if (!(fieldName in accumulator) && SUPPORTED_NEED_FORM_ERROR_FIELDS.includes(fieldName)) {
       accumulator[fieldName] = detail.message;
     }
     return accumulator;

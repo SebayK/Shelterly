@@ -1,13 +1,7 @@
 import { useState, useCallback } from "react";
 import { Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import type { NavbarUser } from "@/types";
 
 interface MobileNavMenuProps {
@@ -48,10 +42,7 @@ export function MobileNavMenu({ user }: MobileNavMenuProps) {
           <SheetTitle>Shelterly</SheetTitle>
         </SheetHeader>
 
-        <nav
-          aria-label="Nawigacja mobilna"
-          className="mt-6 flex flex-col gap-1"
-        >
+        <nav aria-label="Nawigacja mobilna" className="mt-6 flex flex-col gap-1">
           {!user && (
             <>
               <button

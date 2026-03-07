@@ -8,33 +8,32 @@ Widok Dashboard umożliwia zweryfikowanemu schronisku pełne zarządzanie listą
 
 - **Ścieżka:** `/dashboard`
 - **Plik strony:** `src/pages/dashboard.astro`
-- **Layout:** `DashboardLayout.astro` → `DashboardShell.astro` (auth guard + profil SSR)
+- **Layout:** `DashboardLayout.astro` (dashboard chrome: Navbar, StatusBanner, Header, Sidebar, BottomNav, Toaster)
 - **Guard:** Middleware wymaga sesji → redirect do `/auth/login?return=/dashboard`
-- **StatusBanner:** Renderowany SSR w `DashboardShell` dla statusów ≠ `verified`
+- **StatusBanner:** Renderowany SSR w `DashboardLayout.astro` dla statusów ≠ `verified`
 
 ## 3. Struktura komponentów
 
 ```
 dashboard.astro (Astro page)
-└── DashboardLayout.astro (auth guard + fetch profilu)
-    └── DashboardShell.astro (Navbar, StatusBanner, Header, Sidebar, BottomNav, Toaster)
-        └── <slot> — zawartość strony:
-            └── NeedsManager (React island, client:load)
-                ├── NeedsToolbar
-                │   ├── Button "Dodaj potrzebę" (otwiera NeedFormDialog w trybie create)
-                │   └── Informacja o liczbie potrzeb
-                ├── NeedsTable
-                │   ├── NeedsTableHeader (nagłówki kolumn)
-                │   ├── NeedsTableRow[] (wiersze danych)
-                │   │   └── NeedActions (menu akcji: Edytuj, Zrealizuj, Usuń)
-                │   ├── NeedsTableSkeleton (skeleton podczas ładowania)
-                │   └── NeedsTableEmpty (pusty stan)
-                ├── NeedsPagination (przyciski Poprzednia/Następna)
-                ├── NeedFormDialog (Dialog do tworzenia/edycji)
-                │   ├── Pola formularza (category, title, description, urgency, target_quantity, unit, current_quantity, shopping_url)
-                │   └── AIGenerateButton (x2: dla description i shopping_url)
-                ├── DeleteNeedAlertDialog (potwierdzenie usunięcia)
-                └── FulfillNeedAlertDialog (potwierdzenie realizacji)
+└── DashboardLayout.astro (Navbar, StatusBanner, Header, Sidebar, BottomNav, Toaster)
+  └── <slot> — zawartość strony:
+    └── NeedsManager (React island, client:load)
+      ├── NeedsToolbar
+      │   ├── Button "Dodaj potrzebę" (otwiera NeedFormDialog w trybie create)
+      │   └── Informacja o liczbie potrzeb
+      ├── NeedsTable
+      │   ├── NeedsTableHeader (nagłówki kolumn)
+      │   ├── NeedsTableRow[] (wiersze danych)
+      │   │   └── NeedActions (menu akcji: Edytuj, Zrealizuj, Usuń)
+      │   ├── NeedsTableSkeleton (skeleton podczas ładowania)
+      │   └── NeedsTableEmpty (pusty stan)
+      ├── NeedsPagination (przyciski Poprzednia/Następna)
+      ├── NeedFormDialog (Dialog do tworzenia/edycji)
+      │   ├── Pola formularza (category, title, description, urgency, target_quantity, unit, current_quantity, shopping_url)
+      │   └── AIGenerateButton (x2: dla description i shopping_url)
+      ├── DeleteNeedAlertDialog (potwierdzenie usunięcia)
+      └── FulfillNeedAlertDialog (potwierdzenie realizacji)
 ```
 
 ## 4. Szczegóły komponentów

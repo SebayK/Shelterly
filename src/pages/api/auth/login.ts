@@ -59,9 +59,9 @@ export const POST: APIRoute = async ({ request, locals }) => {
     //    Supabase SSR automatically sets HttpOnly session cookies via the
     //    cookie adapter in middleware, so tokens never appear in the response body.
     const { session, ...clientResponse } = result;
-    return new Response(JSON.stringify(clientResponse), { 
+    return new Response(JSON.stringify(clientResponse), {
       status: 200,
-      headers: { "Content-Type": "application/json" }
+      headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
     // Map domain errors to appropriate HTTP responses

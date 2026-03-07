@@ -10,11 +10,14 @@ function createNeedListResponse(total: number, page: number) {
     data: [
       {
         id: `need-${page}`,
-        shelter_id: "shelter-1",
+        shelter: {
+          id: "shelter-1",
+          name: "Test Shelter",
+          city: "Warsaw",
+        },
         category: "food",
         title: `Need ${page}`,
         description: null,
-        shopping_url: null,
         urgency: "normal",
         target_quantity: 10,
         current_quantity: page,
@@ -22,7 +25,6 @@ function createNeedListResponse(total: number, page: number) {
         is_fulfilled: false,
         progress_percentage: 10,
         created_at: "2026-03-01T12:00:00Z",
-        updated_at: "2026-03-01T12:00:00Z",
       },
     ],
     pagination: {

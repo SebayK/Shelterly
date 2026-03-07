@@ -18,11 +18,14 @@ const mocks = vi.hoisted(() => ({
 
 const baseNeed = {
   id: "need-1",
-  shelter_id: "shelter-1",
+  shelter: {
+    id: "shelter-1",
+    name: "Schronisko Testowe",
+    city: "Warszawa",
+  },
   category: "food",
   title: "Karma sucha",
   description: "Duże opakowanie",
-  shopping_url: null,
   urgency: "normal",
   target_quantity: 10,
   current_quantity: 2,
@@ -30,7 +33,6 @@ const baseNeed = {
   is_fulfilled: false,
   progress_percentage: 20,
   created_at: "2026-03-01T12:00:00Z",
-  updated_at: "2026-03-01T12:00:00Z",
 } as const;
 
 vi.mock("sonner", () => ({
@@ -45,9 +47,14 @@ vi.mock("@/components/hooks/useNeeds", () => ({
   useNeeds: (...args: unknown[]) => mocks.useNeeds(...args),
 }));
 
-vi.mock("./request.helpers", () => ({
-  redirectToDashboardLogin: mocks.redirectToLogin,
-}));
+vi.mock("./request.helpers", async () => {
+  const actual = await vi.importActual<typeof import("./request.helpers")>("./request.helpers");
+
+  return {
+    ...actual,
+    redirectToDashboardLogin: mocks.redirectToLogin,
+  };
+});
 
 vi.mock("./NeedFormDialog", () => ({
   default: ({ open }: { open: boolean }) => <div data-testid="need-form-dialog">{open ? "open" : "closed"}</div>,
