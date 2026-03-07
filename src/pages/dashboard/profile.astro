@@ -1,5 +1,5 @@
 ---
-import DashboardShell from "@/layouts/DashboardShell.astro";
+import DashboardLayout from "@/layouts/DashboardLayout.astro";
 import { logError, UnauthorizedError } from "@/lib/errors";
 import { ProfileService } from "@/lib/services/profile.service";
 import ProfileForm from "@/components/profile/ProfileForm";
@@ -33,6 +33,6 @@ try {
 }
 ---
 
-<DashboardShell title="Edycja profilu — Shelterly" profile={profile} currentPath={currentPath}>
+<DashboardLayout title="Edycja profilu — Shelterly" profile={profile} currentPath={currentPath}>
   <ProfileForm profile={profile} client:load />
-</DashboardShell>
+</DashboardLayout>

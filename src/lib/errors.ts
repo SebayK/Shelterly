@@ -2,6 +2,8 @@
  * Custom error classes and helper functions for better error handling
  */
 
+/* eslint-disable no-console */
+
 import type { ErrorResponse, ErrorCode, ErrorDetail } from "@/types";
 
 // ============================================================================

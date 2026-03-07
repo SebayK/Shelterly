@@ -50,9 +50,7 @@ export function UserAvatarMenu({ name, role }: UserAvatarMenuProps) {
           disabled={isLoggingOut}
         >
           <Avatar className="h-8 w-8 cursor-pointer">
-            <AvatarFallback className="text-xs font-medium">
-              {initials}
-            </AvatarFallback>
+            <AvatarFallback className="text-xs font-medium">{initials}</AvatarFallback>
           </Avatar>
         </button>
       </DropdownMenuTrigger>

@@ -1,42 +1,68 @@
 ---
-import DashboardShell from "@/layouts/DashboardShell.astro";
-import { logError, UnauthorizedError } from "@/lib/errors";
-import { ProfileService } from "@/lib/services/profile.service";
-import type { ProfileMeDTO } from "@/types";
+import "../styles/global.css";
+import Navbar from "@/components/Navbar.astro";
+import StatusBanner from "@/components/StatusBanner.astro";
+import DashboardHeader from "@/components/DashboardHeader.astro";
+import DashboardSidebar from "@/components/DashboardSidebar.astro";
+import DashboardBottomNav from "@/components/DashboardBottomNav.astro";
+import type { NavbarUser, ProfileMeDTO } from "@/types";
+import { Toaster } from "@/components/ui/sonner";
 
 interface Props {
   title?: string;
+  profile: ProfileMeDTO;
+  currentPath: string;
 }
 
-const { title = "Dashboard — Shelterly" } = Astro.props;
+const { title = "Dashboard — Shelterly", profile, currentPath } = Astro.props;
 
-const currentPath = Astro.url.pathname;
-
-// Auth guard — redirect to login if no valid session
-const {
-  data: { user },
-  error: authError,
-} = await Astro.locals.supabase.auth.getUser();
-
-if (authError || !user) {
-  return Astro.redirect(`/auth/login?return=${currentPath}`);
-}
-
-let profile: ProfileMeDTO;
-
-try {
-  const profileService = new ProfileService(Astro.locals.supabase);
-  profile = await profileService.getAuthenticatedProfile(user.id);
-} catch (err) {
-  logError("[DashboardLayout] Failed to fetch profile", err);
-  if (err instanceof UnauthorizedError) {
-    return Astro.redirect(`/auth/login?return=${currentPath}`);
-  }
-
-  throw err;
-}
+const navbarUser: NavbarUser = {
+  name: profile.name,
+  role: profile.role,
+};
 ---
 
-<DashboardShell title={title} profile={profile} currentPath={currentPath}>
-  <slot />
-</DashboardShell>
+<!doctype html>
+<html lang="pl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width" />
+    <link rel="icon" type="image/png" href="/favicon.png" />
+    <meta name="generator" content={Astro.generator} />
+    <title>{title}</title>
+  </head>
+  <body>
+    <a
+      href="#main-content"
+      class="sr-only focus:not-sr-only focus:fixed focus:top-4 focus:left-4 focus:z-[100] focus:rounded-md focus:bg-background focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:shadow-md focus:outline-none focus:ring-2 focus:ring-ring"
+    >
+      Przejdź do treści
+    </a>
+
+    <Navbar user={navbarUser} />
+
+    {profile.status !== "verified" && <StatusBanner status={profile.status} />}
+
+    <DashboardHeader name={profile.name} status={profile.status} aiUsageCount={profile.ai_usage_count} />
+
+    <div class="flex min-h-[calc(100vh-56px)]">
+      <DashboardSidebar currentPath={currentPath} />
+
+      <main id="main-content" class="flex-1 overflow-y-auto p-6 pb-24 md:pb-6">
+        <slot />
+      </main>
+    </div>
+
+    <DashboardBottomNav currentPath={currentPath} />
+    <Toaster client:load position="top-right" richColors />
+  </body>
+</html>
+
+<style>
+  html,
+  body {
+    margin: 0;
+    width: 100%;
+    height: 100%;
+  }
+</style>

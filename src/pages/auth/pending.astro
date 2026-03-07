@@ -1,5 +1,6 @@
 ---
 import Layout from "@/layouts/Layout.astro";
+import { logError } from "@/lib/errors";
 import type { ShelterStatus, UserRole } from "@/types";
 
 export const prerender = false;
@@ -12,7 +13,7 @@ try {
   } = await Astro.locals.supabase.auth.getUser();
 
   if (authError) {
-    console.error("[pending] Failed to get user session:", authError);
+    logError("[pending.astro] Failed to get user session", authError);
   }
 
   if (user) {
@@ -23,7 +24,7 @@ try {
       .single<{ status: ShelterStatus; role: UserRole }>();
 
     if (profileError) {
-      console.error("[pending] Failed to fetch profile:", profileError);
+      logError("[pending.astro] Failed to fetch profile", profileError);
     }
 
     if (profile) {
@@ -36,7 +37,7 @@ try {
     }
   }
 } catch (err) {
-  console.error("[pending] Unexpected error during session check:", err);
+  logError("[pending.astro] Unexpected error during session check", err);
 }
 ---
 

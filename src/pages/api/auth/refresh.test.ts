@@ -5,7 +5,6 @@ import { POST } from "./refresh";
 // Helpers & fixtures
 // ---------------------------------------------------------------------------
 
-const REFRESH_TOKEN = "valid.refresh.token";
 const ACCESS_TOKEN = "new.jwt.access.token";
 const EXPIRES_AT = 1234567890;
 
@@ -19,11 +18,7 @@ const SESSION = {
  * Creates a minimal Astro context.
  * With @supabase/ssr, tokens are managed automatically via the cookie adapter in middleware.
  */
-function buildContext({
-  supabase,
-}: {
-  supabase?: unknown;
-}) {
+function buildContext({ supabase }: { supabase?: unknown }) {
   const request = new Request("http://localhost/api/auth/refresh", {
     method: "POST",
   });

@@ -1,6 +1,7 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import LoginForm from "@/components/auth/LoginForm";
+import { logError } from "@/lib/errors";
 
 export const prerender = false;
 
@@ -23,7 +24,7 @@ const returnUrl = sanitizeReturnUrl(Astro.url.searchParams.get("return"));
 const { data, error } = await Astro.locals.supabase.auth.getUser();
 
 if (error) {
-  console.error("Failed to validate Supabase user on /auth/login:", error);
+  logError("[login.astro] Failed to validate Supabase user", error);
 }
 
 if (data?.user) {

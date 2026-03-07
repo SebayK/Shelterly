@@ -1,6 +1,7 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import RegisterForm from "@/components/auth/RegisterForm";
+import { logError } from "@/lib/errors";
 
 export const prerender = false;
 
@@ -9,7 +10,7 @@ export const prerender = false;
 const { data, error } = await Astro.locals.supabase.auth.getUser();
 
 if (error) {
-  console.error("Failed to validate Supabase user on /auth/register:", error);
+  logError("[register.astro] Failed to validate Supabase user", error);
 }
 
 if (data?.user) {

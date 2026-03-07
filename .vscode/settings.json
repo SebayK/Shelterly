@@ -16,6 +16,8 @@
     "npm install": true,
     "git add": true,
     "npx tsc": true,
-    "supabase": true
+    "supabase": true,
+    "npx prettier": true,
+    "npm exec": true
   }
 }

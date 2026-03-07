@@ -1,14 +1,45 @@
 ---
 import DashboardLayout from "@/layouts/DashboardLayout.astro";
+import NeedsManager from "@/components/dashboard/NeedsManager";
+import { APP_CONFIG } from "@/lib/config";
+import { logError, UnauthorizedError } from "@/lib/errors";
+import { ProfileService } from "@/lib/services/profile.service";
+import type { ProfileMeDTO } from "@/types";
 
 export const prerender = false;
+
+const currentPath = Astro.url.pathname;
+
+const {
+  data: { user },
+  error: authError,
+} = await Astro.locals.supabase.auth.getUser();
+
+if (authError || !user) {
+  return Astro.redirect(`/auth/login?return=${currentPath}`);
+}
+
+let profile: ProfileMeDTO;
+
+try {
+  const profileService = new ProfileService(Astro.locals.supabase);
+  profile = await profileService.getAuthenticatedProfile(user.id);
+} catch (err) {
+  logError("[dashboard.astro] Failed to fetch profile", err);
+  if (err instanceof UnauthorizedError) {
+    return Astro.redirect(`/auth/login?return=${currentPath}`);
+  }
+
+  throw err;
+}
 ---
 
-<DashboardLayout title="Dashboard — Shelterly">
-  <div class="flex flex-col gap-4">
-    <h2 class="text-2xl font-semibold">Potrzeby</h2>
-    <p class="text-muted-foreground">
-      Lista potrzeb Twojego schroniska będzie dostępna tutaj.
-    </p>
-  </div>
+<DashboardLayout title="Dashboard — Shelterly" profile={profile} currentPath={currentPath}>
+  <NeedsManager
+    client:load
+    profileId={profile.id}
+    accountStatus={profile.status}
+    aiUsageCount={profile.ai_usage_count}
+    aiUsageLimit={APP_CONFIG.AI.USAGE_LIMIT}
+  />
 </DashboardLayout>
