@@ -2,7 +2,7 @@ import type { APIRoute } from "astro";
 import { ProfileService } from "../../../../lib/services/profile.service";
 import { FileUploadSchema } from "../../../../lib/validation/profile.schemas";
 import type { ErrorResponse } from "../../../../types";
-import { logError } from "../../../../lib/errors";
+import { ValidationError, createErrorHttpResponse, logError } from "../../../../lib/errors";
 
 export const prerender = false;
 
@@ -117,6 +117,10 @@ export const POST: APIRoute = async ({ request, locals }) => {
       headers: { "Content-Type": "application/json" },
     });
   } catch (error) {
+    if (error instanceof ValidationError) {
+      return createErrorHttpResponse("VALIDATION_ERROR", error.message, 400);
+    }
+
     logError("[POST /api/profiles/me/verification-document]", error);
 
     const errorResponse: ErrorResponse = {

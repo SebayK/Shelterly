@@ -44,9 +44,8 @@ export type ShelterIdParamOutput = z.output<typeof ShelterIdParamSchema>;
 /**
  * Validation schema for PATCH /api/admin/shelters/:id/status request body.
  * - `status` must be one of: verified, rejected, suspended (pending is not allowed).
- * - `rejection_reason` is optional and accepted but NOT persisted — the column does not
- *   exist in the database yet. Cross-field enforcement will be re-added once the column
- *   is added to the schema.
+ * - `rejection_reason` is required when `status === 'rejected'` and must be omitted
+ *   for all other decisions.
  */
 export const UpdateShelterStatusSchema = z.object({
   status: z.enum(["verified", "rejected", "suspended"], {

@@ -4,7 +4,7 @@ import { AlertCircle, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useNeeds } from "@/components/hooks/useNeeds";
 import type { ErrorResponse, NeedCreateResponseDTO, NeedListItemDTO, NeedUpdateResponseDTO } from "@/types";
-import { ACCOUNT_STATUS_LABELS, CRUD_DISABLED_REASON, CRUD_DISABLED_SHORT_HINT } from "./constants";
+import { ACCOUNT_STATUS_LABELS, getCrudDisabledReason, getCrudDisabledShortHint } from "./constants";
 import {
   getNeedMutationFailureMessage,
   getNeedMutationSuccessMessage,
@@ -38,10 +38,13 @@ export default function NeedsManager({ profileId, accountStatus, aiUsageCount, a
     useNeeds(profileId);
 
   const isCrudDisabled = accountStatus !== "verified";
-  const statusMessage = isCrudDisabled ? CRUD_DISABLED_REASON : null;
+  const statusMessage = getCrudDisabledReason(accountStatus);
+  const disabledShortHint = getCrudDisabledShortHint(accountStatus);
 
   const warnDisabledAction = () => {
-    toast.warning(CRUD_DISABLED_SHORT_HINT);
+    if (disabledShortHint) {
+      toast.warning(disabledShortHint);
+    }
   };
 
   const handleAddNeed = () => {

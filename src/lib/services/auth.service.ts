@@ -16,7 +16,6 @@ import type {
 import {
   UnauthorizedError,
   InternalError,
-  AccountPendingError,
   AccountSuspendedError,
   ConflictError,
   logWarningWithContext,
@@ -42,20 +41,14 @@ export class AuthService {
 
   /**
    * Authenticates a user with email and password.
-   *
-   * Flow:
-   * 1. Calls Supabase Auth `signInWithPassword` — throws UnauthorizedError on failure.
-   * 2. Fetches the user's profile from the `profiles` table — throws InternalError if missing.
-   * 3. Validates account status: throws AccountPendingError / AccountSuspendedError accordingly.
-   *    Calls signOut() first to invalidate the session before rejecting — prevents active
-   *    sessions from remaining open for non-active accounts.
-   * 4. Returns a LoginResponseDTO with user, session and profile data.
+   * Suspended accounts are rejected and immediately signed out.
+   * Pending and rejected shelters keep a limited session so they can
+   * remediate profile data and upload a verification document.
    *
    * @param command - Login credentials (email, password)
    * @returns LoginResponseDTO with user, session tokens and profile information
    * @throws UnauthorizedError if credentials are invalid or user/session is absent
    * @throws InternalError if the profile cannot be retrieved from the database
-   * @throws AccountPendingError if the account is awaiting verification
    * @throws AccountSuspendedError if the account has been suspended
    */
   async login(command: LoginCommand): Promise<LoginResponseDTO> {
@@ -72,10 +65,10 @@ export class AuthService {
 
     const { user, session } = authData;
 
-    // 2. Fetch profile from the database (id, status, role only — minimal payload)
+    // 2. Fetch profile from the database (minimal payload required by post-login routing)
     const { data: profile, error: profileError } = await this.supabase
       .from("profiles")
-      .select("id, status, role")
+      .select("id, status, role, rejection_reason")
       .eq("id", user.id)
       .maybeSingle();
 
@@ -83,14 +76,7 @@ export class AuthService {
       throw new InternalError("Unable to retrieve user profile");
     }
 
-    // 3. Validate account status — reject non-active accounts before issuing tokens.
-    // signOut() is called first to invalidate the Supabase session that was just created,
-    // preventing pending/suspended accounts from holding active JWT sessions.
-    if (profile.status === "pending") {
-      await this.signOutAndWarn(user.id);
-      throw new AccountPendingError();
-    }
-
+    // 3. Validate account status — only suspended accounts are denied a session.
     if (profile.status === "suspended") {
       await this.signOutAndWarn(user.id);
       throw new AccountSuspendedError();
@@ -111,6 +97,7 @@ export class AuthService {
         id: profile.id,
         status: profile.status,
         role: profile.role,
+        rejection_reason: profile.rejection_reason,
       },
     };
   }

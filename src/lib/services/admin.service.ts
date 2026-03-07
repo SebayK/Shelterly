@@ -45,10 +45,20 @@ function getContentTypeFromFileName(fileName: string): string {
 }
 
 /**
- * Returns true when the storage path looks safe (no path traversal, valid chars).
+ * Returns true when the storage key is relative and cannot escape via traversal.
  */
 function isValidStoragePath(path: string): boolean {
-  return !path.includes("..") && !path.startsWith("/") && /^[a-zA-Z0-9_\-/.]+$/.test(path);
+  if (path.length === 0 || path.startsWith("/") || path.includes("\\")) {
+    return false;
+  }
+
+  const hasControlCharacter = Array.from(path).some((character) => character.charCodeAt(0) < 32);
+  if (hasControlCharacter) {
+    return false;
+  }
+
+  const segments = path.split("/");
+  return segments.every((segment) => segment.length > 0 && segment !== "." && segment !== "..");
 }
 
 /**
@@ -116,7 +126,8 @@ export class AdminService {
   /**
    * Updates the verification status of a shelter.
    * Only `verified`, `rejected`, and `suspended` statuses are allowed.
-   * The `rejection_reason` field is validated but not persisted (no column in DB yet).
+    * Rejected shelters store an actionable `rejection_reason` that is exposed back
+    * to the shelter in the remediation flow.
    *
    * @param shelterId - UUID of the shelter profile to update
    * @param command - Command containing the new status (and optional rejection_reason)
@@ -144,10 +155,12 @@ export class AdminService {
       throw new NotFoundError("Shelter not found");
     }
 
-    // 2. Update status (rejection_reason is not persisted — no column in schema yet)
+    const rejectionReason = command.status === "rejected" ? command.rejection_reason?.trim() ?? null : null;
+
+    // 2. Update status and clear stale rejection reasons when the decision changes
     const { data: updated, error: updateError } = await this.supabase
       .from("profiles")
-      .update({ status: command.status })
+      .update({ status: command.status, rejection_reason: rejectionReason })
       .eq("id", shelterId)
       .select("id, status, updated_at")
       .single();

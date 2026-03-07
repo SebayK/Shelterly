@@ -145,6 +145,56 @@ describe("NeedsManager", () => {
     expect(screen.getByTestId("need-form-dialog").textContent).toBe("open");
   });
 
+  it("shows a pending-specific disabled message and warning when the shelter is pending", () => {
+    mocks.useNeeds.mockReturnValue({
+      needs: [baseNeed],
+      pagination: { total: 1, limit: 10, offset: 0 },
+      isLoading: false,
+      error: null,
+      currentPage: 1,
+      totalPages: 1,
+      refresh: mocks.refresh,
+      nextPage: mocks.nextPage,
+      prevPage: mocks.prevPage,
+    });
+
+    render(<NeedsManager profileId="shelter-1" accountStatus="pending" aiUsageCount={1} aiUsageLimit={5} />);
+
+    expect(
+      screen.getAllByText(/Twoje konto oczekuje na weryfikację\. Uzupełnij profil i dołącz dokument/i)
+    ).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Dodaj potrzebę" })).toHaveProperty("disabled", true);
+
+    fireEvent.click(screen.getByRole("button", { name: /Usuń Karma sucha/i }));
+
+    expect(mocks.warning).toHaveBeenCalledWith("Najpierw dokończ weryfikację konta schroniska.");
+  });
+
+  it("shows a rejected-specific disabled message and warning when the shelter is rejected", () => {
+    mocks.useNeeds.mockReturnValue({
+      needs: [baseNeed],
+      pagination: { total: 1, limit: 10, offset: 0 },
+      isLoading: false,
+      error: null,
+      currentPage: 1,
+      totalPages: 1,
+      refresh: mocks.refresh,
+      nextPage: mocks.nextPage,
+      prevPage: mocks.prevPage,
+    });
+
+    render(<NeedsManager profileId="shelter-1" accountStatus="rejected" aiUsageCount={1} aiUsageLimit={5} />);
+
+    expect(
+      screen.getAllByText(/Twoje konto zostało odrzucone\. Popraw dane profilu i prześlij dokument ponownie/i)
+    ).toHaveLength(2);
+    expect(screen.getByRole("button", { name: "Dodaj potrzebę" })).toHaveProperty("disabled", true);
+
+    fireEvent.click(screen.getByRole("button", { name: /Usuń Karma sucha/i }));
+
+    expect(mocks.warning).toHaveBeenCalledWith("Popraw profil i wyślij dokument ponownie, aby odblokować akcje.");
+  });
+
   it("deletes a need and refreshes the list after confirmation", async () => {
     mocks.useNeeds.mockReturnValue({
       needs: [baseNeed],

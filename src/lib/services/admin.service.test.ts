@@ -189,7 +189,7 @@ function buildUpdateStatusMock({
 
   const from = vi.fn().mockReturnValue({ select: selectChain, update: updateChain });
 
-  return { from } as unknown as SupabaseClient;
+  return { from, __updateChain: updateChain } as unknown as SupabaseClient & { __updateChain: typeof updateChain };
 }
 
 describe("AdminService.updateShelterStatus()", () => {
@@ -227,6 +227,33 @@ describe("AdminService.updateShelterStatus()", () => {
 
     expect(result.status).toBe("rejected");
     expect(result.id).toBe(SHELTER_ID);
+  });
+
+  it("persists rejection_reason when status is set to 'rejected'", async () => {
+    const supabase = buildUpdateStatusMock();
+    service = new AdminService(supabase);
+
+    await service.updateShelterStatus(SHELTER_ID, {
+      status: "rejected",
+      rejection_reason: "  Dokument nie potwierdza umocowania placowki.  ",
+    });
+
+    expect(supabase.__updateChain).toHaveBeenCalledWith({
+      status: "rejected",
+      rejection_reason: "Dokument nie potwierdza umocowania placowki.",
+    });
+  });
+
+  it("clears rejection_reason when status changes to 'verified'", async () => {
+    const supabase = buildUpdateStatusMock();
+    service = new AdminService(supabase);
+
+    await service.updateShelterStatus(SHELTER_ID, { status: "verified" });
+
+    expect(supabase.__updateChain).toHaveBeenCalledWith({
+      status: "verified",
+      rejection_reason: null,
+    });
   });
 
   it("returns correct DTO when status is set to 'suspended'", async () => {
@@ -419,6 +446,18 @@ describe("AdminService.getVerificationDocument()", () => {
     expect(result.contentType).toBe("application/octet-stream");
   });
 
+  it("accepts verification paths with spaces when they stay inside the expected storage prefix", async () => {
+    const supabase = buildGetDocumentMock({
+      shelterData: { id: DOC_SHELTER_ID, verification_doc_path: "verification-docs/1/1700000000-My document.pdf" },
+    });
+    service = new AdminService(supabase);
+
+    const result = await service.getVerificationDocument(DOC_SHELTER_ID);
+
+    expect(result.fileName).toBe("1700000000-My document.pdf");
+    expect(result.contentType).toBe("application/pdf");
+  });
+
   // -------------------------------------------------------------------------
   // NotFoundError — shelter does not exist
   // -------------------------------------------------------------------------
@@ -515,5 +554,14 @@ describe("AdminService.getVerificationDocument()", () => {
     await expect(service.getVerificationDocument(DOC_SHELTER_ID)).rejects.toThrow(
       "Failed to download verification document"
     );
+  });
+
+  it("rejects traversal attempts in verification document paths", async () => {
+    const supabase = buildGetDocumentMock({
+      shelterData: { id: DOC_SHELTER_ID, verification_doc_path: "verification-docs/1/../secrets.txt" },
+    });
+    service = new AdminService(supabase);
+
+    await expect(service.getVerificationDocument(DOC_SHELTER_ID)).rejects.toThrow("Invalid verification document path");
   });
 });

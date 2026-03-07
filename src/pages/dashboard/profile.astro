@@ -1,5 +1,6 @@
 ---
 import DashboardLayout from "@/layouts/DashboardLayout.astro";
+import { isSuspendedShelterSession } from "@/lib/auth-access";
 import { logError, UnauthorizedError } from "@/lib/errors";
 import { ProfileService } from "@/lib/services/profile.service";
 import ProfileForm from "@/components/profile/ProfileForm";
@@ -30,6 +31,11 @@ try {
   }
 
   throw err;
+}
+
+if (isSuspendedShelterSession(profile.role, profile.status)) {
+  await Astro.locals.supabase.auth.signOut();
+  return Astro.redirect("/auth/login");
 }
 ---
 

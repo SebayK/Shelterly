@@ -3,7 +3,8 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { FormErrorAlert } from "@/components/auth/FormErrorAlert";
-import type { LoginCommand, ErrorResponse } from "@/types";
+import { getPostLoginDestination } from "@/lib/auth-access";
+import type { LoginCommand, ErrorResponse, LoginResponseDTO } from "@/types";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -19,16 +20,6 @@ interface LoginFieldErrors {
 // ---------------------------------------------------------------------------
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-// ---------------------------------------------------------------------------
-// URL sanitization (defence-in-depth: mirrors the server-side check)
-// ---------------------------------------------------------------------------
-
-function sanitizeReturnUrl(url: string): string {
-  const trimmed = url.trim();
-  if (trimmed.startsWith("/") && !trimmed.startsWith("//")) return trimmed;
-  return "/dashboard";
-}
 
 // ---------------------------------------------------------------------------
 // Validation helpers
@@ -66,8 +57,6 @@ function mapApiError(errorData: ErrorResponse): string {
   switch (errorData.error.code) {
     case "UNAUTHORIZED":
       return "Nieprawidłowy adres e-mail lub hasło.";
-    case "ACCOUNT_PENDING":
-      return "Twoje konto oczekuje na weryfikację. Skontaktuj się z administratorem.";
     case "ACCOUNT_SUSPENDED":
       return "Twoje konto zostało zawieszone. Skontaktuj się z administratorem.";
     case "RATE_LIMIT_EXCEEDED":
@@ -167,9 +156,8 @@ export default function LoginForm({ returnUrl = "/dashboard" }: LoginFormProps) 
         });
 
         if (response.ok) {
-          // Tokens are stored as HttpOnly cookies by the server.
-          // Redirect to the (re-validated) return URL without touching localStorage.
-          window.location.href = sanitizeReturnUrl(returnUrl);
+          const result = (await response.json()) as Omit<LoginResponseDTO, "session">;
+          window.location.href = getPostLoginDestination(result.profile.role, result.profile.status, returnUrl);
           return;
         }
 

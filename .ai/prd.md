@@ -1,10 +1,10 @@
 # Product Requirements Document (PRD) – Shelterly (MVP)
 
-| Wersja                    | 1.0 (MVP)                                     |
+| Wersja                    | 1.1 (MVP)                                     |
 | :------------------------ | :-------------------------------------------- |
-| **Status**                | Zatwierdzony do realizacji                    |
+| **Status**                | Zrealizowany z poprawkami status-flow         |
 | **Data**                  | 08.01.2026                                    |
-| **Ostatnia aktualizacja** | Konfiguracja Tech Stack (Astro, Supabase, AI) |
+| **Ostatnia aktualizacja** | 07.03.2026 — admin panel i flow remedialny    |
 
 ---
 
@@ -37,7 +37,9 @@ Aplikacja webowa agregująca potrzeby zweryfikowanych schronisk na mapie. Umożl
     - Formularz rejestracji (Email, Hasło, Nazwa, Adres, NIP/KRS).
     - Możliwość uploadu dokumentu do bezpiecznego `Supabase Storage`.
     - Po rejestracji konto otrzymuje status `PENDING` i nie ma dostępu do edycji potrzeb.
-    - Próba logowania przed weryfikacją wyświetla komunikat o oczekiwaniu.
+    - Konto w statusie `PENDING` może zalogować się do ograniczonej strefy `/dashboard/profile`, aby uzupełnić brakujący dokument i poprawić dane profilu.
+    - Konto w statusie `REJECTED` może zalogować się do ograniczonej strefy `/dashboard/profile`, widzi powód odrzucenia i może ponownie przesłać dokument.
+    - Konto w statusie `SUSPENDED` nie może utrzymać sesji i pozostaje zablokowane.
 
 - **US.2. Zarządzanie Profilem i Potrzebami (CRUD)**
   - **Jako** zweryfikowane schronisko, **chcę** zarządzać listą potrzeb, **aby** darczyńcy wiedzieli, czego nam brakuje.
@@ -70,7 +72,9 @@ Aplikacja webowa agregująca potrzeby zweryfikowanych schronisk na mapie. Umożl
 - **US.5. Moderacja Schronisk**
   - **Jako** Super Admin, **chcę** przeglądać zgłoszenia i dokumenty, **aby** aktywować tylko wiarygodne placówki.
   - **Kryteria Akceptacji:**
-    - Admin dostępny tylko z poziomu bazy danych lub prostego panelu (zmiana statusu `PENDING` -> `VERIFIED`).
+    - Dedykowany panel `/admin` dostępny wyłącznie dla `super_admin`.
+    - Możliwość zmiany statusu `PENDING` -> `VERIFIED` lub `REJECTED`.
+    - Przy statusie `REJECTED` administrator podaje `rejection_reason`, które jest zapisywane i prezentowane schronisku.
     - Dostęp do podglądu wgranych dokumentów.
 
 ---
@@ -88,12 +92,12 @@ Aplikacja webowa agregująca potrzeby zweryfikowanych schronisk na mapie. Umożl
 - **UI Library:** Shadcn/ui (dla spójności i dostępności).
 - **Język:** TypeScript 5.
 
-### 3.2. Backend (Supabase + Serverless Functions)
+### 3.2. Backend (Supabase + Astro API)
 
 - **Baza Danych:** PostgreSQL (hostowane na Supabase Cloud - Free Tier).
 - **Auth:** Supabase Auth (Email/Password).
 - **Storage:** Supabase Storage (Bucket prywatny na dokumenty weryfikacyjne, RLS policy: tylko owner i admin).
-- **Logika Biznesowa:** Endpointy API w Astro (Node adapter) lub Edge Functions, łączące się z Supabase.
+- **Logika Biznesowa:** Endpointy API w Astro (Node adapter) łączące się z Supabase.
 
 ### 3.3. Integracja AI
 
@@ -118,11 +122,19 @@ Aplikacja webowa agregująca potrzeby zweryfikowanych schronisk na mapie. Umożl
 TABLE profiles (
   id UUID PRIMARY KEY REFERENCES auth.users, -- powiązanie z Supabase Auth
   role TEXT DEFAULT 'shelter', -- 'shelter', 'super_admin'
-  status TEXT DEFAULT 'pending', -- 'pending', 'verified'
+  status TEXT DEFAULT 'pending', -- 'pending', 'verified', 'rejected', 'suspended'
   name TEXT,
   city TEXT,
+  address TEXT,
+  nip TEXT,
+  phone_number TEXT,
+  website_url TEXT,
   location GEOGRAPHY(Point), -- PostGIS dla mapy
-  verification_doc_url TEXT -- ścieżka do prywatnego bucketa
+  verification_doc_path TEXT, -- ścieżka do prywatnego bucketa
+  rejection_reason TEXT,
+  ai_usage_count INTEGER DEFAULT 0,
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ
 );
 
 TABLE needs (
@@ -132,11 +144,14 @@ TABLE needs (
   title TEXT,
   description_ai TEXT, -- wygenerowane przez AI
   shopping_link_ai TEXT, -- wygenerowane przez AI
-  target_quantity INTEGER,
-  current_quantity INTEGER DEFAULT 0,
+  urgency TEXT,
+  target_quantity NUMERIC,
+  current_quantity NUMERIC DEFAULT 0,
   unit TEXT, -- 'szt', 'kg', 'l'
   is_fulfilled BOOLEAN DEFAULT FALSE,
-  created_at TIMESTAMPTZ
+  deleted_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ,
+  updated_at TIMESTAMPTZ
 );
 ```
 
@@ -144,11 +159,12 @@ TABLE needs (
 
 ## 5. Kryteria Sukcesu i Testy
 
-1. **Weryfikacja Konta:** Scenariusz, w którym nowo zarejestrowane schronisko nie może zarządzać potrzebami do momentu zmiany flagi w bazie przez Admina.
+1. **Weryfikacja Konta:** Scenariusz, w którym nowo zarejestrowane schronisko nie może zarządzać potrzebami do momentu zatwierdzenia przez Admina, ale może zalogować się do ograniczonej strefy profilu w celu uzupełnienia dokumentu.
 2. **Test Logiki Biznesowej (Unit Test):** Test funkcji `suggestShelterForUser`.
    - _Input:_ User(52.2, 21.0), Schroniska[A(52.3, 21.0, pilne), B(50.0, 20.0, małe potrzeby)].
    - _Assert:_ Funkcja zwraca Schronisko A jako pierwsze.
-3. **CI Pipeline:** Workflow w GitHub Actions musi przechodzić na zielono przy każdym commicie.
+3. **Flow Remedialny:** Konto `PENDING` lub `REJECTED` po logowaniu trafia do `/dashboard/profile`, a `/dashboard` przekierowuje do profilu do czasu uzyskania statusu `VERIFIED`.
+4. **CI Pipeline:** Workflow w GitHub Actions musi przechodzić na zielono przy każdym commicie.
 
 ---
 

@@ -121,6 +121,7 @@ export interface ProfileMeDTO {
   id: string;
   role: UserRole;
   status: ShelterStatus;
+  rejection_reason: string | null;
   name: string | null;
   nip: string | null;
   city: string | null;
@@ -344,6 +345,7 @@ export interface LoginResponseDTO {
     id: string;
     status: ShelterStatus;
     role: UserRole;
+    rejection_reason: string | null;
   };
 }
 

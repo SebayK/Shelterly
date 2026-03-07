@@ -9,7 +9,7 @@
 -- To create super admin in dev:
 -- 1. Use Postman "4. Admin > Signup Admin" request (creates user via Supabase Auth)
 -- 2. Run this seed to upgrade user to super_admin role
--- OR manually run: UPDATE profiles SET role = 'super_admin', status = 'verified' WHERE email = 'admin@shelterly.dev';
+-- OR manually run a SQL block that looks up auth.users by email and updates public.profiles by id.
 -- ============================================================================
 
 -- Create a test shelter user with all fields populated

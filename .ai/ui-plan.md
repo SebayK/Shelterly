@@ -10,13 +10,14 @@ Interfejs dzieli się na trzy strefy odpowiadające grupom docelowym:
 - **Strefa schroniska** — widoki wymagające uwierzytelnienia i roli `shelter` (dashboard z CRUD potrzeb, edycja profilu). Chronione middleware z guardem sesji.
 - **Strefa admina** — widoki wymagające roli `super_admin` (panel weryfikacji schronisk). Chronione dodatkowym guardem roli.
 
-Stack UI: Tailwind 4, Shadcn/ui (styl `new-york`), Lucide React (ikony), TanStack Query (stan serwera), React Hook Form + Zod (formularze).
+Stack UI: Tailwind 4, Shadcn/ui (styl `new-york`), Lucide React (ikony), własne hooki oparte o `fetch`, lokalny stan React i helpery walidacyjne formularzy.
 
 Zarządzanie stanem opiera się na trzech filarach:
 
-- **TanStack Query** — zarządzanie stanem serwera (cache, revalidacja, mutacje)
+- **SSR Astro + serwisy** — dane krytyczne dla guardów i layoutów są pobierane po stronie serwera
+- **Custom hooki React** — stan serwera i mutacje w wyspach admin/dashboard są obsługiwane przez dedykowane hooki oparte o `fetch`
 - **React Context** (`ShelterExplorerContext`) — współdzielony stan UI mapy na stronie głównej
-- **Lokalne stany** (`useState`, `useForm`) — formularze i przejściowe interakcje
+- **Lokalne stany** (`useState`) — formularze i przejściowe interakcje
 
 ---
 
@@ -102,7 +103,7 @@ Zarządzanie stanem opiera się na trzech filarach:
   - Centralnie wyśrodkowany formularz na stronie
   - Walidacja inline pól (email format, wymagane hasło)
   - Komunikat błędu przy nieprawidłowych danych logowania
-  - Po zalogowaniu: redirect na `/dashboard` lub URL z parametru `return`
+  - Po zalogowaniu: `super_admin` → `/admin`, `verified` → `/dashboard` lub URL z parametru `return`, `pending/rejected` → `/dashboard/profile`
   - Link „Nie masz konta? Zarejestruj schronisko" pod formularzem
 - **Dostępność:**
   - Etykiety pól z `htmlFor`/`id`, `aria-describedby` dla komunikatów błędów
@@ -148,18 +149,19 @@ Zarządzanie stanem opiera się na trzech filarach:
 - **Plik:** `src/pages/auth/pending.astro`
 - **Główny cel:** Informacja o statusie oczekiwania na weryfikację konta schroniska.
 - **Kluczowe informacje:**
-  - Komunikat potwierdzający rejestrację
-  - Informacja o procesie weryfikacji i oczekiwanym czasie
-  - Link do strony głównej
+  - Komunikat potwierdzający rejestrację dla użytkownika anonimowego
+  - Dla zalogowanego `pending`: CTA do `/dashboard/profile`, aby uzupełnić dokument
+  - Dla zalogowanego `rejected`: CTA do `/dashboard/profile` oraz prezentacja `rejection_reason`, jeśli jest dostępny
 - **Kluczowe komponenty widoku:**
   - Statyczny komponent Astro — brak interaktywnych elementów React
   - Ikona statusu (np. Clock z Lucide)
-  - Przycisk „Wróć na stronę główną"
+  - CTA do profilu lub na stronę główną, zależnie od statusu sesji
 - **UX:**
   - Prosty, centrowany układ z czytelnym komunikatem
-  - Możliwość dotarcia tu po rejestracji (redirect) lub po logowaniu ze statusem `pending`
+  - Możliwość dotarcia tu po rejestracji lub wejścia bez sesji
+  - Zalogowane konto `verified` lub `super_admin` jest przekierowywane poza ten widok
 - **Dostępność:** Semantyczny HTML, nagłówek `h1` z jasnym komunikatem
-- **Bezpieczeństwo:** Strona dostępna publicznie, ale nie ujawnia szczegółów konta (jedynie ogólny komunikat).
+- **Bezpieczeństwo:** Strona dostępna publicznie, ale szczegóły odrzucenia są pokazywane tylko właścicielowi zalogowanego konta.
 
 ---
 
@@ -174,7 +176,7 @@ Zarządzanie stanem opiera się na trzech filarach:
   - Operacje CRUD na potrzebach
 - **Kluczowe komponenty widoku:**
   - `StatusBanner` — warunkowy baner statusu konta (Astro, renderowany SSR):
-    - `pending` → żółty baner z informacją i linkiem do uploadu dokumentu
+    - `pending` → żółty baner z informacją o uzupełnieniu profilu i dokumentu
     - `suspended` → czerwony baner z informacją o zawieszeniu
     - `rejected` → czerwony baner z powodem odrzucenia
     - `verified` → brak banera
@@ -199,7 +201,7 @@ Zarządzanie stanem opiera się na trzech filarach:
   - Potwierdzenie usunięcia przez `AlertDialog`
   - Skeletony podczas ładowania listy
   - Pusty stan: zachęta do dodania pierwszej potrzeby z wyraźnym CTA
-  - Przyciski CRUD zablokowane (`disabled` + `Tooltip` z wyjaśnieniem) dla statusów konta ≠ `verified`
+  - Przyciski CRUD zablokowane (`disabled` + komunikat kontekstowy) dla statusów konta ≠ `verified`
 - **Dostępność:**
   - Tabela z `role="table"`, nagłówki `th` z `scope="col"`
   - Modale z focus trap, zamykanie Escape, `aria-modal="true"`
@@ -220,6 +222,7 @@ Zarządzanie stanem opiera się na trzech filarach:
 - **Kluczowe informacje:**
   - Formularz z aktualnymi danymi profilu: nazwa, miasto, adres, telefon, strona www
   - Status weryfikacji i ścieżka do dokumentu
+  - Powód odrzucenia zgłoszenia dla statusu `rejected`, jeśli został zapisany
   - Współrzędne lokalizacji
 - **Kluczowe komponenty widoku:**
   - `ProfileForm` — wyspa React (`client:load`) z formularzem edycji profilu
@@ -236,6 +239,7 @@ Zarządzanie stanem opiera się na trzech filarach:
   - Przycisk geokodowania inline obok pola adresu — po kliknięciu wyświetla sformatowany adres i współrzędne
   - Komunikat sukcesu po zapisie (toast Sonner)
   - Informacja o statusie dokumentu weryfikacyjnego (wgrany / brak)
+  - Dla statusu `rejected` wyraźny komunikat z powodem odrzucenia nad formularzem
 - **Dostępność:** Formularze z pełnymi etykietami, inline errors, `aria-describedby`
 - **Bezpieczeństwo:**
   - Guard middleware: wymaga sesji
@@ -266,7 +270,8 @@ Zarządzanie stanem opiera się na trzech filarach:
   - Tabela z paginacją (klasyczne przyciski)
   - Kliknięcie wiersza otwiera panel review z podglądem dokumentu (inline iframe/img lub link do pobrania)
   - Potwierdzenie zmiany statusu przez `AlertDialog` z komunikatem konsekwencji
-  - Po akcji: odświeżenie tabeli (invalidacja cache TanStack Query, `staleTime` 30s)
+  - Przy odrzuceniu wymagany jest powód odrzucenia walidowany po stronie klienta i API
+  - Po akcji: odświeżenie tabeli przez lokalny `refetch()` hooka administracyjnego
   - Badge statusu i liczba oczekujących w nagłówku
 - **Dostępność:**
   - Tabela z prawidłową strukturą semantyczną
@@ -299,7 +304,7 @@ Zarządzanie stanem opiera się na trzech filarach:
 
 ### 3.1. Ścieżka darczyńcy (anonimowy)
 
-```
+```text
 1. Wejście na stronę główną (/)
 2. Przeglądarka pyta o geolokalizację
    ├── Zgoda → mapa centruje na lokalizacji użytkownika, lista sortowana wg odległości
@@ -319,7 +324,7 @@ Zarządzanie stanem opiera się na trzech filarach:
 
 ### 3.2. Ścieżka schroniska (rejestracja → weryfikacja → zarządzanie)
 
-```
+```text
 1. Wejście na /auth/register
 2. Wypełnienie formularza rejestracji (email, hasło, nazwa, adres, miasto, NIP)
 3. Upload dokumentu weryfikacyjnego (PDF/JPG/PNG, max 5MB)
@@ -327,11 +332,14 @@ Zarządzanie stanem opiera się na trzech filarach:
 5. Redirect na /auth/pending — komunikat o oczekiwaniu na weryfikację
 --- (oczekiwanie na decyzję admina) ---
 6. Logowanie na /auth/login
-   ├── Status pending → redirect na /auth/pending (lub dashboard z żółtym banerem i disabled CRUD)
-   ├── Status rejected → dashboard z czerwonym banerem i powodem odrzucenia
-   ├── Status suspended → dashboard z czerwonym banerem
+  ├── Status pending → redirect na /dashboard/profile i możliwość uzupełnienia dokumentu
+  ├── Status rejected → redirect na /dashboard/profile, komunikat z powodem odrzucenia i możliwość korekty
+  ├── Status suspended → wylogowanie i powrót do /auth/login
    └── Status verified → dashboard z pełnym dostępem
-7. Dashboard (/) — zarządzanie potrzebami
+7. Wejście na /dashboard
+  ├── Status verified → widok zarządzania potrzebami
+  └── Status pending/rejected → redirect na /dashboard/profile
+8. Dashboard (/) — zarządzanie potrzebami
    a. Dodawanie potrzeby:
       - Kliknięcie "Dodaj potrzebę" → NeedFormDialog modal
       - Wypełnienie: kategoria, tytuł, ilość docelowa, jednostka, pilność
@@ -347,8 +355,9 @@ Zarządzanie stanem opiera się na trzech filarach:
       - Kliknięcie "Zrealizowane" → POST /api/needs/:id/fulfill → odświeżenie listy
    e. Usunięcie potrzeby:
       - Kliknięcie "Usuń" → AlertDialog z potwierdzeniem → DELETE /api/needs/:id → odświeżenie listy
-8. Edycja profilu (/dashboard/profile)
+9. Edycja profilu (/dashboard/profile)
    - Formularz z aktualnymi danymi
+  - Dla `rejected`: widoczny powód odrzucenia
    - Opcjonalnie: geokodowanie adresu → POST /api/profiles/me/geocode
    - Opcjonalnie: zmiana dokumentu weryfikacyjnego
    - Zapisanie → PATCH /api/profiles/me
@@ -356,7 +365,7 @@ Zarządzanie stanem opiera się na trzech filarach:
 
 ### 3.3. Ścieżka administratora
 
-```
+```text
 1. Logowanie na /auth/login (konto z role=super_admin)
 2. Redirect na /admin
 3. Przegląd tabeli schronisk oczekujących na weryfikację
@@ -386,6 +395,7 @@ Aplikacja wykorzystuje dwa layouty Astro:
 
 - Używany przez: `/dashboard`, `/dashboard/profile`
 - Struktura: `Navbar` (sticky, 56px) → `StatusBanner` (warunkowy) → sidebar (desktop) + `<main>` (slot)
+- `StatusBanner` otrzymuje dane SSR z profilu i może pokazać zapisany `rejection_reason`
 - Desktop: sidebar 220px po lewej z pozycjami nawigacji (Potrzeby, Profil)
 - Mobile: bottom navigation bar zamiast sidebar
 - Header dashboardu: nazwa schroniska, badge statusu konta, licznik AI
@@ -431,13 +441,13 @@ Serwer renderuje navbar warunkowo na podstawie `locals.session` i `locals.profil
 ### 4.4. Przepływy nawigacji i guardy
 
 | Ścieżka | Wymaganie auth | Guard middleware | Redirect przy braku dostępu |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `/` | Brak | — | — |
 | `/shelter/[id]` | Brak | — | 404 jeśli schronisko nie istnieje |
-| `/auth/login` | Brak | Redirect zalogowanego → `/dashboard` | — |
-| `/auth/register` | Brak | Redirect zalogowanego → `/dashboard` | — |
+| `/auth/login` | Brak | Redirect zalogowanego zgodnie z rolą i statusem (`/admin`, `/dashboard`, `/dashboard/profile`) | — |
+| `/auth/register` | Brak | Redirect zalogowanego zgodnie z rolą i statusem | — |
 | `/auth/pending` | Brak | — | — |
-| `/dashboard` | Sesja wymagana | `locals.session` | `/auth/login?return=/dashboard` |
+| `/dashboard` | Sesja wymagana | `locals.session` + redirect `pending/rejected` do `/dashboard/profile` | `/auth/login?return=/dashboard` |
 | `/dashboard/profile` | Sesja wymagana | `locals.session` | `/auth/login?return=/dashboard/profile` |
 | `/admin` | Sesja + super_admin | `locals.session` + `locals.profile.role` | `/auth/login` lub 403 |
 
@@ -448,16 +458,16 @@ Serwer renderuje navbar warunkowo na podstawie `locals.session` i `locals.profil
 ### 5.1. Komponenty nawigacji i layoutu
 
 | Komponent | Typ | Opis |
-|---|---|---|
+| --- | --- | --- |
 | `Navbar.astro` | Astro | Sticky nawigacja z logo, linkami auth lub avatar dropdown. Renderowany SSR warunkowo wg roli. Zero JS. |
 | `Layout.astro` | Astro | Layout główny z meta tagami, global CSS, Navbar, slot na content. |
 | `DashboardLayout.astro` | Astro | Layout dashboardu z Navbar, StatusBanner, sidebar/bottom nav, slot. |
-| `StatusBanner.astro` | Astro | Warunkowy baner statusu konta (pending/suspended/rejected). Renderowany SSR — brak flashu. |
+| `StatusBanner.astro` | Astro | Warunkowy baner statusu konta (pending/suspended/rejected). Dla `rejected` może wyświetlać zapisany `rejection_reason`. Renderowany SSR — brak flashu. |
 
 ### 5.2. Komponenty eksploratora schronisk
 
 | Komponent | Typ | Opis |
-|---|---|---|
+| --- | --- | --- |
 | `ShelterExplorer` | React | Root island strony głównej. Zarządza split-view, stanem mapy i listy. Opakowuje `ShelterExplorerContext`. |
 | `ShelterExplorerContext` | React Context | Współdzielony stan: filtry, geolokalizacja, selected marker, mobile view mode. |
 | `MapView` | React | Mapa Leaflet z OpenStreetMap tiles, klasteringiem markerów, obsługą zoomu i centrowania. |
@@ -471,7 +481,7 @@ Serwer renderuje navbar warunkowo na podstawie `locals.session` i `locals.profil
 ### 5.3. Komponenty potrzeb (reużywalne)
 
 | Komponent | Typ | Opis |
-|---|---|---|
+| --- | --- | --- |
 | `NeedCard` | React | Karta potrzeby: `CategoryIcon`, tytuł, opis, `ProgressBar`, `UrgencyBadge`, przycisk „Kup online", opcjonalny slot `actions` (wzorzec composition). Używana na stronie publicznej i w dashboardzie. |
 | `ProgressBar` | React | Wizualny pasek postępu z etykietą „X/Y jednostka". `role="progressbar"` z pełnymi atrybutami ARIA. |
 | `UrgencyBadge` | React | Badge z kolorowym oznaczeniem poziomu pilności: low=szary, normal=niebieski, high=pomarańżowy, urgent=czerwony, critical=czerwony pulsujący. Oparty na Shadcn/ui `Badge`. |
@@ -481,49 +491,48 @@ Serwer renderuje navbar warunkowo na podstawie `locals.session` i `locals.profil
 ### 5.4. Komponenty dashboardu
 
 | Komponent | Typ | Opis |
-|---|---|---|
-| `NeedsManager` | React | Root island dashboardu. Tabela potrzeb z sortowaniem, paginacją, akcjami CRUD. Opakowuje TanStack Query provider. |
+| --- | --- | --- |
+| `NeedsManager` | React | Root island dashboardu. Tabela potrzeb z paginacją, akcjami CRUD i statusowymi blokadami dla kont niezweryfikowanych. |
 | `NeedFormDialog` | React | Modal (Shadcn/ui Dialog) do tworzenia i edycji potrzeby. Pola: kategoria, tytuł, opis, link zakupowy, pilność, ilość docelowa, ilość obecna, jednostka. Integracja z AI helperami. |
 | `AIGenerateButton` | React | Przycisk inline obok pola formularza. Wywołuje endpoint AI, wstawia wynik do pola. Pokazuje spinner i obsługuje limit/error. |
-| `ProfileForm` | React | Formularz edycji profilu z React Hook Form + Zod. Pola: nazwa, miasto, adres, telefon, strona <www>. Przycisk geokodowania. |
+| `ProfileForm` | React | Formularz edycji profilu z lokalnym stanem i helperami walidacji. Pokazuje status konta, opcjonalny `rejection_reason`, geokodowanie i upload dokumentu. |
 | `VerificationUpload` | React | Komponent uploadu dokumentu z drag & drop, podglądem pliku, walidacją formatu/rozmiaru. |
 
 ### 5.5. Komponenty admina
 
 | Komponent | Typ | Opis |
-|---|---|---|
+| --- | --- | --- |
 | `PendingSheltersTable` | React | Tabela Shadcn/ui z listą schronisk pending. Kolumny: nazwa, NIP, miasto, email, data, dokument. Paginacja. |
 | `ShelterReviewPanel` | React | Panel boczny/modal z detalami schroniska, podglądem dokumentu, przyciskami Zweryfikuj/Odrzuć. AlertDialog do potwierdzenia decyzji. |
 
 ### 5.6. Komponenty auth
 
 | Komponent | Typ | Opis |
-|---|---|---|
+| --- | --- | --- |
 | `LoginForm` | React | Formularz logowania z React Hook Form + Zod. Pola: email, hasło. Obsługa błędów auth. |
 | `RegisterForm` | React | Formularz rejestracji z walidacją NIP, siłą hasła, uploadem dokumentu. Wieloetapowy flow. |
 
 ### 5.7. Hooki (custom hooks)
 
 | Hook | Opis |
-|---|---|
+| --- | --- |
 | `useGeolocation` | Jednokrotne pobranie lokalizacji przeglądarki z timeout 5s. Zwraca `{ coords, status, error }`. Status: `loading` → `granted`/`denied`/`error`. |
-| `useProfiles` | TanStack Query wrapper na `GET /api/profiles`. Parametry: `lat`, `lon`, `urgent_only`. `staleTime` 5 min. |
-| `useNeeds` | TanStack Query wrapper na `GET /api/needs`. Parametry: `shelter_id`, `category`, `urgency`. `staleTime` 1 min. |
-| `useCreateNeed` | TanStack Query mutation na `POST /api/needs`. Invalidacja klucza `needs` po sukcesie. |
-| `useUpdateNeed` | TanStack Query mutation na `PATCH /api/needs/:id`. Invalidacja klucza `needs` po sukcesie. |
-| `useDeleteNeed` | TanStack Query mutation na `DELETE /api/needs/:id`. Invalidacja klucza `needs` po sukcesie. |
-| `useAIGenerate` | TanStack Query mutation na `POST /api/ai/generate-description` lub `POST /api/ai/generate-shopping-link`. Obsługa limitu AI (403) i rate limit (429). |
+| `useProfiles` | Custom hook pobierający `GET /api/profiles` z parametrami `lat`, `lon`, `urgent_only`. |
+| `useNeeds` | Custom hook pobierający `GET /api/needs` oraz obsługujący odświeżanie i paginację lokalną. |
+| `useAdminPendingShelters` | Custom hook pobierający `GET /api/admin/shelters/pending`, mapujący dane do tabeli i obsługujący `refetch()`. |
+| `useUpdateShelterStatus` | Custom hook wykonujący `PATCH /api/admin/shelters/:id/status` wraz z mapowaniem błędów walidacji. |
+| `useShelterVerificationDocument` | Custom hook pobierający dokument weryfikacyjny dla panelu admina i tworzący bezpieczny preview/download. |
 
 ### 5.8. Warstwa komunikacji z API
 
 | Moduł | Opis |
-|---|---|
-| `apiClient` (`src/lib/api.ts`) | Centralny wrapper `fetch` z mapowaniem kodów błędów na akcje UI: 401 → redirect login, 403 `ACCOUNT_PENDING` → baner, 400 `VALIDATION_ERROR` → inline errors, 429 → toast z info o retry, 500/503 → toast z przyciskiem retry. Integracja z toastami Sonner. |
+| --- | --- |
+| Warstwa request helpers | Zestaw lekkich helperów `fetchWithTimeout`, redirect helpers i mapperów błędów używanych lokalnie przez hooki admin/dashboard/auth. |
 
 ### 5.9. Komponenty Shadcn/ui (istniejące i planowane)
 
-Istniejące: `Button`, `Card`, `Avatar`.
+Istniejące: `Button`, `Card`, `Avatar`, `Badge`, `Input`, `Textarea`, `Sheet`, `AlertDialog`, `Tooltip`, `Separator`, `DropdownMenu`.
 
-Do dodania: `Dialog`, `Sheet`, `Table`, `Badge`, `Form`, `AlertDialog`, `Tooltip`, `Skeleton`, `Switch`, `DropdownMenu`, `Separator`, `Input`, `Label`, `Textarea`, `Select`.
+Do ewentualnego dodania w kolejnych iteracjach: `Form`, `Label`, `Select`, dodatkowe `Skeleton` i `Switch` tam, gdzie będą potrzebne nowe widoki.
 
 Wszystkie komponenty w `src/components/ui/`, styl `new-york`, spójne z aktualną konfiguracją `components.json`.

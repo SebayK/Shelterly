@@ -1,74 +1,103 @@
 ---
-interface Props {
-  currentPath: string;
-}
+import { getDashboardNavigation } from "@/lib/dashboard-navigation";
 
-const { currentPath } = Astro.props;
-
-const isNeeds = currentPath === "/dashboard";
-const isProfile = currentPath.startsWith("/dashboard/profile");
+const { currentPath, role } = Astro.props;
+const navigation = getDashboardNavigation(role, currentPath);
 ---
 
 <aside class="hidden md:block w-[220px] shrink-0 border-r bg-background">
-  <nav aria-label="Nawigacja dashboardu" class="flex flex-col gap-1 p-3">
-    <a
-      href="/dashboard"
-      aria-current={isNeeds ? "page" : undefined}
-      class={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
-        isNeeds
-          ? "bg-accent font-semibold text-accent-foreground"
-          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-      }`}
-    >
-      <!-- ClipboardList icon (Lucide inline SVG) -->
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
+  {role === "super_admin" && (
+    <nav aria-label={navigation.ariaLabel} class="flex flex-col gap-1 p-3">
+      <a
+        href={navigation.items[0]?.href}
+        aria-current={navigation.items[0]?.isCurrent ? "page" : undefined}
+        class={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
+          navigation.items[0]?.isCurrent
+            ? "bg-accent font-semibold text-accent-foreground"
+            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+        }`}
       >
-        <rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect>
-        <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-        <path d="M12 11h4"></path>
-        <path d="M12 16h4"></path>
-        <path d="M8 11h.01"></path>
-        <path d="M8 16h.01"></path>
-      </svg>
-      Potrzeby
-    </a>
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M12 2l7 4v6c0 5-3.5 9.74-7 10-3.5-.26-7-5-7-10V6l7-4z"></path>
+          <path d="m9 12 2 2 4-4"></path>
+        </svg>
+        {navigation.items[0]?.label}
+      </a>
+    </nav>
+  )}
 
-    <a
-      href="/dashboard/profile"
-      aria-current={isProfile ? "page" : undefined}
-      class={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
-        isProfile
-          ? "bg-accent font-semibold text-accent-foreground"
-          : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
-      }`}
-    >
-      <!-- User icon (Lucide inline SVG) -->
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        stroke="currentColor"
-        stroke-width="2"
-        stroke-linecap="round"
-        stroke-linejoin="round"
-        aria-hidden="true"
+  {role === "shelter" && (
+    <nav aria-label={navigation.ariaLabel} class="flex flex-col gap-1 p-3">
+      <a
+        href={navigation.items[0]?.href}
+        aria-current={navigation.items[0]?.isCurrent ? "page" : undefined}
+        class={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
+          navigation.items[0]?.isCurrent
+            ? "bg-accent font-semibold text-accent-foreground"
+            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+        }`}
       >
-        <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
-        <circle cx="12" cy="7" r="4"></circle>
-      </svg>
-      Profil
-    </a>
-  </nav>
+        <!-- ClipboardList icon (Lucide inline SVG) -->
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <rect width="8" height="4" x="8" y="2" rx="1" ry="1"></rect>
+          <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
+          <path d="M12 11h4"></path>
+          <path d="M12 16h4"></path>
+          <path d="M8 11h.01"></path>
+          <path d="M8 16h.01"></path>
+        </svg>
+        {navigation.items[0]?.label}
+      </a>
+
+      <a
+        href={navigation.items[1]?.href}
+        aria-current={navigation.items[1]?.isCurrent ? "page" : undefined}
+        class={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
+          navigation.items[1]?.isCurrent
+            ? "bg-accent font-semibold text-accent-foreground"
+            : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
+        }`}
+      >
+        <!-- User icon (Lucide inline SVG) -->
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="16"
+          height="16"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="2"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+          aria-hidden="true"
+        >
+          <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"></path>
+          <circle cx="12" cy="7" r="4"></circle>
+        </svg>
+        {navigation.items[1]?.label}
+      </a>
+    </nav>
+  )}
 </aside>
