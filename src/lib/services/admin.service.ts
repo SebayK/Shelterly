@@ -11,7 +11,7 @@ import type {
   ShelterStatusUpdateResponseDTO,
   UpdateShelterStatusCommand,
 } from "@/types";
-import { InternalError, NotFoundError } from "@/lib/errors";
+import { InternalError, NotFoundError, ValidationError } from "@/lib/errors";
 import { APP_CONFIG } from "@/lib/config";
 
 /**
@@ -45,10 +45,23 @@ function getContentTypeFromFileName(fileName: string): string {
 }
 
 /**
- * Returns true when the storage path looks safe (no path traversal, valid chars).
+ * Returns true when the storage key is relative and cannot escape via traversal.
  */
 function isValidStoragePath(path: string): boolean {
-  return !path.includes("..") && !path.startsWith("/") && /^[a-zA-Z0-9_\-/.]+$/.test(path);
+  if (path.length === 0 || path.startsWith("/") || path.includes("\\") || !path.startsWith("verification-docs/")) {
+    return false;
+  }
+
+  const hasControlCharacter = Array.from(path).some((character) => {
+    const charCode = character.charCodeAt(0);
+    return charCode < 32 || charCode === 127;
+  });
+  if (hasControlCharacter) {
+    return false;
+  }
+
+  const segments = path.split("/");
+  return segments.every((segment) => segment.length > 0 && segment !== "." && segment !== "..");
 }
 
 /**
@@ -116,7 +129,8 @@ export class AdminService {
   /**
    * Updates the verification status of a shelter.
    * Only `verified`, `rejected`, and `suspended` statuses are allowed.
-   * The `rejection_reason` field is validated but not persisted (no column in DB yet).
+    * Rejected shelters store an actionable `rejection_reason` that is exposed back
+    * to the shelter in the remediation flow.
    *
    * @param shelterId - UUID of the shelter profile to update
    * @param command - Command containing the new status (and optional rejection_reason)
@@ -131,7 +145,7 @@ export class AdminService {
     // 1. Verify the shelter exists and has role = 'shelter'
     const { data: existing, error: selectError } = await this.supabase
       .from("profiles")
-      .select("id")
+      .select("id, rejection_reason")
       .eq("id", shelterId)
       .eq("role", "shelter")
       .maybeSingle();
@@ -144,10 +158,31 @@ export class AdminService {
       throw new NotFoundError("Shelter not found");
     }
 
-    // 2. Update status (rejection_reason is not persisted — no column in schema yet)
+    const rejectionReason =
+      command.status === "rejected"
+        ? command.rejection_reason?.trim() ?? null
+        : command.status === "verified"
+          ? null
+          : existing.rejection_reason ?? null;
+
+    if (command.status === "rejected") {
+      if (!rejectionReason) {
+        throw new ValidationError("Rejection reason is required when status is 'rejected'");
+      }
+
+      if (rejectionReason.length < 3) {
+        throw new ValidationError("Rejection reason must be at least 3 characters");
+      }
+
+      if (rejectionReason.length > 500) {
+        throw new ValidationError("Rejection reason must not exceed 500 characters");
+      }
+    }
+
+    // 2. Update status and only clear rejection reasons when the shelter is verified again
     const { data: updated, error: updateError } = await this.supabase
       .from("profiles")
-      .update({ status: command.status })
+      .update({ status: command.status, rejection_reason: rejectionReason })
       .eq("id", shelterId)
       .select("id, status, updated_at")
       .single();

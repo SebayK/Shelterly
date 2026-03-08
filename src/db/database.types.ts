@@ -90,6 +90,7 @@ export interface Database {
           name: string | null;
           nip: string | null;
           phone_number: string | null;
+          rejection_reason: string | null;
           role: Database["public"]["Enums"]["user_role"];
           status: Database["public"]["Enums"]["shelter_status"];
           updated_at: string | null;
@@ -106,6 +107,7 @@ export interface Database {
           name?: string | null;
           nip?: string | null;
           phone_number?: string | null;
+          rejection_reason?: string | null;
           role?: Database["public"]["Enums"]["user_role"];
           status?: Database["public"]["Enums"]["shelter_status"];
           updated_at?: string | null;
@@ -122,6 +124,7 @@ export interface Database {
           name?: string | null;
           nip?: string | null;
           phone_number?: string | null;
+          rejection_reason?: string | null;
           role?: Database["public"]["Enums"]["user_role"];
           status?: Database["public"]["Enums"]["shelter_status"];
           updated_at?: string | null;

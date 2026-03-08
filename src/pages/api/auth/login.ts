@@ -7,7 +7,6 @@ import {
   logErrorWithContext,
   logSuccess,
   UnauthorizedError,
-  AccountPendingError,
   AccountSuspendedError,
 } from "@/lib/errors";
 
@@ -19,7 +18,9 @@ export const prerender = false;
  * Authenticates an existing shelter user with email and password.
  * On success, Supabase automatically sets HttpOnly session cookies via the SSR adapter.
  * Returns user profile data only - tokens are never exposed in the response body.
- * Accounts in `pending` or `suspended` status are rejected with 403.
+ * Suspended accounts are rejected with 403.
+ * Pending and rejected shelters are allowed to log in so they can remediate
+ * their profile and upload missing verification documents.
  *
  * Request body: { email: string; password: string }
  * Response: { user, profile } (200 OK)
@@ -67,10 +68,6 @@ export const POST: APIRoute = async ({ request, locals }) => {
     // Map domain errors to appropriate HTTP responses
     if (error instanceof UnauthorizedError) {
       return createErrorHttpResponse("UNAUTHORIZED", error.message, 401);
-    }
-
-    if (error instanceof AccountPendingError) {
-      return createErrorHttpResponse("ACCOUNT_PENDING", error.message, 403);
     }
 
     if (error instanceof AccountSuspendedError) {

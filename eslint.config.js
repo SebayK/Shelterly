@@ -57,11 +57,19 @@ const reactConfig = tseslint.config({
   },
 });
 
+const astroPrettierOverride = {
+  files: ["**/*.astro"],
+  rules: {
+    "prettier/prettier": "off",
+  },
+};
+
 export default tseslint.config(
   includeIgnoreFile(gitignorePath),
   baseConfig,
   jsxA11yConfig,
   reactConfig,
   eslintPluginAstro.configs["flat/recommended"],
-  eslintPluginPrettier
+  eslintPluginPrettier,
+  astroPrettierOverride
 );

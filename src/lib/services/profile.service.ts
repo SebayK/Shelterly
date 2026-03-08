@@ -11,12 +11,20 @@ import type {
 import {
   NotFoundError,
   InternalError,
+  ValidationError,
   AddressNotFoundError,
   logError,
   logErrorWithContext,
   logWarningWithContext,
 } from "../errors";
 import { APP_CONFIG } from "../config";
+
+const VERIFICATION_DOCUMENT_EXTENSIONS = {
+  "application/pdf": "pdf",
+  "image/jpeg": "jpg",
+  "image/jpg": "jpg",
+  "image/png": "png",
+} as const;
 
 /**
  * Profile Service
@@ -250,6 +258,7 @@ export class ProfileService {
       id: profile.id,
       role: profile.role,
       status: profile.status,
+      rejection_reason: profile.rejection_reason,
       name: profile.name,
       nip: profile.nip,
       city: profile.city,
@@ -324,7 +333,9 @@ export class ProfileService {
     file: File
   ): Promise<{ verification_doc_path: string; uploaded_at: string }> {
     const timestamp = Date.now();
-    const fileName = `${timestamp}-${file.name}`;
+    const extension = this.getVerificationDocumentExtension(file.type);
+    const sanitizedBaseName = this.sanitizeFileBaseName(file.name);
+    const fileName = `${timestamp}-${sanitizedBaseName}.${extension}`;
     const filePath = `verification-docs/${userId}/${fileName}`;
 
     // Upload file to Supabase Storage
@@ -513,5 +524,30 @@ export class ProfileService {
    */
   private toRad(degrees: number): number {
     return degrees * (Math.PI / 180);
+  }
+
+  private sanitizeFileBaseName(fileName: string): string {
+    const nameWithoutExtension = fileName.replace(/\.[^.]+$/, "");
+
+    return (
+      nameWithoutExtension
+        .replace(/[łŁ]/g, (char) => (char === "ł" ? "l" : "L"))
+        .normalize("NFKD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/\s+/g, "-")
+        .replace(/[^a-zA-Z0-9_-]/g, "-")
+        .replace(/-+/g, "-")
+        .replace(/^-|-$/g, "") || "verification-document"
+    );
+  }
+
+  private getVerificationDocumentExtension(fileType: string): string {
+    const extension = VERIFICATION_DOCUMENT_EXTENSIONS[fileType as keyof typeof VERIFICATION_DOCUMENT_EXTENSIONS];
+
+    if (extension) {
+      return extension;
+    }
+
+    throw new ValidationError("File must be PDF, JPEG, or PNG");
   }
 }

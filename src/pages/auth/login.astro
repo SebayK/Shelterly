@@ -1,7 +1,9 @@
 ---
 import Layout from "@/layouts/Layout.astro";
 import LoginForm from "@/components/auth/LoginForm";
+import { getPostLoginDestination, isSuspendedShelterSession } from "@/lib/auth-access";
 import { logError } from "@/lib/errors";
+import type { ShelterStatus, UserRole } from "@/types";
 
 export const prerender = false;
 
@@ -28,7 +30,27 @@ if (error) {
 }
 
 if (data?.user) {
-  return Astro.redirect(returnUrl);
+  const { data: profile, error: profileError } = await Astro.locals.supabase
+    .from("profiles")
+    .select("role, status")
+    .eq("id", data.user.id)
+    .maybeSingle<{ role: UserRole; status: ShelterStatus }>();
+
+  if (profileError) {
+    logError("[login.astro] Failed to fetch profile for redirect", profileError);
+    return Astro.redirect(returnUrl);
+  }
+
+  if (!profile) {
+    return Astro.redirect(returnUrl);
+  }
+
+  if (isSuspendedShelterSession(profile.role, profile.status)) {
+    await Astro.locals.supabase.auth.signOut();
+    return Astro.redirect("/auth/login");
+  }
+
+  return Astro.redirect(getPostLoginDestination(profile.role, profile.status, returnUrl));
 }
 ---
 

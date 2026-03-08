@@ -109,6 +109,33 @@ function formatDate(iso: string): string {
   }
 }
 
+function getVerificationDocumentHint(status: ShelterStatus, hasDocument: boolean): string {
+  if (status === "rejected") {
+    return hasDocument
+      ? "Możesz zastąpić poprzedni dokument nową wersją i poprawić dane profilu przed ponowną weryfikacją."
+      : "To konto wymaga poprawionego dokumentu. Prześlij nowy plik, aby zgłoszenie mogło zostać rozpatrzone ponownie.";
+  }
+
+  if (status === "pending") {
+    return hasDocument
+      ? "Dokument został już dodany. W razie potrzeby możesz podmienić go na nowszą wersję przed zakończeniem weryfikacji."
+      : "Dodaj dokument weryfikacyjny, aby administrator mógł zakończyć proces sprawdzania konta.";
+  }
+
+  return hasDocument
+    ? "Możesz zaktualizować dokument potwierdzający działalność schroniska, jeśli wymaga odświeżenia."
+    : "Wgraj dokument potwierdzający działalność schroniska (np. KRS, zaświadczenie).";
+}
+
+function getRejectionReasonMessage(reason: string | null): string | null {
+  const trimmedReason = reason?.trim() ?? "";
+  if (!trimmedReason) {
+    return null;
+  }
+
+  return trimmedReason;
+}
+
 // ---------------------------------------------------------------------------
 // Sub-components
 // ---------------------------------------------------------------------------
@@ -437,6 +464,8 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
   // =========================================================================
 
   const isAnyLoading = isSaving || isGeocoding || isUploading;
+  const verificationDocumentHint = getVerificationDocumentHint(profile.status, Boolean(currentDocPath));
+  const rejectionReasonMessage = getRejectionReasonMessage(profile.rejection_reason);
 
   return (
     <div className="mx-auto max-w-2xl space-y-8">
@@ -479,6 +508,13 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
             <span className="text-sm font-medium">{formatDate(profile.created_at)}</span>
           </div>
         </div>
+
+        {profile.status === "rejected" && rejectionReasonMessage && (
+          <div className="mb-6 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-900" role="alert">
+            <p className="font-medium">Powód odrzucenia zgłoszenia</p>
+            <p className="mt-1">{rejectionReasonMessage}</p>
+          </div>
+        )}
 
         {/* Editable form */}
         <form onSubmit={handleSubmit} noValidate aria-label="Formularz edycji profilu">
@@ -668,10 +704,19 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
         <h3 id="doc-section-heading" className="mb-1 text-base font-semibold">
           Dokument weryfikacyjny
         </h3>
-        <p className="mb-4 text-sm text-muted-foreground">
-          Wgraj lub zaktualizuj dokument potwierdzający działalność schroniska (np. KRS, zaświadczenie). Akceptowane
-          formaty: PDF, JPG, PNG (maks. 5 MB).
+        <p className="mb-2 text-sm text-muted-foreground">
+          {verificationDocumentHint} Akceptowane formaty: PDF, JPG, PNG (maks. 5 MB).
         </p>
+
+        {profile.status !== "verified" && (
+          <p
+            className="mb-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-900"
+            role="status"
+          >
+            Do czasu zatwierdzenia konta możesz aktualizować profil i dokument, ale dodawanie oraz edycja potrzeb są
+            zablokowane.
+          </p>
+        )}
 
         {/* Current document status */}
         <div className="mb-4 flex items-center gap-2 text-sm">

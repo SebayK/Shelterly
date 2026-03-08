@@ -13,6 +13,7 @@ import {
   NotFoundError,
   ForbiddenError,
   InternalError,
+  ValidationError,
 } from "@/lib/errors";
 
 export const prerender = false;
@@ -94,6 +95,9 @@ export const PATCH: APIRoute = async ({ params, request, locals }) => {
       },
     });
   } catch (error) {
+    if (error instanceof ValidationError) {
+      return createErrorHttpResponse("VALIDATION_ERROR", error.message, 400);
+    }
     if (error instanceof NotFoundError) {
       return createErrorHttpResponse("NOT_FOUND", error.message, 404);
     }

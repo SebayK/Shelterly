@@ -41,19 +41,26 @@ const navbarUser: NavbarUser = {
 
     <Navbar user={navbarUser} />
 
-    {profile.status !== "verified" && <StatusBanner status={profile.status} />}
+    {profile.role === "shelter" && profile.status !== "verified" && (
+      <StatusBanner status={profile.status} rejectionReason={profile.rejection_reason} />
+    )}
 
-    <DashboardHeader name={profile.name} status={profile.status} aiUsageCount={profile.ai_usage_count} />
+    <DashboardHeader
+      name={profile.name}
+      status={profile.status}
+      role={profile.role}
+      aiUsageCount={profile.ai_usage_count}
+    />
 
     <div class="flex min-h-[calc(100vh-56px)]">
-      <DashboardSidebar currentPath={currentPath} />
+      <DashboardSidebar currentPath={currentPath} role={profile.role} />
 
       <main id="main-content" class="flex-1 overflow-y-auto p-6 pb-24 md:pb-6">
         <slot />
       </main>
     </div>
 
-    <DashboardBottomNav currentPath={currentPath} />
+    <DashboardBottomNav currentPath={currentPath} role={profile.role} />
     <Toaster client:load position="top-right" richColors />
   </body>
 </html>

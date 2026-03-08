@@ -5,6 +5,28 @@ import type { ShelterStatus, UserRole } from "@/types";
 
 export const prerender = false;
 
+type PendingViewMode = "anonymous" | "pending" | "rejected";
+
+const viewState: {
+  mode: PendingViewMode;
+  title: string;
+  description: string;
+  helperText: string;
+  rejectionReason: string | null;
+  primaryHref: string;
+  primaryLabel: string;
+} = {
+  mode: "anonymous",
+  title: "Konto oczekuje na weryfikację",
+  description:
+    "Twoje zgłoszenie zostało przyjęte. Administrator zweryfikuje dostarczone dane i dokument potwierdzający działalność schroniska. Proces weryfikacji może potrwać do 48 godzin.",
+  helperText:
+    "Po pozytywnej weryfikacji otrzymasz dostęp do panelu zarządzania schroniskiem. W razie pytań skontaktuj się z nami.",
+  rejectionReason: null,
+  primaryHref: "/",
+  primaryLabel: "Wróć na stronę główną",
+};
+
 // Server-side guard: redirect users who no longer need this page
 try {
   const {
@@ -19,9 +41,9 @@ try {
   if (user) {
     const { data: profile, error: profileError } = await Astro.locals.supabase
       .from("profiles")
-      .select("status, role")
+      .select("status, role, rejection_reason")
       .eq("id", user.id)
-      .single<{ status: ShelterStatus; role: UserRole }>();
+      .single<{ status: ShelterStatus; role: UserRole; rejection_reason: string | null }>();
 
     if (profileError) {
       logError("[pending.astro] Failed to fetch profile", profileError);
@@ -34,6 +56,30 @@ try {
       if (profile.status === "verified") {
         return Astro.redirect("/dashboard");
       }
+
+      if (profile.status === "pending") {
+        viewState.mode = "pending";
+        viewState.title = "Uzupełnij dokument do weryfikacji";
+        viewState.description =
+          "Twoje konto jest już aktywne w ograniczonym zakresie. Uzupełnij dane profilu i dołącz dokument weryfikacyjny, aby administrator mógł zakończyć proces weryfikacji.";
+        viewState.helperText =
+          "Do czasu zatwierdzenia możesz edytować profil i przesłać dokument, ale zarządzanie potrzebami pozostaje zablokowane.";
+        viewState.primaryHref = "/dashboard/profile";
+        viewState.primaryLabel = "Przejdź do profilu schroniska";
+      }
+
+      if (profile.status === "rejected") {
+        viewState.mode = "rejected";
+        viewState.title = "Popraw zgłoszenie i wyślij dokument ponownie";
+        viewState.description = profile.rejection_reason?.trim()
+          ? `Administrator odrzucił wcześniejsze zgłoszenie. Powód: ${profile.rejection_reason.trim()}`
+          : "Administrator odrzucił wcześniejsze zgłoszenie. Zaktualizuj dane schroniska i prześlij poprawiony dokument weryfikacyjny, aby ponownie trafił do kolejki weryfikacyjnej.";
+        viewState.helperText =
+          "Konto działa w trybie ograniczonym: możesz edytować profil i wysłać nowy dokument, ale zarządzanie potrzebami pozostaje zablokowane do czasu pozytywnej decyzji.";
+        viewState.rejectionReason = profile.rejection_reason?.trim() || null;
+        viewState.primaryHref = "/dashboard/profile";
+        viewState.primaryLabel = "Popraw profil i dokument";
+      }
     }
   }
 } catch (err) {
@@ -41,7 +87,7 @@ try {
 }
 ---
 
-<Layout title="Oczekiwanie na weryfikację — Shelterly">
+<Layout title={`${viewState.title} — Shelterly`}>
   <section
     class="flex min-h-[calc(100vh-3.5rem)] flex-col items-center justify-center px-4 py-12 text-center"
     aria-labelledby="pending-heading"
@@ -70,27 +116,43 @@ try {
 
       <!-- Heading -->
       <h1 id="pending-heading" class="text-2xl font-semibold tracking-tight text-foreground">
-        Konto oczekuje na weryfikację
+        {viewState.title}
       </h1>
 
       <!-- Description -->
-      <p class="text-base leading-relaxed text-muted-foreground">
-        Twoje zgłoszenie zostało przyjęte. Administrator zweryfikuje dostarczone dane i dokument potwierdzający
-        działalność schroniska. Proces weryfikacji może potrwać do&nbsp;48&nbsp;godzin.
-      </p>
+      <p class="text-base leading-relaxed text-muted-foreground">{viewState.description}</p>
 
-      <p class="text-sm text-muted-foreground">
-        Po pozytywnej weryfikacji otrzymasz dostęp do panelu zarządzania schroniskiem. W razie pytań skontaktuj się z
-        nami.
-      </p>
+      <p class="text-sm text-muted-foreground">{viewState.helperText}</p>
 
-      <!-- Back to home link -->
-      <a
-        href="/"
-        class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-      >
-        Wróć na stronę główną
-      </a>
+      {viewState.rejectionReason && (
+        <div class="w-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-left text-sm text-red-900">
+          <p class="font-medium">Powód odrzucenia</p>
+          <p class="mt-1">{viewState.rejectionReason}</p>
+        </div>
+      )}
+
+      <div class="flex flex-col items-center gap-3 sm:flex-row">
+        <a
+          href={viewState.primaryHref}
+          class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+        >
+          {viewState.primaryLabel}
+        </a>
+        {viewState.primaryHref !== "/" && (
+          <a
+            href="/"
+            class="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-6 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+          >
+            Wróć na stronę główną
+          </a>
+        )}
+      </div>
+
+      {viewState.mode !== "anonymous" && (
+        <p class="max-w-md text-xs text-muted-foreground">
+          Jeśli dokument został już dodany, poczekaj na ponowne rozpatrzenie zgłoszenia przez administratora.
+        </p>
+      )}
     </div>
   </section>
 </Layout>

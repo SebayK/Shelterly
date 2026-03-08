@@ -1,9 +1,35 @@
 import type { NeedCategory, NeedUnit, ShelterStatus, UrgencyLevel } from "@/types";
 
-export const CRUD_DISABLED_REASON =
-  "Twoje konto nie jest jeszcze zweryfikowane. Akcje CRUD pozostają zablokowane do czasu aktywacji konta.";
+const CRUD_DISABLED_REASONS: Record<Exclude<ShelterStatus, "verified">, string> = {
+  pending:
+    "Twoje konto oczekuje na weryfikację. Uzupełnij profil i dołącz dokument, a akcje CRUD odblokują się po zatwierdzeniu zgłoszenia.",
+  rejected:
+    "Twoje konto zostało odrzucone. Popraw dane profilu i prześlij dokument ponownie, aby odzyskać dostęp do zarządzania potrzebami.",
+  suspended:
+    "Twoje konto zostało zawieszone. Zarządzanie potrzebami pozostaje zablokowane do czasu wyjaśnienia sprawy z administratorem.",
+};
 
-export const CRUD_DISABLED_SHORT_HINT = "Akcje odblokują się po weryfikacji konta schroniska.";
+const CRUD_DISABLED_SHORT_HINTS: Record<Exclude<ShelterStatus, "verified">, string> = {
+  pending: "Najpierw dokończ weryfikację konta schroniska.",
+  rejected: "Popraw profil i wyślij dokument ponownie, aby odblokować akcje.",
+  suspended: "Konto jest zawieszone. Akcje są tymczasowo niedostępne.",
+};
+
+export function getCrudDisabledReason(status: ShelterStatus): string | null {
+  if (status === "verified") {
+    return null;
+  }
+
+  return CRUD_DISABLED_REASONS[status];
+}
+
+export function getCrudDisabledShortHint(status: ShelterStatus): string | null {
+  if (status === "verified") {
+    return null;
+  }
+
+  return CRUD_DISABLED_SHORT_HINTS[status];
+}
 
 export const ACCOUNT_STATUS_LABELS: Record<ShelterStatus, string> = {
   pending: "Oczekujące",

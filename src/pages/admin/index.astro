@@ -1,0 +1,49 @@
+---
+import AdminPendingSheltersView from "@/components/admin/AdminPendingSheltersView";
+import DashboardLayout from "@/layouts/DashboardLayout.astro";
+import { logError, NotFoundError, UnauthorizedError } from "@/lib/errors";
+import { ProfileService } from "@/lib/services/profile.service";
+import type { ProfileMeDTO } from "@/types";
+
+export const prerender = false;
+
+const currentPath = Astro.url.pathname;
+
+const {
+  data: { user },
+  error: authError,
+} = await Astro.locals.supabase.auth.getUser();
+
+if (authError || !user) {
+  return Astro.redirect(`/auth/login?return=${currentPath}`);
+}
+
+let profile: ProfileMeDTO;
+
+try {
+  const profileService = new ProfileService(Astro.locals.supabase);
+  profile = await profileService.getAuthenticatedProfile(user.id);
+} catch (err) {
+  logError("[admin/index.astro] Failed to fetch profile", err);
+
+  if (err instanceof UnauthorizedError || err instanceof NotFoundError) {
+    return Astro.redirect(`/auth/login?return=${currentPath}`);
+  }
+
+  throw err;
+}
+
+if (profile.role !== "super_admin") {
+  return Astro.redirect("/dashboard");
+}
+
+const currentUser = {
+  id: profile.id,
+  name: profile.name,
+  role: "super_admin" as const,
+};
+---
+
+<DashboardLayout title="Panel administracyjny — Shelterly" profile={profile} currentPath={currentPath}>
+  <AdminPendingSheltersView client:load currentUser={currentUser} />
+</DashboardLayout>

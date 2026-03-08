@@ -10,7 +10,7 @@ const USER_ID = "00000000-0000-0000-0000-000000000001";
 const USER_EMAIL = "shelter@example.com";
 const PASSWORD = "SecureP@ssw0rd";
 
-const PROFILE = { id: USER_ID, status: "verified" as const, role: "shelter" as const };
+const PROFILE = { id: USER_ID, status: "verified" as const, role: "shelter" as const, rejection_reason: null };
 
 const SESSION = {
   access_token: "jwt.access.token",
@@ -50,6 +50,7 @@ interface ProfileData {
   id: string;
   status: ShelterStatus;
   role: UserRole;
+  rejection_reason: string | null;
 }
 
 function buildSupabaseMock({
@@ -70,7 +71,7 @@ function buildSupabaseMock({
   const from = vi.fn().mockReturnValue({ select });
 
   const signInWithPassword = vi.fn().mockResolvedValue(authResult);
-  // signOut is called by login() when the account status is pending or suspended,
+  // signOut is called by login() when the account status is suspended,
   // to invalidate the session before throwing the domain error.
   const signOut = vi.fn().mockResolvedValue(signOutResult);
 
@@ -224,22 +225,45 @@ describe("POST /api/auth/login", () => {
   // 9. Account pending
   // -------------------------------------------------------------------------
 
-  it("returns 403 ACCOUNT_PENDING when profile status is pending", async () => {
+  it("returns 200 OK when profile status is pending", async () => {
     const supabase = buildSupabaseMock({
-      profileResult: { data: { id: USER_ID, status: "pending", role: "shelter" }, error: null },
+      profileResult: { data: { id: USER_ID, status: "pending", role: "shelter", rejection_reason: null }, error: null },
     });
     const ctx = buildContext({ supabase });
 
     const response = await POST(ctx);
 
-    expect(response.status).toBe(403);
+    expect(response.status).toBe(200);
     const body = await response.json();
-    expect(body.error.code).toBe("ACCOUNT_PENDING");
-    // Ensure session tokens are NOT returned for pending accounts
-    expect(JSON.stringify(body)).not.toContain("access_token");
-    // signOut must be called to invalidate the created session
+    expect(body.profile.status).toBe("pending");
+    expect(body.user.id).toBe(USER_ID);
+    expect(body.profile.rejection_reason).toBeNull();
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    expect((supabase.auth as any).signOut).toHaveBeenCalledOnce();
+    expect((supabase.auth as any).signOut).not.toHaveBeenCalled();
+  });
+
+  it("returns 200 OK when profile status is rejected", async () => {
+    const supabase = buildSupabaseMock({
+      profileResult: {
+        data: {
+          id: USER_ID,
+          status: "rejected",
+          role: "shelter",
+          rejection_reason: "Brak podpisanego dokumentu.",
+        },
+        error: null,
+      },
+    });
+    const ctx = buildContext({ supabase });
+
+    const response = await POST(ctx);
+
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.profile.status).toBe("rejected");
+    expect(body.profile.rejection_reason).toBe("Brak podpisanego dokumentu.");
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    expect((supabase.auth as any).signOut).not.toHaveBeenCalled();
   });
 
   // -------------------------------------------------------------------------
@@ -345,6 +369,7 @@ describe("POST /api/auth/login", () => {
     expect(body.profile.id).toBe(USER_ID);
     expect(body.profile.status).toBe("verified");
     expect(body.profile.role).toBe("shelter");
+    expect(body.profile.rejection_reason).toBeNull();
     // Session tokens must NOT appear in the JSON body — they are set as HttpOnly cookies.
     expect(JSON.stringify(body)).not.toContain("access_token");
     expect(JSON.stringify(body)).not.toContain("refresh_token");
