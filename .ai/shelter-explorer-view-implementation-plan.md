@@ -239,8 +239,8 @@ interface ProfileListItemDTO {
   id: string;
   name: string;
   city: string;
-  location: Location;            // { lat: number; lon: number }
-  distance_km?: number;          // obecne tylko gdy podano geolokalizację
+  location: Location; // { lat: number; lon: number }
+  distance_km?: number; // obecne tylko gdy podano geolokalizację
   has_urgent_needs: boolean;
   needs_count: number;
   urgent_needs_count: number;
@@ -249,7 +249,7 @@ interface ProfileListItemDTO {
 // Wrapper odpowiedzi z API
 interface ProfileListResponseDTO {
   data: ProfileListItemDTO[];
-  pagination: Pagination;        // { total: number; limit: number; offset: number }
+  pagination: Pagination; // { total: number; limit: number; offset: number }
 }
 
 // Parametry zapytania do API
@@ -291,7 +291,7 @@ interface ErrorResponse {
  * Stan geolokalizacji przeglądarki
  */
 interface GeolocationState {
-  status: 'idle' | 'requesting' | 'granted' | 'denied' | 'unavailable';
+  status: "idle" | "requesting" | "granted" | "denied" | "unavailable";
   coordinates: Location | null;
   error: string | null;
 }
@@ -307,7 +307,7 @@ interface ShelterFiltersState {
 /**
  * Tryb widoku mobilnego
  */
-type MobileView = 'map' | 'list';
+type MobileView = "map" | "list";
 
 /**
  * Parametry wewnętrzne hooka useShelters
@@ -334,7 +334,7 @@ interface UseSheltersReturn {
  * Zwracany obiekt z hooka useGeolocation
  */
 interface UseGeolocationReturn {
-  status: GeolocationState['status'];
+  status: GeolocationState["status"];
   coordinates: Location | null;
   error: string | null;
 }
@@ -411,16 +411,16 @@ interface UseGeolocationReturn {
 
 ```typescript
 const buildUrl = (params: UseSheltersParams, limit: number, offset: number): string => {
-  const url = new URL('/api/profiles', window.location.origin);
+  const url = new URL("/api/profiles", window.location.origin);
   if (params.coordinates) {
-    url.searchParams.set('lat', params.coordinates.lat.toString());
-    url.searchParams.set('lon', params.coordinates.lon.toString());
+    url.searchParams.set("lat", params.coordinates.lat.toString());
+    url.searchParams.set("lon", params.coordinates.lon.toString());
   }
   if (params.urgentOnly) {
-    url.searchParams.set('urgent_only', 'true');
+    url.searchParams.set("urgent_only", "true");
   }
-  url.searchParams.set('limit', limit.toString());
-  url.searchParams.set('offset', offset.toString());
+  url.searchParams.set("limit", limit.toString());
+  url.searchParams.set("offset", offset.toString());
   return url.toString();
 };
 ```
@@ -444,44 +444,44 @@ const buildUrl = (params: UseSheltersParams, limit: number, offset: number): str
 
 ## 8. Interakcje użytkownika
 
-| # | Interakcja | Oczekiwany wynik |
-|---|-----------|------------------|
-| 1 | Wejście na stronę główną | System prosi o geolokalizację. Wyświetlane skeletony. Po odpowiedzi — fetch schronisk i renderowanie mapy + listy. |
-| 2 | Udostępnienie geolokalizacji | Mapa centruje się na użytkowniku. Lista sortowana wg odległości. Marker lokalizacji użytkownika na mapie. |
-| 3 | Odmowa geolokalizacji | Wyświetlenie `LocationBanner`. Mapa pokazuje całą Polskę. Lista sortowana wg pilności. |
-| 4 | Toggle „Tylko pilne potrzeby" | Re-fetch z `urgent_only=true/false`. Reset listy i paginacji. Mapa aktualizuje markery. |
-| 5 | Wpisanie tekstu w pole wyszukiwania miasta | Filtrowanie lokalne (client-side) po nazwie miasta. Mapa i lista aktualizują się natychmiast. |
-| 6 | Kliknięcie markera na mapie | Otwarcie popup z danymi schroniska. Podświetlenie odpowiedniej karty na liście. Automatyczny scroll listy do wybranej karty. |
-| 7 | Kliknięcie karty schroniska na liście | Podświetlenie markera na mapie. Mapa centruje się na wybranym schronisku. Na mobile: automatyczne przełączenie na widok mapy. |
-| 8 | Kliknięcie „Zobacz szczegóły" (popup/karta) | Nawigacja do strony szczegółowej schroniska: `/shelters/{id}`. |
-| 9 | Kliknięcie FAB na mobile | Przełączenie między widokiem mapy a listy. Zmiana ikony i `aria-label` FAB. |
-| 10 | Scroll do końca listy | Automatyczne załadowanie kolejnej strony schronisk (`loadMore()`), jeśli dostępne. |
-| 11 | Zamknięcie `LocationBanner` | Ukrycie banera (nie zmienia zachowania aplikacji). |
+| #   | Interakcja                                  | Oczekiwany wynik                                                                                                              |
+| --- | ------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Wejście na stronę główną                    | System prosi o geolokalizację. Wyświetlane skeletony. Po odpowiedzi — fetch schronisk i renderowanie mapy + listy.            |
+| 2   | Udostępnienie geolokalizacji                | Mapa centruje się na użytkowniku. Lista sortowana wg odległości. Marker lokalizacji użytkownika na mapie.                     |
+| 3   | Odmowa geolokalizacji                       | Wyświetlenie `LocationBanner`. Mapa pokazuje całą Polskę. Lista sortowana wg pilności.                                        |
+| 4   | Toggle „Tylko pilne potrzeby"               | Re-fetch z `urgent_only=true/false`. Reset listy i paginacji. Mapa aktualizuje markery.                                       |
+| 5   | Wpisanie tekstu w pole wyszukiwania miasta  | Filtrowanie lokalne (client-side) po nazwie miasta. Mapa i lista aktualizują się natychmiast.                                 |
+| 6   | Kliknięcie markera na mapie                 | Otwarcie popup z danymi schroniska. Podświetlenie odpowiedniej karty na liście. Automatyczny scroll listy do wybranej karty.  |
+| 7   | Kliknięcie karty schroniska na liście       | Podświetlenie markera na mapie. Mapa centruje się na wybranym schronisku. Na mobile: automatyczne przełączenie na widok mapy. |
+| 8   | Kliknięcie „Zobacz szczegóły" (popup/karta) | Nawigacja do strony szczegółowej schroniska: `/shelters/{id}`.                                                                |
+| 9   | Kliknięcie FAB na mobile                    | Przełączenie między widokiem mapy a listy. Zmiana ikony i `aria-label` FAB.                                                   |
+| 10  | Scroll do końca listy                       | Automatyczne załadowanie kolejnej strony schronisk (`loadMore()`), jeśli dostępne.                                            |
+| 11  | Zamknięcie `LocationBanner`                 | Ukrycie banera (nie zmienia zachowania aplikacji).                                                                            |
 
 ## 9. Warunki i walidacja
 
-| # | Warunek | Komponenty | Wpływ na stan UI |
-|---|---------|------------|------------------|
-| 1 | Geolokalizacja niedostępna lub odrzucona | `ShelterExplorer`, `LocationBanner` | Wyświetlenie banera informacyjnego. Fetch schronisk bez parametrów `lat`/`lon`. Mapa z domyślnym widokiem (cała Polska, zoom ~6). Lista sortowana wg pilności (brak `distance_km` w danych). |
-| 2 | Brak schronisk w odpowiedzi API (`data.length === 0`) | `ShelterList`, `ShelterListEmpty` | Wyświetlenie komponentu `ShelterListEmpty` z komunikatem zachęcającym do zmiany filtrów. Mapa pusta (brak markerów). |
-| 3 | Filtr `urgentOnly` aktywny i brak wyników | `ShelterList`, `ShelterListEmpty` | Komunikat sugerujący wyłączenie filtra „Tylko pilne potrzeby". |
-| 4 | Paginacja: `offset + limit >= total` | `ShelterList` | Ukrycie elementu „Załaduj więcej". `hasMore` = false. |
-| 5 | Współrzędne geolokalizacji — oba parametry (`lat` i `lon`) wymagane jednocześnie | `useShelters` | Hook wysyła `lat` i `lon` tylko gdy oba są dostępne (zapewnione przez `useGeolocation` — `coordinates` to obiekt `{lat, lon}` lub `null`). |
-| 6 | Filtr miasta (client-side) — case-insensitive, trimmed | `ShelterFilters`, `ShelterExplorer` | Filtrowanie listy `shelters` po `city`. Markery na mapie również filtrowane lokalnie. Pusty wynik → `ShelterListEmpty`. |
+| #   | Warunek                                                                          | Komponenty                          | Wpływ na stan UI                                                                                                                                                                             |
+| --- | -------------------------------------------------------------------------------- | ----------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Geolokalizacja niedostępna lub odrzucona                                         | `ShelterExplorer`, `LocationBanner` | Wyświetlenie banera informacyjnego. Fetch schronisk bez parametrów `lat`/`lon`. Mapa z domyślnym widokiem (cała Polska, zoom ~6). Lista sortowana wg pilności (brak `distance_km` w danych). |
+| 2   | Brak schronisk w odpowiedzi API (`data.length === 0`)                            | `ShelterList`, `ShelterListEmpty`   | Wyświetlenie komponentu `ShelterListEmpty` z komunikatem zachęcającym do zmiany filtrów. Mapa pusta (brak markerów).                                                                         |
+| 3   | Filtr `urgentOnly` aktywny i brak wyników                                        | `ShelterList`, `ShelterListEmpty`   | Komunikat sugerujący wyłączenie filtra „Tylko pilne potrzeby".                                                                                                                               |
+| 4   | Paginacja: `offset + limit >= total`                                             | `ShelterList`                       | Ukrycie elementu „Załaduj więcej". `hasMore` = false.                                                                                                                                        |
+| 5   | Współrzędne geolokalizacji — oba parametry (`lat` i `lon`) wymagane jednocześnie | `useShelters`                       | Hook wysyła `lat` i `lon` tylko gdy oba są dostępne (zapewnione przez `useGeolocation` — `coordinates` to obiekt `{lat, lon}` lub `null`).                                                   |
+| 6   | Filtr miasta (client-side) — case-insensitive, trimmed                           | `ShelterFilters`, `ShelterExplorer` | Filtrowanie listy `shelters` po `city`. Markery na mapie również filtrowane lokalnie. Pusty wynik → `ShelterListEmpty`.                                                                      |
 
 ## 10. Obsługa błędów
 
-| # | Scenariusz błędu | Obsługa |
-|---|------------------|---------|
-| 1 | **Błąd API 400 (nieprawidłowe parametry)** | Wyświetlenie komunikatu o błędzie walidacji w obszarze listy. Log błędu do konsoli. Przycisk „Spróbuj ponownie" wywołujący `refetch()`. |
-| 2 | **Błąd API 500 (błąd serwera)** | Wyświetlenie ogólnego komunikatu o błędzie serwera: „Wystąpił błąd podczas ładowania schronisk. Spróbuj ponownie później." Przycisk „Spróbuj ponownie". |
-| 3 | **Błąd sieci (brak połączenia)** | Wyświetlenie komunikatu: „Brak połączenia z internetem. Sprawdź połączenie i spróbuj ponownie." Przycisk „Spróbuj ponownie". |
-| 4 | **Geolokalizacja odrzucona przez użytkownika** | `LocationBanner` z informacją. Aplikacja działa normalnie bez geolokalizacji. |
-| 5 | **Geolocation API niedostępne (stary browser, HTTP)** | `status: 'unavailable'`. Zachowanie identyczne jak odmowa — `LocationBanner` + brak współrzędnych. |
-| 6 | **Timeout geolokalizacji** | Traktowany jak odmowa — `status: 'denied'`. Opcja: ustawienie `timeout` w opcjach `getCurrentPosition` (np. 10s). |
-| 7 | **Błąd ładowania Leaflet (brakujące CSS/JS)** | Użycie `client:only="react"` zapobiega SSR problemom. Dodatkowe zabezpieczenie: `ErrorBoundary` wokół `MapView` z fallbackiem do samej listy. |
-| 8 | **Błąd paginacji (loadMore z nieaktualnymi danymi)** | Guard: sprawdzenie `hasMore` przed wywołaniem. Ignorowanie duplikatów (sprawdzanie po `id`). |
-| 9 | **Pusta odpowiedź z prawidłowymi parametrami** | Wyświetlenie `ShelterListEmpty` z odpowiednim komunikatem. Brak markerów na mapie. |
+| #   | Scenariusz błędu                                      | Obsługa                                                                                                                                                 |
+| --- | ----------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | **Błąd API 400 (nieprawidłowe parametry)**            | Wyświetlenie komunikatu o błędzie walidacji w obszarze listy. Log błędu do konsoli. Przycisk „Spróbuj ponownie" wywołujący `refetch()`.                 |
+| 2   | **Błąd API 500 (błąd serwera)**                       | Wyświetlenie ogólnego komunikatu o błędzie serwera: „Wystąpił błąd podczas ładowania schronisk. Spróbuj ponownie później." Przycisk „Spróbuj ponownie". |
+| 3   | **Błąd sieci (brak połączenia)**                      | Wyświetlenie komunikatu: „Brak połączenia z internetem. Sprawdź połączenie i spróbuj ponownie." Przycisk „Spróbuj ponownie".                            |
+| 4   | **Geolokalizacja odrzucona przez użytkownika**        | `LocationBanner` z informacją. Aplikacja działa normalnie bez geolokalizacji.                                                                           |
+| 5   | **Geolocation API niedostępne (stary browser, HTTP)** | `status: 'unavailable'`. Zachowanie identyczne jak odmowa — `LocationBanner` + brak współrzędnych.                                                      |
+| 6   | **Timeout geolokalizacji**                            | Traktowany jak odmowa — `status: 'denied'`. Opcja: ustawienie `timeout` w opcjach `getCurrentPosition` (np. 10s).                                       |
+| 7   | **Błąd ładowania Leaflet (brakujące CSS/JS)**         | Użycie `client:only="react"` zapobiega SSR problemom. Dodatkowe zabezpieczenie: `ErrorBoundary` wokół `MapView` z fallbackiem do samej listy.           |
+| 8   | **Błąd paginacji (loadMore z nieaktualnymi danymi)**  | Guard: sprawdzenie `hasMore` przed wywołaniem. Ignorowanie duplikatów (sprawdzanie po `id`).                                                            |
+| 9   | **Pusta odpowiedź z prawidłowymi parametrami**        | Wyświetlenie `ShelterListEmpty` z odpowiednim komunikatem. Brak markerów na mapie.                                                                      |
 
 ## 11. Kroki implementacji
 

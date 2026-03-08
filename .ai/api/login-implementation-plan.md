@@ -100,14 +100,14 @@ export const LoginCommandSchema = z.object({
 
 ### Błędy
 
-| Kod HTTP | ErrorCode           | Opis                                              |
-| :------- | :------------------ | :------------------------------------------------ |
-| 400      | `VALIDATION_ERROR`  | Brakujące/niepoprawne pola (email, hasło)         |
-| 400      | `INVALID_REQUEST`   | Body nie jest poprawnym JSON                      |
-| 401      | `UNAUTHORIZED`      | Nieprawidłowy email lub hasło                     |
-| 403      | `ACCOUNT_PENDING`   | Konto oczekuje na weryfikację administratora      |
-| 403      | `ACCOUNT_SUSPENDED` | Konto zawieszone                                  |
-| 500      | `INTERNAL_ERROR`    | Błąd serwera                                      |
+| Kod HTTP | ErrorCode           | Opis                                         |
+| :------- | :------------------ | :------------------------------------------- |
+| 400      | `VALIDATION_ERROR`  | Brakujące/niepoprawne pola (email, hasło)    |
+| 400      | `INVALID_REQUEST`   | Body nie jest poprawnym JSON                 |
+| 401      | `UNAUTHORIZED`      | Nieprawidłowy email lub hasło                |
+| 403      | `ACCOUNT_PENDING`   | Konto oczekuje na weryfikację administratora |
+| 403      | `ACCOUNT_SUSPENDED` | Konto zawieszone                             |
+| 500      | `INTERNAL_ERROR`    | Błąd serwera                                 |
 
 ## 5. Przepływ danych
 
@@ -166,15 +166,15 @@ sequenceDiagram
 
 ## 7. Obsługa błędów
 
-| Scenariusz                               | Kod HTTP | ErrorCode           | Komunikat                                          |
-| :--------------------------------------- | :------- | :------------------ | :------------------------------------------------- |
-| Body nie jest JSON                       | 400      | `INVALID_REQUEST`   | "Request body must be valid JSON"                  |
-| Brak wymaganych pól / niepoprawny format | 400      | `VALIDATION_ERROR`  | Szczegóły pól z Zod (tablica `details`)            |
-| Nieprawidłowy email lub hasło            | 401      | `UNAUTHORIZED`      | "Invalid email or password"                        |
-| Konto oczekuje na weryfikację            | 403      | `ACCOUNT_PENDING`   | "Account is pending verification"                  |
-| Konto zawieszone                         | 403      | `ACCOUNT_SUSPENDED` | "Account has been suspended"                       |
-| Błąd Supabase Auth (inny niż 401)        | 500      | `INTERNAL_ERROR`    | "An internal error occurred"                       |
-| Supabase client niedostępny              | 500      | `INTERNAL_ERROR`    | "Database connection not available"                |
+| Scenariusz                               | Kod HTTP | ErrorCode           | Komunikat                               |
+| :--------------------------------------- | :------- | :------------------ | :-------------------------------------- |
+| Body nie jest JSON                       | 400      | `INVALID_REQUEST`   | "Request body must be valid JSON"       |
+| Brak wymaganych pól / niepoprawny format | 400      | `VALIDATION_ERROR`  | Szczegóły pól z Zod (tablica `details`) |
+| Nieprawidłowy email lub hasło            | 401      | `UNAUTHORIZED`      | "Invalid email or password"             |
+| Konto oczekuje na weryfikację            | 403      | `ACCOUNT_PENDING`   | "Account is pending verification"       |
+| Konto zawieszone                         | 403      | `ACCOUNT_SUSPENDED` | "Account has been suspended"            |
+| Błąd Supabase Auth (inny niż 401)        | 500      | `INTERNAL_ERROR`    | "An internal error occurred"            |
+| Supabase client niedostępny              | 500      | `INTERNAL_ERROR`    | "Database connection not available"     |
 
 ## 8. Rozważania dotyczące wydajności
 

@@ -124,12 +124,14 @@ try {
 
       <p class="text-sm text-muted-foreground">{viewState.helperText}</p>
 
-      {viewState.rejectionReason && (
-        <div class="w-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-left text-sm text-red-900">
-          <p class="font-medium">Powód odrzucenia</p>
-          <p class="mt-1">{viewState.rejectionReason}</p>
-        </div>
-      )}
+      {
+        viewState.rejectionReason && (
+          <div class="w-full rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-left text-sm text-red-900">
+            <p class="font-medium">Powód odrzucenia</p>
+            <p class="mt-1">{viewState.rejectionReason}</p>
+          </div>
+        )
+      }
 
       <div class="flex flex-col items-center gap-3 sm:flex-row">
         <a
@@ -138,21 +140,25 @@ try {
         >
           {viewState.primaryLabel}
         </a>
-        {viewState.primaryHref !== "/" && (
-          <a
-            href="/"
-            class="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-6 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
-          >
-            Wróć na stronę główną
-          </a>
-        )}
+        {
+          viewState.primaryHref !== "/" && (
+            <a
+              href="/"
+              class="inline-flex h-10 items-center justify-center rounded-md border border-input bg-background px-6 text-sm font-medium text-foreground shadow-sm transition-colors hover:bg-accent hover:text-accent-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+            >
+              Wróć na stronę główną
+            </a>
+          )
+        }
       </div>
 
-      {viewState.mode !== "anonymous" && (
-        <p class="max-w-md text-xs text-muted-foreground">
-          Jeśli dokument został już dodany, poczekaj na ponowne rozpatrzenie zgłoszenia przez administratora.
-        </p>
-      )}
+      {
+        viewState.mode !== "anonymous" && (
+          <p class="max-w-md text-xs text-muted-foreground">
+            Jeśli dokument został już dodany, poczekaj na ponowne rozpatrzenie zgłoszenia przez administratora.
+          </p>
+        )
+      }
     </div>
   </section>
 </Layout>

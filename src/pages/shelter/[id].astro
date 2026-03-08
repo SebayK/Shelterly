@@ -12,6 +12,13 @@ import needsData from "../../../__mocks__/data/needs.json";
 
 export const prerender = false;
 
+const rewriteToNotFound = () => {
+  Astro.response.status = 404;
+  Astro.response.statusText = "Not Found";
+
+  return Astro.rewrite("/404");
+};
+
 // Get and validate the shelter ID from URL params
 const { id } = Astro.params;
 
@@ -19,7 +26,7 @@ const { id } = Astro.params;
 const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 if (!id || !uuidRegex.test(id)) {
-  return Astro.redirect("/404");
+  return rewriteToNotFound();
 }
 
 let shelter: ProfileDetailDTO;
@@ -62,7 +69,7 @@ try {
     if (!supabase) {
       // eslint-disable-next-line no-console
       console.error("Supabase client not available in Astro.locals");
-      return Astro.redirect("/404");
+      return rewriteToNotFound();
     }
     const profileService = new ProfileService(supabase);
     shelter = await profileService.getProfileById(id);
@@ -79,7 +86,7 @@ try {
 } catch (error) {
   // eslint-disable-next-line no-console
   console.error("Error fetching shelter details:", error);
-  return Astro.redirect("/404");
+  return rewriteToNotFound();
 }
 
 // Generate page metadata

@@ -78,11 +78,11 @@ Te wywołania służą wyłącznie do logiki redirect i nie wpływają na treś�
 
 ## 8. Interakcje użytkownika
 
-| Interakcja | Element | Rezultat |
-|---|---|---|
-| Kliknięcie „Wróć na stronę główną" | Link `<a href="/">` | Nawigacja do strony głównej (mapa schronisk) |
-| Kliknięcie logo „Shelterly" w Navbar | Link w `Navbar.astro` | Nawigacja do strony głównej |
-| Kliknięcie linków auth w Navbar | Linki „Zaloguj się" / „Zarejestruj" | Nawigacja do odpowiednich stron auth |
+| Interakcja                           | Element                             | Rezultat                                     |
+| ------------------------------------ | ----------------------------------- | -------------------------------------------- |
+| Kliknięcie „Wróć na stronę główną"   | Link `<a href="/">`                 | Nawigacja do strony głównej (mapa schronisk) |
+| Kliknięcie logo „Shelterly" w Navbar | Link w `Navbar.astro`               | Nawigacja do strony głównej                  |
+| Kliknięcie linków auth w Navbar      | Linki „Zaloguj się" / „Zarejestruj" | Nawigacja do odpowiednich stron auth         |
 
 Strona nie zawiera formularzy, przycisków akcji ani elementów wymagających JavaScript.
 
@@ -90,14 +90,14 @@ Strona nie zawiera formularzy, przycisków akcji ani elementów wymagających Ja
 
 ### Warunki server-side (frontmatter)
 
-| Warunek | Weryfikacja | Wpływ na UI |
-|---|---|---|
-| Użytkownik zalogowany ze statusem `verified` | `profile.status === "verified"` | Redirect 302 do `/dashboard` — strona nie jest renderowana |
-| Użytkownik zalogowany z rolą `super_admin` | `profile.role === "super_admin"` | Redirect 302 do `/admin` — strona nie jest renderowana |
-| Użytkownik zalogowany ze statusem `pending` / `suspended` / `rejected` | Sprawdzenie statusu profilu | Strona jest renderowana normalnie |
-| Użytkownik anonimowy (brak sesji) | `!user` po `getUser()` | Strona jest renderowana normalnie |
-| Błąd autentykacji | `error` w odpowiedzi `getUser()` | Logowanie błędu do konsoli, renderowanie strony (fail-open) |
-| Błąd pobrania profilu | `profileError` | Logowanie błędu, renderowanie strony (fail-open) |
+| Warunek                                                                | Weryfikacja                      | Wpływ na UI                                                 |
+| ---------------------------------------------------------------------- | -------------------------------- | ----------------------------------------------------------- |
+| Użytkownik zalogowany ze statusem `verified`                           | `profile.status === "verified"`  | Redirect 302 do `/dashboard` — strona nie jest renderowana  |
+| Użytkownik zalogowany z rolą `super_admin`                             | `profile.role === "super_admin"` | Redirect 302 do `/admin` — strona nie jest renderowana      |
+| Użytkownik zalogowany ze statusem `pending` / `suspended` / `rejected` | Sprawdzenie statusu profilu      | Strona jest renderowana normalnie                           |
+| Użytkownik anonimowy (brak sesji)                                      | `!user` po `getUser()`           | Strona jest renderowana normalnie                           |
+| Błąd autentykacji                                                      | `error` w odpowiedzi `getUser()` | Logowanie błędu do konsoli, renderowanie strony (fail-open) |
+| Błąd pobrania profilu                                                  | `profileError`                   | Logowanie błędu, renderowanie strony (fail-open)            |
 
 ### Warunki client-side
 
@@ -105,12 +105,12 @@ Brak — strona jest w pełni statyczna po renderowaniu SSR.
 
 ## 10. Obsługa błędów
 
-| Scenariusz | Obsługa |
-|---|---|
-| Błąd `supabase.auth.getUser()` | Logowanie błędu na serwerze (`console.error`), kontynuacja renderowania strony (użytkownik widzi komunikat o weryfikacji) |
-| Błąd pobrania profilu z bazy | Logowanie błędu, kontynuacja renderowania (bezpieczne zachowanie — wyświetlenie strony pending jest lepsze niż błąd) |
-| Brak klienta Supabase w `locals` | Logowanie błędu, kontynuacja renderowania strony |
-| Użytkownik wchodzi bezpośrednio na URL `/auth/pending` bez rejestracji | Strona renderowana normalnie — ogólny komunikat nie ujawnia informacji o koncie |
+| Scenariusz                                                             | Obsługa                                                                                                                   |
+| ---------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------- |
+| Błąd `supabase.auth.getUser()`                                         | Logowanie błędu na serwerze (`console.error`), kontynuacja renderowania strony (użytkownik widzi komunikat o weryfikacji) |
+| Błąd pobrania profilu z bazy                                           | Logowanie błędu, kontynuacja renderowania (bezpieczne zachowanie — wyświetlenie strony pending jest lepsze niż błąd)      |
+| Brak klienta Supabase w `locals`                                       | Logowanie błędu, kontynuacja renderowania strony                                                                          |
+| Użytkownik wchodzi bezpośrednio na URL `/auth/pending` bez rejestracji | Strona renderowana normalnie — ogólny komunikat nie ujawnia informacji o koncie                                           |
 
 Strategia obsługi błędów to **fail-open**: w przypadku problemów z Supabase strona jest renderowana ze statyczną treścią. Jest to bezpieczne, ponieważ strona nie ujawnia żadnych wrażliwych danych.
 
