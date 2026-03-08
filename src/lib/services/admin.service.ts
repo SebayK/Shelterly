@@ -48,11 +48,14 @@ function getContentTypeFromFileName(fileName: string): string {
  * Returns true when the storage key is relative and cannot escape via traversal.
  */
 function isValidStoragePath(path: string): boolean {
-  if (path.length === 0 || path.startsWith("/") || path.includes("\\")) {
+  if (path.length === 0 || path.startsWith("/") || path.includes("\\") || !path.startsWith("verification-docs/")) {
     return false;
   }
 
-  const hasControlCharacter = Array.from(path).some((character) => character.charCodeAt(0) < 32);
+  const hasControlCharacter = Array.from(path).some((character) => {
+    const charCode = character.charCodeAt(0);
+    return charCode < 32 || charCode === 127;
+  });
   if (hasControlCharacter) {
     return false;
   }
@@ -142,7 +145,7 @@ export class AdminService {
     // 1. Verify the shelter exists and has role = 'shelter'
     const { data: existing, error: selectError } = await this.supabase
       .from("profiles")
-      .select("id")
+      .select("id, rejection_reason")
       .eq("id", shelterId)
       .eq("role", "shelter")
       .maybeSingle();
@@ -155,7 +158,12 @@ export class AdminService {
       throw new NotFoundError("Shelter not found");
     }
 
-    const rejectionReason = command.status === "rejected" ? command.rejection_reason?.trim() ?? null : null;
+    const rejectionReason =
+      command.status === "rejected"
+        ? command.rejection_reason?.trim() ?? null
+        : command.status === "verified"
+          ? null
+          : existing.rejection_reason ?? null;
 
     if (command.status === "rejected") {
       if (!rejectionReason) {
@@ -171,7 +179,7 @@ export class AdminService {
       }
     }
 
-    // 2. Update status and clear stale rejection reasons when the decision changes
+    // 2. Update status and only clear rejection reasons when the shelter is verified again
     const { data: updated, error: updateError } = await this.supabase
       .from("profiles")
       .update({ status: command.status, rejection_reason: rejectionReason })

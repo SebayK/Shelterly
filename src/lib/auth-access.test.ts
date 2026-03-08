@@ -20,6 +20,10 @@ describe("auth access helpers", () => {
   it("sanitizes unsafe requested paths for verified shelters", () => {
     expect(getPostLoginDestination("shelter", "verified", "https://evil.example")).toBe("/dashboard");
     expect(getPostLoginDestination("shelter", "verified", "//evil.example")).toBe("/dashboard");
+    expect(getPostLoginDestination("shelter", "verified", "   ")).toBe("/dashboard");
+    expect(getPostLoginDestination("shelter", "verified", "/dashboard\\profile")).toBe("/dashboard");
+    expect(getPostLoginDestination("shelter", "verified", "/dashboard\r\nSet-Cookie:test")).toBe("/dashboard");
+    expect(getPostLoginDestination("shelter", "verified", "/dashboardprofile")).toBe("/dashboard");
   });
 
   it("treats only suspended shelter sessions as blocked", () => {

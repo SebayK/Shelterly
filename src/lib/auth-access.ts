@@ -2,6 +2,19 @@ import type { ShelterStatus, UserRole } from "@/types";
 
 function sanitizeReturnPath(path: string): string {
   const trimmed = path.trim();
+  if (trimmed.length === 0) {
+    return "/dashboard";
+  }
+
+  const hasUnsafeCharacter = Array.from(trimmed).some((character) => {
+    const charCode = character.charCodeAt(0);
+    return charCode < 32 || charCode === 127 || character === "\\";
+  });
+
+  if (hasUnsafeCharacter) {
+    return "/dashboard";
+  }
+
   if (trimmed.startsWith("/") && !trimmed.startsWith("//")) {
     return trimmed;
   }

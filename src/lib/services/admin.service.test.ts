@@ -166,7 +166,7 @@ describe("AdminService.getPendingShelters()", () => {
 const SHELTER_ID = "00000000-0000-0000-0000-000000000010";
 
 function buildUpdateStatusMock({
-  selectData = { id: SHELTER_ID } as { id: string } | null,
+  selectData = { id: SHELTER_ID, rejection_reason: null } as { id: string; rejection_reason: string | null } | null,
   selectError = null as { message: string } | null,
   updateData = { id: SHELTER_ID, status: "verified", updated_at: "2026-02-22T12:00:00Z" } as {
     id: string;
@@ -273,6 +273,7 @@ describe("AdminService.updateShelterStatus()", () => {
 
   it("returns correct DTO when status is set to 'suspended'", async () => {
     const supabase = buildUpdateStatusMock({
+      selectData: { id: SHELTER_ID, rejection_reason: "Poprzedni powód odrzucenia" },
       updateData: { id: SHELTER_ID, status: "suspended", updated_at: "2026-02-22T14:00:00Z" },
     });
     service = new AdminService(supabase);
@@ -280,6 +281,10 @@ describe("AdminService.updateShelterStatus()", () => {
     const result = await service.updateShelterStatus(SHELTER_ID, { status: "suspended" });
 
     expect(result.status).toBe("suspended");
+    expect(supabase.__updateChain).toHaveBeenCalledWith({
+      status: "suspended",
+      rejection_reason: "Poprzedni powód odrzucenia",
+    });
   });
 
   // -------------------------------------------------------------------------
@@ -352,7 +357,7 @@ describe("AdminService.updateShelterStatus()", () => {
 // ---------------------------------------------------------------------------
 
 const DOC_SHELTER_ID = "00000000-0000-0000-0000-000000000020";
-const DOC_PATH = "verification-documents/shelter-20/document.pdf";
+const DOC_PATH = "verification-docs/shelter-20/document.pdf";
 
 /**
  * Builds a Supabase mock tailored for the getVerificationDocument() path:
@@ -407,7 +412,7 @@ describe("AdminService.getVerificationDocument()", () => {
 
   it("derives correct Content-Type for .jpg files", async () => {
     const supabase = buildGetDocumentMock({
-      shelterData: { id: DOC_SHELTER_ID, verification_doc_path: "docs/photo.jpg" },
+      shelterData: { id: DOC_SHELTER_ID, verification_doc_path: "verification-docs/shelter-20/photo.jpg" },
     });
     service = new AdminService(supabase);
 
@@ -419,7 +424,7 @@ describe("AdminService.getVerificationDocument()", () => {
 
   it("derives correct Content-Type for .jpeg files", async () => {
     const supabase = buildGetDocumentMock({
-      shelterData: { id: DOC_SHELTER_ID, verification_doc_path: "docs/photo.jpeg" },
+      shelterData: { id: DOC_SHELTER_ID, verification_doc_path: "verification-docs/shelter-20/photo.jpeg" },
     });
     service = new AdminService(supabase);
 
@@ -430,7 +435,7 @@ describe("AdminService.getVerificationDocument()", () => {
 
   it("derives correct Content-Type for .png files", async () => {
     const supabase = buildGetDocumentMock({
-      shelterData: { id: DOC_SHELTER_ID, verification_doc_path: "docs/image.png" },
+      shelterData: { id: DOC_SHELTER_ID, verification_doc_path: "verification-docs/shelter-20/image.png" },
     });
     service = new AdminService(supabase);
 
@@ -441,7 +446,7 @@ describe("AdminService.getVerificationDocument()", () => {
 
   it("derives correct Content-Type for .webp files", async () => {
     const supabase = buildGetDocumentMock({
-      shelterData: { id: DOC_SHELTER_ID, verification_doc_path: "docs/image.webp" },
+      shelterData: { id: DOC_SHELTER_ID, verification_doc_path: "verification-docs/shelter-20/image.webp" },
     });
     service = new AdminService(supabase);
 
@@ -452,7 +457,7 @@ describe("AdminService.getVerificationDocument()", () => {
 
   it("falls back to application/octet-stream for unknown extensions", async () => {
     const supabase = buildGetDocumentMock({
-      shelterData: { id: DOC_SHELTER_ID, verification_doc_path: "docs/archive.zip" },
+      shelterData: { id: DOC_SHELTER_ID, verification_doc_path: "verification-docs/shelter-20/archive.zip" },
     });
     service = new AdminService(supabase);
 
@@ -574,6 +579,24 @@ describe("AdminService.getVerificationDocument()", () => {
   it("rejects traversal attempts in verification document paths", async () => {
     const supabase = buildGetDocumentMock({
       shelterData: { id: DOC_SHELTER_ID, verification_doc_path: "verification-docs/1/../secrets.txt" },
+    });
+    service = new AdminService(supabase);
+
+    await expect(service.getVerificationDocument(DOC_SHELTER_ID)).rejects.toThrow("Invalid verification document path");
+  });
+
+  it("rejects verification document paths outside the expected prefix", async () => {
+    const supabase = buildGetDocumentMock({
+      shelterData: { id: DOC_SHELTER_ID, verification_doc_path: "other-prefix/1/document.pdf" },
+    });
+    service = new AdminService(supabase);
+
+    await expect(service.getVerificationDocument(DOC_SHELTER_ID)).rejects.toThrow("Invalid verification document path");
+  });
+
+  it("rejects verification document paths containing DEL characters", async () => {
+    const supabase = buildGetDocumentMock({
+      shelterData: { id: DOC_SHELTER_ID, verification_doc_path: "verification-docs/1/docfile.pdf" },
     });
     service = new AdminService(supabase);
 
