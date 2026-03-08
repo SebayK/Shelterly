@@ -126,7 +126,7 @@ register.astro (strona Astro)
   - Kliknięcie przycisku „×" → usunięcie wybranego pliku
 - **Walidacja:**
   - Typ pliku: `application/pdf`, `image/jpeg`, `image/png`
-  - Rozmiar: max 5 MB (5 _ 1024 _ 1024 bytes)
+  - Rozmiar: max 5 MB (`5 * 1024 * 1024` bytes)
   - Wymagane: plik musi być wybrany przed submitem
 - **Typy:** Brak typów niestandardowych (operuje na natywnym `File`)
 - **Propsy:**
