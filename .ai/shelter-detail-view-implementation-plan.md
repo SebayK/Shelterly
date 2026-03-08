@@ -935,7 +935,7 @@ const needsResponse = await NeedsService.getNeeds({
    - Implementacja conditional rendering
 
 2. **UrgencyBadge.tsx**:
-   - Stworzenie mapy urgency → klasy Tailwind (bg-_, text-_)
+   - Stworzenie mapy urgency → klasy Tailwind (`bg-*`, `text-*`)
    - Stworzenie mapy urgency → polskie labele
    - Implementacja renderowania span z dynamicznymi klasami
 
