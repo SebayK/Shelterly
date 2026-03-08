@@ -1,0 +1,55 @@
+---
+import Layout from "@/layouts/Layout.astro";
+
+Astro.response.status = 404;
+Astro.response.statusText = "Not Found";
+---
+
+<Layout title="404 - Strona nie znaleziona - Shelterly">
+  <section
+    class="flex min-h-[calc(100vh-3.5rem)] flex-col items-center justify-center px-4 py-12 text-center"
+    aria-labelledby="not-found-heading"
+  >
+    <div class="flex max-w-md flex-col items-center gap-6">
+      <div
+        class="flex h-20 w-20 items-center justify-center rounded-full bg-slate-100 text-slate-700"
+        aria-hidden="true"
+      >
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          width="40"
+          height="40"
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          stroke-width="1.75"
+          stroke-linecap="round"
+          stroke-linejoin="round"
+        >
+          <circle cx="11" cy="11" r="7"></circle>
+          <path d="m20 20-3.5-3.5"></path>
+          <path d="M8.5 8.5h5"></path>
+          <path d="M8.5 12h3"></path>
+        </svg>
+      </div>
+
+      <div class="space-y-3">
+        <h1 id="not-found-heading" class="text-3xl font-semibold tracking-tight text-foreground sm:text-4xl">
+          Nie znaleziono strony
+        </h1>
+
+        <p class="text-base leading-relaxed text-muted-foreground">
+          Adres, który próbujesz otworzyć, nie prowadzi do żadnej dostępnej strony. Wróć na mapę schronisk i kontynuuj
+          przeglądanie.
+        </p>
+      </div>
+
+      <a
+        href="/"
+        class="inline-flex h-10 items-center justify-center rounded-md bg-primary px-6 text-sm font-medium text-primary-foreground shadow transition-colors hover:bg-primary/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+      >
+        Wróć na mapę
+      </a>
+    </div>
+  </section>
+</Layout>

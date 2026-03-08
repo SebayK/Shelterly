@@ -162,15 +162,15 @@ Stan formularza zarządzany jest wewnątrz komponentu `LoginForm` za pomocą hoo
 
 ### Zmienne stanu
 
-| Zmienna | Typ | Wartość początkowa | Opis |
-|---|---|---|---|
-| `email` | `string` | `""` | Wartość pola email |
-| `password` | `string` | `""` | Wartość pola hasło |
-| `fieldErrors` | `LoginFieldErrors` | `{}` | Błędy walidacji pól (inline) |
-| `apiError` | `string \| null` | `null` | Komunikat błędu z API |
-| `isSubmitting` | `boolean` | `false` | Flaga stanu ładowania (blokada przycisku) |
-| `showPassword` | `boolean` | `false` | Czy hasło jest widoczne |
-| `hasSubmitted` | `boolean` | `false` | Czy formularz był już raz wysłany (do walidacji w trybie realtime) |
+| Zmienna        | Typ                | Wartość początkowa | Opis                                                               |
+| -------------- | ------------------ | ------------------ | ------------------------------------------------------------------ |
+| `email`        | `string`           | `""`               | Wartość pola email                                                 |
+| `password`     | `string`           | `""`               | Wartość pola hasło                                                 |
+| `fieldErrors`  | `LoginFieldErrors` | `{}`               | Błędy walidacji pól (inline)                                       |
+| `apiError`     | `string \| null`   | `null`             | Komunikat błędu z API                                              |
+| `isSubmitting` | `boolean`          | `false`            | Flaga stanu ładowania (blokada przycisku)                          |
+| `showPassword` | `boolean`          | `false`            | Czy hasło jest widoczne                                            |
+| `hasSubmitted` | `boolean`          | `false`            | Czy formularz był już raz wysłany (do walidacji w trybie realtime) |
 
 ### Przepływ stanu
 
@@ -221,14 +221,14 @@ Typ: Dane użytkownika i profilu (bez tokenów)
 
 ### Odpowiedzi błędów
 
-| Status | Kod błędu | Znaczenie |
-|---|---|---|
-| 400 | `VALIDATION_ERROR` / `INVALID_REQUEST` | Brakujące lub nieprawidłowe dane wejściowe |
-| 401 | `UNAUTHORIZED` | Nieprawidłowy email lub hasło |
-| 403 | `ACCOUNT_PENDING` | Konto oczekuje na weryfikację |
-| 403 | `ACCOUNT_SUSPENDED` | Konto zostało zawieszone |
-| 429 | `RATE_LIMIT_EXCEEDED` | Przekroczono limit prób logowania |
-| 500 | `INTERNAL_ERROR` | Błąd wewnętrzny serwera |
+| Status | Kod błędu                              | Znaczenie                                  |
+| ------ | -------------------------------------- | ------------------------------------------ |
+| 400    | `VALIDATION_ERROR` / `INVALID_REQUEST` | Brakujące lub nieprawidłowe dane wejściowe |
+| 401    | `UNAUTHORIZED`                         | Nieprawidłowy email lub hasło              |
+| 403    | `ACCOUNT_PENDING`                      | Konto oczekuje na weryfikację              |
+| 403    | `ACCOUNT_SUSPENDED`                    | Konto zostało zawieszone                   |
+| 429    | `RATE_LIMIT_EXCEEDED`                  | Przekroczono limit prób logowania          |
+| 500    | `INTERNAL_ERROR`                       | Błąd wewnętrzny serwera                    |
 
 ### Implementacja wywołania
 
@@ -242,7 +242,8 @@ const response = await fetch("/api/auth/login", {
 if (response.ok) {
   // @supabase/ssr automatycznie zarządza HttpOnly cookies (sb-access-token, sb-refresh-token)
   // poprzez cookie adapter w middleware. Odpowiedź zawiera TYLKO dane użytkownika i profilu.
-  const data: { user: { id: string; email: string }; profile: { id: string; status: string; role: string } } = await response.json();
+  const data: { user: { id: string; email: string }; profile: { id: string; status: string; role: string } } =
+    await response.json();
   // Przekierowanie na returnUrl lub /dashboard
   window.location.href = returnUrl || "/dashboard";
 } else {
@@ -264,26 +265,26 @@ Tokeny **nie są** dostępne dla JavaScript (ochrona przed XSS). Klient otrzymuj
 
 ## 8. Interakcje użytkownika
 
-| Interakcja | Oczekiwany rezultat |
-|---|---|
-| Wpisywanie tekstu w pole email | Aktualizacja stanu `email`. Jeśli formularz był już raz wysłany (`hasSubmitted`), uruchomienie walidacji inline. |
-| Wpisywanie tekstu w pole hasło | Aktualizacja stanu `password`. Jeśli formularz był już raz wysłany, walidacja inline. |
-| Utrata focusu pola (onBlur) | Walidacja danego pola, wyświetlenie komunikatu błędu pod polem jeśli niepoprawne. |
-| Kliknięcie przycisku pokaż/ukryj hasło | Toggle widoczności hasła (`type="password"` ↔ `type="text"`). Przycisk toggle posiada `aria-label` opisujący akcję. |
-| Kliknięcie przycisku „Zaloguj się" / Enter | Walidacja wszystkich pól. Jeśli poprawne — wyświetlenie stanu ładowania (spinner/disabled button), wywołanie API. Po odpowiedzi — przekierowanie lub komunikat błędu. |
-| Kliknięcie linku „Nie masz konta? Zarejestruj schronisko" | Nawigacja do `/auth/register`. |
+| Interakcja                                                | Oczekiwany rezultat                                                                                                                                                   |
+| --------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Wpisywanie tekstu w pole email                            | Aktualizacja stanu `email`. Jeśli formularz był już raz wysłany (`hasSubmitted`), uruchomienie walidacji inline.                                                      |
+| Wpisywanie tekstu w pole hasło                            | Aktualizacja stanu `password`. Jeśli formularz był już raz wysłany, walidacja inline.                                                                                 |
+| Utrata focusu pola (onBlur)                               | Walidacja danego pola, wyświetlenie komunikatu błędu pod polem jeśli niepoprawne.                                                                                     |
+| Kliknięcie przycisku pokaż/ukryj hasło                    | Toggle widoczności hasła (`type="password"` ↔ `type="text"`). Przycisk toggle posiada `aria-label` opisujący akcję.                                                  |
+| Kliknięcie przycisku „Zaloguj się" / Enter                | Walidacja wszystkich pól. Jeśli poprawne — wyświetlenie stanu ładowania (spinner/disabled button), wywołanie API. Po odpowiedzi — przekierowanie lub komunikat błędu. |
+| Kliknięcie linku „Nie masz konta? Zarejestruj schronisko" | Nawigacja do `/auth/register`.                                                                                                                                        |
 
 ## 9. Warunki i walidacja
 
 ### Walidacja po stronie klienta (inline)
 
-| Pole | Warunek | Komunikat błędu | Kiedy sprawdzane |
-|---|---|---|---|
-| Email | Pole niepuste | „Email jest wymagany" | onBlur, onSubmit, onChange (po pierwszym submicie) |
-| Email | Poprawny format email (regex) | „Nieprawidłowy format adresu email" | onBlur, onSubmit, onChange (po pierwszym submicie) |
-| Email | Max 255 znaków | „Email nie może przekraczać 255 znaków" | onBlur, onSubmit, onChange (po pierwszym submicie) |
-| Hasło | Pole niepuste | „Hasło jest wymagane" | onBlur, onSubmit, onChange (po pierwszym submicie) |
-| Hasło | Max 128 znaków | „Hasło nie może przekraczać 128 znaków" | onBlur, onSubmit, onChange (po pierwszym submicie) |
+| Pole  | Warunek                       | Komunikat błędu                         | Kiedy sprawdzane                                   |
+| ----- | ----------------------------- | --------------------------------------- | -------------------------------------------------- |
+| Email | Pole niepuste                 | „Email jest wymagany"                   | onBlur, onSubmit, onChange (po pierwszym submicie) |
+| Email | Poprawny format email (regex) | „Nieprawidłowy format adresu email"     | onBlur, onSubmit, onChange (po pierwszym submicie) |
+| Email | Max 255 znaków                | „Email nie może przekraczać 255 znaków" | onBlur, onSubmit, onChange (po pierwszym submicie) |
+| Hasło | Pole niepuste                 | „Hasło jest wymagane"                   | onBlur, onSubmit, onChange (po pierwszym submicie) |
+| Hasło | Max 128 znaków                | „Hasło nie może przekraczać 128 znaków" | onBlur, onSubmit, onChange (po pierwszym submicie) |
 
 ### Walidacja po stronie serwera (z API)
 
@@ -297,16 +298,16 @@ Walidacja po stronie serwera korzysta ze schematu Zod `LoginCommandSchema` (w `s
 
 ## 10. Obsługa błędów
 
-| Scenariusz | Kod API | Komunikat dla użytkownika |
-|---|---|---|
-| Nieprawidłowy email lub hasło | 401 `UNAUTHORIZED` | „Nieprawidłowy adres email lub hasło. Sprawdź dane i spróbuj ponownie." |
-| Konto oczekuje na weryfikację | 403 `ACCOUNT_PENDING` | „Twoje konto oczekuje na weryfikację. Skontaktuj się z administracją, jeśli proces trwa dłużej niż oczekiwano." |
-| Konto zawieszone | 403 `ACCOUNT_SUSPENDED` | „Twoje konto zostało zawieszone. Skontaktuj się z administracją w celu uzyskania szczegółów." |
-| Przekroczony limit prób | 429 `RATE_LIMIT_EXCEEDED` | „Zbyt wiele prób logowania. Spróbuj ponownie za kilka minut." |
-| Błędy walidacji z API | 400 `VALIDATION_ERROR` | „Sprawdź poprawność wprowadzonych danych." (+ opcjonalnie mapowanie `details` na pola) |
-| Błąd serwera | 500 `INTERNAL_ERROR` | „Wystąpił błąd serwera. Spróbuj ponownie później." |
-| Błąd sieci / brak połączenia | N/A (fetch reject) | „Nie udało się połączyć z serwerem. Sprawdź połączenie internetowe." |
-| Nieoczekiwany błąd parsowania odpowiedzi | N/A | „Wystąpił nieoczekiwany błąd. Spróbuj ponownie." |
+| Scenariusz                               | Kod API                   | Komunikat dla użytkownika                                                                                       |
+| ---------------------------------------- | ------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| Nieprawidłowy email lub hasło            | 401 `UNAUTHORIZED`        | „Nieprawidłowy adres email lub hasło. Sprawdź dane i spróbuj ponownie."                                         |
+| Konto oczekuje na weryfikację            | 403 `ACCOUNT_PENDING`     | „Twoje konto oczekuje na weryfikację. Skontaktuj się z administracją, jeśli proces trwa dłużej niż oczekiwano." |
+| Konto zawieszone                         | 403 `ACCOUNT_SUSPENDED`   | „Twoje konto zostało zawieszone. Skontaktuj się z administracją w celu uzyskania szczegółów."                   |
+| Przekroczony limit prób                  | 429 `RATE_LIMIT_EXCEEDED` | „Zbyt wiele prób logowania. Spróbuj ponownie za kilka minut."                                                   |
+| Błędy walidacji z API                    | 400 `VALIDATION_ERROR`    | „Sprawdź poprawność wprowadzonych danych." (+ opcjonalnie mapowanie `details` na pola)                          |
+| Błąd serwera                             | 500 `INTERNAL_ERROR`      | „Wystąpił błąd serwera. Spróbuj ponownie później."                                                              |
+| Błąd sieci / brak połączenia             | N/A (fetch reject)        | „Nie udało się połączyć z serwerem. Sprawdź połączenie internetowe."                                            |
+| Nieoczekiwany błąd parsowania odpowiedzi | N/A                       | „Wystąpił nieoczekiwany błąd. Spróbuj ponownie."                                                                |
 
 Wszystkie komunikaty wyświetlane są w komponencie `FormErrorAlert` nad polami formularza z atrybutem `role="alert"`, aby czytniki ekranu automatycznie ogłosiły zmianę (role="alert" implikuje aria-live="assertive").
 
@@ -329,6 +330,7 @@ Wszystkie komunikaty wyświetlane są w komponencie `FormErrorAlert` nad polami 
    - Zapewnienie dostępności: `htmlFor`/`id` na etykietach, `aria-describedby` łączący pola z komunikatami błędów, `aria-invalid` na polach z błędami, `role="alert"` na komunikatach.
 
 5. **Dodanie rate limitera do endpointu login** — W pliku `src/pages/api/auth/login.ts` dodać konfigurację rate limitera (5 prób / 15 min / IP) z wykorzystaniem istniejącej klasy `RateLimiter`. Dodać odpowiednią konfigurację do `src/lib/config.ts` w sekcji `RATE_LIMITING`:
+
    ```typescript
    LOGIN: {
      windowMs: 15 * 60 * 1000, // 15 minutes

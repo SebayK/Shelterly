@@ -149,19 +149,23 @@ profile.astro (strona Astro)
 ### 5.2. Nowe typy (do stworzenia w `src/components/profile/ProfileForm.tsx` lub wyodrębnione)
 
 #### `ProfileFormData`
+
 Dane formularza edycji profilu — odzwierciedlają edytowalne pola:
+
 ```typescript
 interface ProfileFormData {
-  name: string;         // Nazwa schroniska, wymagane, 1–255 znaków
-  city: string;         // Miasto, wymagane, 1–100 znaków
-  address: string;      // Adres, wymagane, 1–500 znaków
+  name: string; // Nazwa schroniska, wymagane, 1–255 znaków
+  city: string; // Miasto, wymagane, 1–100 znaków
+  address: string; // Adres, wymagane, 1–500 znaków
   phone_number: string; // Telefon, opcjonalne, format E.164
-  website_url: string;  // Strona www, opcjonalne, poprawny URL
+  website_url: string; // Strona www, opcjonalne, poprawny URL
 }
 ```
 
 #### `ProfileFieldErrors`
+
 Błędy walidacji poszczególnych pól:
+
 ```typescript
 interface ProfileFieldErrors {
   name?: string;
@@ -173,7 +177,9 @@ interface ProfileFieldErrors {
 ```
 
 #### `ProfileFormProps`
+
 Propsy dla głównego komponentu:
+
 ```typescript
 interface ProfileFormProps {
   profile: ProfileMeDTO;
@@ -186,23 +192,25 @@ Stan jest zarządzany lokalnie w komponencie `ProfileForm` za pomocą hooków Re
 
 ### Zmienne stanu:
 
-| Zmienna | Typ | Cel |
-|---------|-----|-----|
-| `formData` | `ProfileFormData` | Aktualne wartości pól formularza |
-| `fieldErrors` | `ProfileFieldErrors` | Błędy walidacji per pole |
-| `apiError` | `string \| null` | Globalny błąd z API |
-| `isSaving` | `boolean` | Trwa zapis profilu (PATCH) |
-| `isGeocoding` | `boolean` | Trwa geokodowanie |
-| `isUploading` | `boolean` | Trwa upload dokumentu |
-| `hasSubmitted` | `boolean` | Czy formularz był już raz wysłany (do inline walidacji) |
-| `geocodeResult` | `GeocodeResponseDTO \| null` | Wynik geokodowania |
-| `currentDocPath` | `string \| null` | Aktualna ścieżka dokumentu weryfikacyjnego |
-| `currentLocation` | `Location \| null` | Aktualne współrzędne (z profilu lub geokodowania) |
-| `uploadFile` | `File \| null` | Wybrany plik do uploadu |
-| `uploadFileError` | `string \| undefined` | Błąd walidacji pliku |
+| Zmienna           | Typ                          | Cel                                                     |
+| ----------------- | ---------------------------- | ------------------------------------------------------- |
+| `formData`        | `ProfileFormData`            | Aktualne wartości pól formularza                        |
+| `fieldErrors`     | `ProfileFieldErrors`         | Błędy walidacji per pole                                |
+| `apiError`        | `string \| null`             | Globalny błąd z API                                     |
+| `isSaving`        | `boolean`                    | Trwa zapis profilu (PATCH)                              |
+| `isGeocoding`     | `boolean`                    | Trwa geokodowanie                                       |
+| `isUploading`     | `boolean`                    | Trwa upload dokumentu                                   |
+| `hasSubmitted`    | `boolean`                    | Czy formularz był już raz wysłany (do inline walidacji) |
+| `geocodeResult`   | `GeocodeResponseDTO \| null` | Wynik geokodowania                                      |
+| `currentDocPath`  | `string \| null`             | Aktualna ścieżka dokumentu weryfikacyjnego              |
+| `currentLocation` | `Location \| null`           | Aktualne współrzędne (z profilu lub geokodowania)       |
+| `uploadFile`      | `File \| null`               | Wybrany plik do uploadu                                 |
+| `uploadFileError` | `string \| undefined`        | Błąd walidacji pliku                                    |
 
 ### Inicjalizacja stanu:
+
 `formData` jest inicjalizowane na podstawie `profile` prop:
+
 ```typescript
 const initialFormData: ProfileFormData = {
   name: profile.name ?? "",
@@ -214,6 +222,7 @@ const initialFormData: ProfileFormData = {
 ```
 
 ### Przepływ walidacji:
+
 1. **onBlur:** Walidacja pojedynczego pola na utratę focusu
 2. **onChange (po pierwszym submicie):** Inline re-walidacja zmienionego pola
 3. **onSubmit:** Walidacja wszystkich pól; jeśli błędy — focus na pierwszy błędny element
@@ -260,40 +269,41 @@ const initialFormData: ProfileFormData = {
 ### 7.5. Helper do fetch z timeoutem
 
 Reużycie wzorca z `RegisterForm`:
+
 ```typescript
-function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response>
+function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response>;
 ```
 
 ## 8. Interakcje użytkownika
 
-| # | Interakcja | Oczekiwany wynik |
-|---|-----------|------------------|
-| 1 | Załadowanie strony | Formularz pre-wypełniony aktualnymi danymi profilu, wyświetlony status i rola |
-| 2 | Edycja pola tekstowego | Aktualizacja stanu `formData`; jeśli `hasSubmitted=true` — inline walidacja |
-| 3 | Opuszczenie pola (blur) | Walidacja pola, wyświetlenie błędu inline jeśli niepoprawne |
-| 4 | Kliknięcie „Zapisz zmiany" | Walidacja wszystkich pól → jeśli błędy: focus na pierwszy błąd; jeśli OK: PATCH API → toast sukcesu lub błąd |
-| 5 | Kliknięcie „Geokoduj adres" | Walidacja pola adres → POST geocode → wyświetlenie współrzędnych i sformatowanego adresu LUB komunikat o błędzie |
-| 6 | Wybór pliku (drag & drop / klik) | Walidacja typu i rozmiaru → wyświetlenie podglądu pliku lub błąd |
-| 7 | Usunięcie wybranego pliku | Reset stanu pliku i błędu walidacji pliku |
-| 8 | Kliknięcie „Wyślij dokument" | POST upload → toast sukcesu, aktualizacja statusu dokumentu LUB błąd |
-| 9 | Próba edycji podczas zapisu | Przyciski i pola wyłączone (`disabled`) podczas operacji asynchronicznych |
+| #   | Interakcja                       | Oczekiwany wynik                                                                                                 |
+| --- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| 1   | Załadowanie strony               | Formularz pre-wypełniony aktualnymi danymi profilu, wyświetlony status i rola                                    |
+| 2   | Edycja pola tekstowego           | Aktualizacja stanu `formData`; jeśli `hasSubmitted=true` — inline walidacja                                      |
+| 3   | Opuszczenie pola (blur)          | Walidacja pola, wyświetlenie błędu inline jeśli niepoprawne                                                      |
+| 4   | Kliknięcie „Zapisz zmiany"       | Walidacja wszystkich pól → jeśli błędy: focus na pierwszy błąd; jeśli OK: PATCH API → toast sukcesu lub błąd     |
+| 5   | Kliknięcie „Geokoduj adres"      | Walidacja pola adres → POST geocode → wyświetlenie współrzędnych i sformatowanego adresu LUB komunikat o błędzie |
+| 6   | Wybór pliku (drag & drop / klik) | Walidacja typu i rozmiaru → wyświetlenie podglądu pliku lub błąd                                                 |
+| 7   | Usunięcie wybranego pliku        | Reset stanu pliku i błędu walidacji pliku                                                                        |
+| 8   | Kliknięcie „Wyślij dokument"     | POST upload → toast sukcesu, aktualizacja statusu dokumentu LUB błąd                                             |
+| 9   | Próba edycji podczas zapisu      | Przyciski i pola wyłączone (`disabled`) podczas operacji asynchronicznych                                        |
 
 ## 9. Warunki i walidacja
 
 ### 9.1. Walidacja pól formularza (klient)
 
-| Pole | Warunek | Komunikat błędu |
-|------|---------|-----------------|
-| `name` | Wymagane, niepuste po trim | „Nazwa schroniska jest wymagana." |
-| `name` | min 1, maks. 255 znaków | „Nazwa schroniska może mieć maksymalnie 255 znaków." |
-| `city` | Wymagane, niepuste po trim | „Miasto jest wymagane." |
-| `city` | min 1, maks. 100 znaków | „Nazwa miasta może mieć maksymalnie 100 znaków." |
-| `address` | Wymagane, niepuste po trim | „Adres jest wymagany." |
-| `address` | min 1, maks. 500 znaków | „Adres może mieć maksymalnie 500 znaków." |
-| `phone_number` | Opcjonalne; jeśli podane — regex `/^\+?[1-9]\d{1,14}$/` | „Podaj poprawny numer telefonu." |
-| `website_url` | Opcjonalne; jeśli podane — poprawny URL (http/https) | „Podaj poprawny adres URL." |
-| `file` | Typ: PDF, JPG, PNG | „Akceptowane formaty: PDF, JPG, PNG." |
-| `file` | Rozmiar ≤ 5 MB | „Plik nie może przekraczać 5 MB." |
+| Pole           | Warunek                                                 | Komunikat błędu                                      |
+| -------------- | ------------------------------------------------------- | ---------------------------------------------------- |
+| `name`         | Wymagane, niepuste po trim                              | „Nazwa schroniska jest wymagana."                    |
+| `name`         | min 1, maks. 255 znaków                                 | „Nazwa schroniska może mieć maksymalnie 255 znaków." |
+| `city`         | Wymagane, niepuste po trim                              | „Miasto jest wymagane."                              |
+| `city`         | min 1, maks. 100 znaków                                 | „Nazwa miasta może mieć maksymalnie 100 znaków."     |
+| `address`      | Wymagane, niepuste po trim                              | „Adres jest wymagany."                               |
+| `address`      | min 1, maks. 500 znaków                                 | „Adres może mieć maksymalnie 500 znaków."            |
+| `phone_number` | Opcjonalne; jeśli podane — regex `/^\+?[1-9]\d{1,14}$/` | „Podaj poprawny numer telefonu."                     |
+| `website_url`  | Opcjonalne; jeśli podane — poprawny URL (http/https)    | „Podaj poprawny adres URL."                          |
+| `file`         | Typ: PDF, JPG, PNG                                      | „Akceptowane formaty: PDF, JPG, PNG."                |
+| `file`         | Rozmiar ≤ 5 MB                                          | „Plik nie może przekraczać 5 MB."                    |
 
 ### 9.2. Walidacja po stronie API (serwer)
 
@@ -315,28 +325,28 @@ function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number):
 
 ### 10.1. Błędy API profilu (PATCH)
 
-| Kod HTTP | ErrorCode | Obsługa |
-|----------|-----------|---------|
-| 400 | `VALIDATION_ERROR` | Wyświetlenie `FormErrorAlert` z komunikatem; mapowanie `details` na `fieldErrors` jeśli dostępne |
-| 401 | `UNAUTHORIZED` | Przekierowanie na `/auth/login` |
-| 403 | `FORBIDDEN` | Wyświetlenie `FormErrorAlert` — „Nie można zmodyfikować chronionych pól" |
-| 500 | `INTERNAL_ERROR` | Toast błędu sonner — „Wystąpił problem z serwerem. Spróbuj ponownie." |
+| Kod HTTP | ErrorCode          | Obsługa                                                                                          |
+| -------- | ------------------ | ------------------------------------------------------------------------------------------------ |
+| 400      | `VALIDATION_ERROR` | Wyświetlenie `FormErrorAlert` z komunikatem; mapowanie `details` na `fieldErrors` jeśli dostępne |
+| 401      | `UNAUTHORIZED`     | Przekierowanie na `/auth/login`                                                                  |
+| 403      | `FORBIDDEN`        | Wyświetlenie `FormErrorAlert` — „Nie można zmodyfikować chronionych pól"                         |
+| 500      | `INTERNAL_ERROR`   | Toast błędu sonner — „Wystąpił problem z serwerem. Spróbuj ponownie."                            |
 
 ### 10.2. Błędy geokodowania (POST geocode)
 
-| Kod HTTP | ErrorCode | Obsługa |
-|----------|-----------|---------|
-| 400 | `NOT_FOUND` | Komunikat pod sekcją geokodowania — „Nie znaleziono adresu. Sprawdź poprawność." |
-| 401 | `UNAUTHORIZED` | Przekierowanie na `/auth/login` |
-| 500 | `INTERNAL_ERROR` | Toast błędu — „Nie udało się geokodować adresu." |
+| Kod HTTP | ErrorCode        | Obsługa                                                                          |
+| -------- | ---------------- | -------------------------------------------------------------------------------- |
+| 400      | `NOT_FOUND`      | Komunikat pod sekcją geokodowania — „Nie znaleziono adresu. Sprawdź poprawność." |
+| 401      | `UNAUTHORIZED`   | Przekierowanie na `/auth/login`                                                  |
+| 500      | `INTERNAL_ERROR` | Toast błędu — „Nie udało się geokodować adresu."                                 |
 
 ### 10.3. Błędy uploadu dokumentu (POST verification-document)
 
-| Kod HTTP | ErrorCode | Obsługa |
-|----------|-----------|---------|
-| 400 | `VALIDATION_ERROR` | Wyświetlenie błędu pod `FileUploadDropzone` |
-| 401 | `UNAUTHORIZED` | Przekierowanie na `/auth/login` |
-| 500 | `INTERNAL_ERROR` | Toast błędu — „Nie udało się przesłać dokumentu." |
+| Kod HTTP | ErrorCode          | Obsługa                                           |
+| -------- | ------------------ | ------------------------------------------------- |
+| 400      | `VALIDATION_ERROR` | Wyświetlenie błędu pod `FileUploadDropzone`       |
+| 401      | `UNAUTHORIZED`     | Przekierowanie na `/auth/login`                   |
+| 500      | `INTERNAL_ERROR`   | Toast błędu — „Nie udało się przesłać dokumentu." |
 
 ### 10.4. Błędy sieciowe
 

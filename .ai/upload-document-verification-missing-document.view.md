@@ -6,12 +6,12 @@ Domknąć brakujący flow dla schronisk, które zarejestrowały konto bez dokume
 
 ## Target Access Matrix
 
-| Status | Login | Dashboard | Profile | Upload document | Needs CRUD | Notes |
-| --- | --- | --- | --- | --- | --- | --- |
-| `verified` | yes | full | yes | yes | yes | standard shelter flow |
-| `pending` | yes | limited | yes | yes | no | should be guided to complete profile/document |
-| `rejected` | yes | limited | yes | yes | no | should be guided to correct submission |
-| `suspended` | no | no | no | no | no | blocked account |
+| Status      | Login | Dashboard | Profile | Upload document | Needs CRUD | Notes                                         |
+| ----------- | ----- | --------- | ------- | --------------- | ---------- | --------------------------------------------- |
+| `verified`  | yes   | full      | yes     | yes             | yes        | standard shelter flow                         |
+| `pending`   | yes   | limited   | yes     | yes             | no         | should be guided to complete profile/document |
+| `rejected`  | yes   | limited   | yes     | yes             | no         | should be guided to correct submission        |
+| `suspended` | no    | no        | no      | no              | no         | blocked account                               |
 
 ## Implementation Plan
 

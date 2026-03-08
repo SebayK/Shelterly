@@ -668,9 +668,7 @@ Cel frontendowy:
 Typ żądania dla tego widoku:
 
 ```ts
-type AdminStatusCommand =
-  | { status: "verified" }
-  | { status: "rejected"; rejection_reason: string };
+type AdminStatusCommand = { status: "verified" } | { status: "rejected"; rejection_reason: string };
 ```
 
 Typ odpowiedzi:

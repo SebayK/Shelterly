@@ -4,17 +4,17 @@
 
 Historia migracji zawiera dwie migracje oznaczone jako "DEVELOPMENT ONLY", które mimo to wejdą na produkcję przy `supabase db push`:
 
-| Migracja | Co robi | Problem |
-|---|---|---|
-| `20260119000000_init_schema.sql` | Tworzy schema + poprawne polityki RLS | OK — bazowa migracja |
-| `20260119120000_disable_rls_policies.sql` | Usuwa wszystkie polityki RLS | ⚠️ Dev-only, ale wejdzie na produkcję |
-| `20260124000000_update_handle_new_user.sql` | Aktualizuje trigger | OK |
-| `20260221000000_add_get_pending_shelters_fn.sql` | Dodaje RPC dla admina | OK |
-| `20260224000000_disable_rls.sql` | Wyłącza RLS całkowicie | ⚠️ Dev-only, ale wejdzie na produkcję |
-| `20260301000000_update_handle_new_user_full_profile.sql` | Aktualizuje trigger | OK |
-| `20260302000000_add_nip_required_for_shelter.sql` | Dodaje constraint NIP | OK |
-| `20260304000000_create_storage_buckets.sql` | Tworzy bucket storage | OK |
-| `20260304000001_create_storage_policies.sql` | Polityki RLS dla storage | OK |
+| Migracja                                                 | Co robi                               | Problem                               |
+| -------------------------------------------------------- | ------------------------------------- | ------------------------------------- |
+| `20260119000000_init_schema.sql`                         | Tworzy schema + poprawne polityki RLS | OK — bazowa migracja                  |
+| `20260119120000_disable_rls_policies.sql`                | Usuwa wszystkie polityki RLS          | ⚠️ Dev-only, ale wejdzie na produkcję |
+| `20260124000000_update_handle_new_user.sql`              | Aktualizuje trigger                   | OK                                    |
+| `20260221000000_add_get_pending_shelters_fn.sql`         | Dodaje RPC dla admina                 | OK                                    |
+| `20260224000000_disable_rls.sql`                         | Wyłącza RLS całkowicie                | ⚠️ Dev-only, ale wejdzie na produkcję |
+| `20260301000000_update_handle_new_user_full_profile.sql` | Aktualizuje trigger                   | OK                                    |
+| `20260302000000_add_nip_required_for_shelter.sql`        | Dodaje constraint NIP                 | OK                                    |
+| `20260304000000_create_storage_buckets.sql`              | Tworzy bucket storage                 | OK                                    |
+| `20260304000001_create_storage_policies.sql`             | Polityki RLS dla storage              | OK                                    |
 
 **Efekt końcowy na produkcji:** `profiles` i `needs` mają RLS **wyłączone** — każdy zalogowany użytkownik może czytać i modyfikować dane innych.
 

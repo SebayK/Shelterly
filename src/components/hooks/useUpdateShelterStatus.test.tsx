@@ -131,10 +131,13 @@ describe("useUpdateShelterStatus", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn().mockResolvedValue(
-        new Response(JSON.stringify({ error: { code: "FORBIDDEN", message: "Access restricted to super administrators" } }), {
-          status: 403,
-          headers: { "Content-Type": "application/json" },
-        })
+        new Response(
+          JSON.stringify({ error: { code: "FORBIDDEN", message: "Access restricted to super administrators" } }),
+          {
+            status: 403,
+            headers: { "Content-Type": "application/json" },
+          }
+        )
       )
     );
 

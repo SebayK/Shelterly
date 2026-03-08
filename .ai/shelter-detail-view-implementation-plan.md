@@ -53,6 +53,7 @@ shelter/[id].astro (Astro SSR Page)
 Główny plik strony odpowiedzialny za server-side rendering. Pobiera dane schroniska i jego potrzeb z API w sekcji frontmatter, waliduje dostępność danych, generuje meta tagi oraz renderuje strukturę strony ze statycznymi komponentami Astro i interaktywną wyspą React.
 
 **Główne elementy**:
+
 - Frontmatter (TypeScript):
   - Walidacja parametru `id` z URL
   - Wywołanie `ProfileService.getProfileById(id)`
@@ -65,20 +66,24 @@ Główny plik strony odpowiedzialny za server-side rendering. Pobiera dane schro
 - `<ShelterDetailView>` React island z dyrektywą `client:load`
 
 **Obsługiwane interakcje**:
+
 - Brak (komponent statyczny, interakcje w React islands)
 
 **Obsługiwana walidacja**:
+
 - Walidacja formatu UUID parametru `id` (pattern: `^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$`)
 - Sprawdzenie czy schronisko istnieje (response !== null)
 - Sprawdzenie czy schronisko jest zweryfikowane (implied by ProfileService logic)
 - Przekierowanie do 404 jeśli którykolwiek warunek nie jest spełniony
 
 **Typy**:
+
 - `ProfileDetailDTO` (from types.ts)
 - `NeedListResponseDTO` (from types.ts)
 - `NeedListItemDTO[]` (from types.ts)
 
 **Propsy**:
+
 - Brak (strona top-level)
 
 ---
@@ -89,18 +94,22 @@ Główny plik strony odpowiedzialny za server-side rendering. Pobiera dane schro
 Statyczny komponent nawigacyjny wyświetlający ścieżkę: Strona główna → [Nazwa schroniska]. Poprawia UX i pomaga w nawigacji oraz wspiera SEO poprzez strukturalną hierarchię.
 
 **Główne elementy**:
+
 - `<nav aria-label="Breadcrumb">`
 - `<ol>` lista z separatorami (np. "/" lub ">")
 - `<li>` Link do strony głównej: `<a href="/">Strona główna</a>`
 - `<li>` Aktualny element (aria-current="page"): `<span>{shelterName}</span>`
 
 **Obsługiwane interakcje**:
+
 - Kliknięcie na "Strona główna" → nawigacja do `/`
 
 **Obsługiwana walidacja**:
+
 - Brak
 
 **Typy**:
+
 ```typescript
 interface BreadcrumbProps {
   shelterName: string;
@@ -108,6 +117,7 @@ interface BreadcrumbProps {
 ```
 
 **Propsy**:
+
 - `shelterName: string` - nazwa schroniska do wyświetlenia
 
 ---
@@ -118,6 +128,7 @@ interface BreadcrumbProps {
 Statyczny nagłówek prezentujący podstawowe informacje o schronisku: nazwę, adres, miasto oraz dane kontaktowe (telefon i strona www). Elementy kontaktowe są interaktywne (clickable links).
 
 **Główne elementy**:
+
 - `<header>` sekcja
 - `<h1>` Nazwa schroniska
 - `<div>` Sekcja adresowa
@@ -128,14 +139,17 @@ Statyczny nagłówek prezentujący podstawowe informacje o schronisku: nazwę, a
   - `<a href="{website_url}" target="_blank" rel="noopener noreferrer">` Strona WWW (if exists)
 
 **Obsługiwane interakcje**:
+
 - Kliknięcie na numer telefonu → otwarcie dialera
 - Kliknięcie na WWW → otwarcie strony w nowej karcie
 
 **Obsługiwana walidacja**:
+
 - Sprawdzenie czy `phone_number` nie jest null przed wyświetleniem
 - Sprawdzenie czy `website_url` nie jest null przed wyświetleniem
 
 **Typy**:
+
 ```typescript
 interface ShelterHeaderProps {
   name: string;
@@ -147,6 +161,7 @@ interface ShelterHeaderProps {
 ```
 
 **Propsy**:
+
 - `name: string` - nazwa schroniska
 - `address: string` - adres schroniska
 - `city: string` - miasto
@@ -161,6 +176,7 @@ interface ShelterHeaderProps {
 Statyczna sekcja prezentująca podsumowanie potrzeb schroniska w formie trzech kart statystycznych: łączna liczba potrzeb, liczba pilnych potrzeb oraz liczba zrealizowanych potrzeb.
 
 **Główne elementy**:
+
 - `<section>` container
 - `<h2>` Tytuł sekcji (np. "Podsumowanie potrzeb")
 - `<div>` Grid z trzema kartami statystyk
@@ -169,12 +185,15 @@ Statyczna sekcja prezentująca podsumowanie potrzeb schroniska w formie trzech k
   - Karta 3: Ikona + Label "Zrealizowane" + Liczba `{fulfilled}`
 
 **Obsługiwane interakcje**:
+
 - Brak
 
 **Obsługiwana walidacja**:
+
 - Brak
 
 **Typy**:
+
 ```typescript
 interface NeedsSummarySectionProps {
   summary: NeedsSummary; // from types.ts
@@ -182,6 +201,7 @@ interface NeedsSummarySectionProps {
 ```
 
 **Propsy**:
+
 - `summary: NeedsSummary` - obiekt zawierający total, urgent, fulfilled
 
 ---
@@ -192,6 +212,7 @@ interface NeedsSummarySectionProps {
 Główny interaktywny kontener React (wyspa) zarządzający listą potrzeb i ich filtrowaniem. Komponent utrzymuje stan filtrów, przetwarza listę potrzeb zgodnie z wybranymi filtrami i renderuje komponenty potomne.
 
 **Główne elementy**:
+
 - `<section>` główny kontener
 - `<NeedsFilter>` komponent filtrowania
 - `<div>` Grid kontener z listą kart potrzeb
@@ -199,26 +220,30 @@ Główny interaktywny kontener React (wyspa) zarządzający listą potrzeb i ich
 - `<NeedsEmptyState>` - wyświetlany gdy brak wyników
 
 **Obsługiwane interakcje**:
+
 - Zmiana filtrów → aktualizacja stanu → przeliczenie przefiltrowanej listy
 
 **Obsługiwana walidacja**:
+
 - Walidacja wartości filtrów (muszą być valid enum values lub 'all')
 
 **Typy**:
+
 ```typescript
-import type { NeedListItemDTO, NeedCategory, UrgencyLevel } from '../types';
+import type { NeedListItemDTO, NeedCategory, UrgencyLevel } from "../types";
 
 interface ShelterDetailViewProps {
   needs: NeedListItemDTO[];
 }
 
 interface FilterState {
-  category: NeedCategory | 'all';
-  urgency: UrgencyLevel | 'all';
+  category: NeedCategory | "all";
+  urgency: UrgencyLevel | "all";
 }
 ```
 
 **Propsy**:
+
 - `needs: NeedListItemDTO[]` - pełna lista potrzeb schroniska
 
 ---
@@ -229,6 +254,7 @@ interface FilterState {
 Komponent filtrowania pozwalający na wybór kategorii potrzeb oraz poziomu pilności. Używa komponentów Shadcn/ui Select do przyjaznej interakcji.
 
 **Główne elementy**:
+
 - `<div>` kontener z dwoma select fields
 - `<Select>` (Shadcn/ui) dla kategorii
   - Options: "Wszystkie", "Karma", "Tekstylia", "Środki czystości", "Medyczne", "Zabawki", "Inne"
@@ -236,25 +262,29 @@ Komponent filtrowania pozwalający na wybór kategorii potrzeb oraz poziomu piln
   - Options: "Wszystkie", "Niska", "Średnia", "Wysoka", "Krytyczna"
 
 **Obsługiwane interakcje**:
+
 - onChange category select → wywołanie `onCategoryChange(value)`
 - onChange urgency select → wywołanie `onUrgencyChange(value)`
 
 **Obsługiwana walidacja**:
+
 - Wybrana wartość musi być valid enum value lub 'all'
 
 **Typy**:
+
 ```typescript
-import type { NeedCategory, UrgencyLevel } from '../types';
+import type { NeedCategory, UrgencyLevel } from "../types";
 
 interface NeedsFilterProps {
-  onCategoryChange: (category: NeedCategory | 'all') => void;
-  onUrgencyChange: (urgency: UrgencyLevel | 'all') => void;
-  currentCategory: NeedCategory | 'all';
-  currentUrgency: UrgencyLevel | 'all';
+  onCategoryChange: (category: NeedCategory | "all") => void;
+  onUrgencyChange: (urgency: UrgencyLevel | "all") => void;
+  currentCategory: NeedCategory | "all";
+  currentUrgency: UrgencyLevel | "all";
 }
 ```
 
 **Propsy**:
+
 - `onCategoryChange: (category: NeedCategory | 'all') => void` - callback przy zmianie kategorii
 - `onUrgencyChange: (urgency: UrgencyLevel | 'all') => void` - callback przy zmianie pilności
 - `currentCategory: NeedCategory | 'all'` - aktualna wartość filtra kategorii
@@ -268,6 +298,7 @@ interface NeedsFilterProps {
 Karta pojedynczej potrzeby prezentująca wszystkie kluczowe informacje: kategorię (ikona), tytuł, pilność (badge), opis, pasek postępu oraz przycisk "Kup online" (jeśli dostępny link).
 
 **Główne elementy**:
+
 - `<article>` semantyczny kontener
 - `<div>` Header sekcja
   - `<CategoryIcon category={need.category}>` - ikona kategorii
@@ -281,14 +312,17 @@ Karta pojedynczej potrzeby prezentująca wszystkie kluczowe informacje: kategori
   - `aria-label="Kup online - otworzy się w nowej karcie"`
 
 **Obsługiwane interakcje**:
+
 - Kliknięcie "Kup online" → otwarcie shopping_url w nowej karcie
 
 **Obsługiwana walidacja**:
+
 - Przycisk "Kup online" wyświetlany tylko gdy `shopping_url !== null`
 
 **Typy**:
+
 ```typescript
-import type { NeedListItemDTO } from '../types';
+import type { NeedListItemDTO } from "../types";
 
 interface NeedCardProps {
   need: NeedListItemDTO;
@@ -296,6 +330,7 @@ interface NeedCardProps {
 ```
 
 **Propsy**:
+
 - `need: NeedListItemDTO` - obiekt z pełnymi danymi potrzeby
 
 ---
@@ -306,6 +341,7 @@ interface NeedCardProps {
 Wizualny wskaźnik postępu zbiórki prezentujący aktualną wartość względem wartości docelowej w formie tekstowej (np. "5/50 kg") oraz graficznego paska. Implementuje wymagania ARIA dla dostępności.
 
 **Główne elementy**:
+
 - `<div>` główny kontener
 - `<div>` Tekst postępu: `{currentQuantity}/{targetQuantity} {unit}`
 - `<div>` Progress bar container
@@ -317,14 +353,17 @@ Wizualny wskaźnik postępu zbiórki prezentujący aktualną wartość względem
   - Wewnętrzny `<div>` z `width: {progressPercentage}%` i background color
 
 **Obsługiwane interakcje**:
+
 - Brak (komponent wizualny)
 
 **Obsługiwana walidacja**:
+
 - Brak
 
 **Typy**:
+
 ```typescript
-import type { NeedUnit } from '../types';
+import type { NeedUnit } from "../types";
 
 interface ProgressBarProps {
   currentQuantity: number;
@@ -335,6 +374,7 @@ interface ProgressBarProps {
 ```
 
 **Propsy**:
+
 - `currentQuantity: number` - aktualna ilość zebranych zasobów
 - `targetQuantity: number` - docelowa ilość
 - `unit: NeedUnit` - jednostka (szt, kg, l)
@@ -348,6 +388,7 @@ interface ProgressBarProps {
 Kolorowy badge wizualizujący poziom pilności potrzeby. Używa różnych kolorów tła i tekstu dla każdego poziomu urgency (low, medium, high, critical).
 
 **Główne elementy**:
+
 - `<span>` badge element z dynamiczną klasą Tailwind CSS
   - `urgency === 'low'` → klasy: bg-green-100, text-green-800
   - `urgency === 'medium'` → klasy: bg-yellow-100, text-yellow-800
@@ -360,14 +401,17 @@ Kolorowy badge wizualizujący poziom pilności potrzeby. Używa różnych kolor�
   - critical → "Krytyczna"
 
 **Obsługiwane interakcje**:
+
 - Brak
 
 **Obsługiwana walidacja**:
+
 - Brak
 
 **Typy**:
+
 ```typescript
-import type { UrgencyLevel } from '../types';
+import type { UrgencyLevel } from "../types";
 
 interface UrgencyBadgeProps {
   urgency: UrgencyLevel;
@@ -375,6 +419,7 @@ interface UrgencyBadgeProps {
 ```
 
 **Propsy**:
+
 - `urgency: UrgencyLevel` - poziom pilności
 
 ---
@@ -385,6 +430,7 @@ interface UrgencyBadgeProps {
 Komponent wyświetlający ikonę Lucide React odpowiadającą kategorii potrzeby. Mapuje enum `NeedCategory` na konkretną ikonę.
 
 **Główne elementy**:
+
 - Conditional rendering ikony Lucide:
   - `category === 'food'` → `<Utensils>` icon
   - `category === 'textiles'` → `<Shirt>` icon
@@ -394,14 +440,17 @@ Komponent wyświetlający ikonę Lucide React odpowiadającą kategorii potrzeby
   - `category === 'other'` → `<Package>` icon
 
 **Obsługiwane interakcje**:
+
 - Brak
 
 **Obsługiwana walidacja**:
+
 - Brak
 
 **Typy**:
+
 ```typescript
-import type { NeedCategory } from '../types';
+import type { NeedCategory } from "../types";
 
 interface CategoryIconProps {
   category: NeedCategory;
@@ -410,6 +459,7 @@ interface CategoryIconProps {
 ```
 
 **Propsy**:
+
 - `category: NeedCategory` - kategoria potrzeby
 - `className?: string` - opcjonalne dodatkowe klasy CSS
 
@@ -421,18 +471,22 @@ interface CategoryIconProps {
 Komponent wyświetlany gdy lista potrzeb po filtrowaniu jest pusta. Informuje użytkownika o braku wyników i sugeruje zmianę filtrów.
 
 **Główne elementy**:
+
 - `<div>` kontener z centrowaniem
 - Ikona (np. `<PackageOpen>` z Lucide)
 - `<p>` Komunikat: "Nie znaleziono potrzeb pasujących do wybranych filtrów"
 - `<p>` Podpowiedź: "Spróbuj zmienić kryteria wyszukiwania"
 
 **Obsługiwane interakcje**:
+
 - Brak
 
 **Obsługiwana walidacja**:
+
 - Brak
 
 **Typy**:
+
 ```typescript
 interface NeedsEmptyStateProps {
   // brak props
@@ -440,6 +494,7 @@ interface NeedsEmptyStateProps {
 ```
 
 **Propsy**:
+
 - Brak
 
 ---
@@ -451,6 +506,7 @@ interface NeedsEmptyStateProps {
 Wszystkie potrzebne typy DTO są już zdefiniowane w `src/types.ts`:
 
 **ProfileDetailDTO**:
+
 ```typescript
 {
   id: string;
@@ -466,6 +522,7 @@ Wszystkie potrzebne typy DTO są już zdefiniowane w `src/types.ts`:
 ```
 
 **NeedListItemDTO**:
+
 ```typescript
 {
   id: string;
@@ -484,6 +541,7 @@ Wszystkie potrzebne typy DTO są już zdefiniowane w `src/types.ts`:
 ```
 
 **Enumy**:
+
 - `NeedCategory`: 'food' | 'textiles' | 'cleaning' | 'medical' | 'toys' | 'other'
 - `UrgencyLevel`: 'low' | 'medium' | 'high' | 'critical'
 - `NeedUnit`: 'szt' | 'kg' | 'l'
@@ -491,16 +549,19 @@ Wszystkie potrzebne typy DTO są już zdefiniowane w `src/types.ts`:
 ### 5.2. Nowe typy komponentów
 
 **FilterState** (stan filtrów w ShelterDetailView):
+
 ```typescript
 interface FilterState {
-  category: NeedCategory | 'all';
-  urgency: UrgencyLevel | 'all';
+  category: NeedCategory | "all";
+  urgency: UrgencyLevel | "all";
 }
 ```
+
 - `category`: Obecnie wybrany filtr kategorii, wartość 'all' oznacza brak filtrowania
 - `urgency`: Obecnie wybrany filtr pilności, wartość 'all' oznacza brak filtrowania
 
 **Props interface dla każdego komponentu** (szczegóły w sekcji 4 powyżej):
+
 - `BreadcrumbProps`
 - `ShelterHeaderProps`
 - `NeedsSummarySectionProps`
@@ -519,6 +580,7 @@ interface FilterState {
 Dane są pobierane jednokrotnie podczas SSR i przekazywane do komponentów jako props. Brak persystencji stanu po stronie serwera poza czasem renderowania.
 
 **Pobierane dane**:
+
 ```typescript
 const shelterProfile: ProfileDetailDTO = await ProfileService.getProfileById(id);
 const needsResponse: NeedListResponseDTO = await NeedsService.getNeeds({ shelter_id: id });
@@ -531,27 +593,28 @@ const needs: NeedListItemDTO[] = needsResponse.data;
 
 ```typescript
 const [filterState, setFilterState] = useState<FilterState>({
-  category: 'all',
-  urgency: 'all'
+  category: "all",
+  urgency: "all",
 });
 
 const filteredNeeds = useMemo(() => {
-  return needs.filter(need => {
-    const categoryMatch = filterState.category === 'all' || need.category === filterState.category;
-    const urgencyMatch = filterState.urgency === 'all' || need.urgency === filterState.urgency;
+  return needs.filter((need) => {
+    const categoryMatch = filterState.category === "all" || need.category === filterState.category;
+    const urgencyMatch = filterState.urgency === "all" || need.urgency === filterState.urgency;
     return categoryMatch && urgencyMatch;
   });
 }, [needs, filterState]);
 ```
 
 **Callbacks dla filtrów**:
+
 ```typescript
-const handleCategoryChange = (category: NeedCategory | 'all') => {
-  setFilterState(prev => ({ ...prev, category }));
+const handleCategoryChange = (category: NeedCategory | "all") => {
+  setFilterState((prev) => ({ ...prev, category }));
 };
 
-const handleUrgencyChange = (urgency: UrgencyLevel | 'all') => {
-  setFilterState(prev => ({ ...prev, urgency }));
+const handleUrgencyChange = (urgency: UrgencyLevel | "all") => {
+  setFilterState((prev) => ({ ...prev, urgency }));
 };
 ```
 
@@ -563,31 +626,31 @@ Dla uproszczenia logiki filtrowania można wydzielić custom hook:
 // src/components/hooks/useNeedsFilter.ts
 export function useNeedsFilter(needs: NeedListItemDTO[]) {
   const [filterState, setFilterState] = useState<FilterState>({
-    category: 'all',
-    urgency: 'all'
+    category: "all",
+    urgency: "all",
   });
 
   const filteredNeeds = useMemo(() => {
-    return needs.filter(need => {
-      const categoryMatch = filterState.category === 'all' || need.category === filterState.category;
-      const urgencyMatch = filterState.urgency === 'all' || need.urgency === filterState.urgency;
+    return needs.filter((need) => {
+      const categoryMatch = filterState.category === "all" || need.category === filterState.category;
+      const urgencyMatch = filterState.urgency === "all" || need.urgency === filterState.urgency;
       return categoryMatch && urgencyMatch;
     });
   }, [needs, filterState]);
 
-  const setCategory = (category: NeedCategory | 'all') => {
-    setFilterState(prev => ({ ...prev, category }));
+  const setCategory = (category: NeedCategory | "all") => {
+    setFilterState((prev) => ({ ...prev, category }));
   };
 
-  const setUrgency = (urgency: UrgencyLevel | 'all') => {
-    setFilterState(prev => ({ ...prev, urgency }));
+  const setUrgency = (urgency: UrgencyLevel | "all") => {
+    setFilterState((prev) => ({ ...prev, urgency }));
   };
 
   return {
     filteredNeeds,
     filterState,
     setCategory,
-    setUrgency
+    setUrgency,
   };
 }
 ```
@@ -603,17 +666,24 @@ export function useNeedsFilter(needs: NeedListItemDTO[]) {
 const shelterProfile = await ProfileService.getProfileById(id);
 
 // Response type: ProfileDetailDTO
-// Success (200): 
+// Success (200):
 {
   id: string;
   name: string;
   city: string;
   address: string;
-  location: { lat: number; lon: number; };
+  location: {
+    lat: number;
+    lon: number;
+  }
   phone_number: string | null;
   website_url: string | null;
   created_at: string;
-  needs_summary: { total: number; urgent: number; fulfilled: number; };
+  needs_summary: {
+    total: number;
+    urgent: number;
+    fulfilled: number;
+  }
 }
 
 // Error handling:
@@ -625,7 +695,7 @@ const shelterProfile = await ProfileService.getProfileById(id);
 
 ```typescript
 // Request
-const needsResponse = await NeedsService.getNeeds({ 
+const needsResponse = await NeedsService.getNeeds({
   shelter_id: id,
   fulfilled: false // only active needs
 });
@@ -646,47 +716,55 @@ const needsResponse = await NeedsService.getNeeds({
 ## 8. Interakcje użytkownika
 
 ### 8.1. Nawigacja Breadcrumb
+
 - **Akcja**: Użytkownik klika "Strona główna" w breadcrumb
 - **Reakcja**: Przejście do `/` (strona główna z mapą)
 
 ### 8.2. Kontakt telefoniczny
+
 - **Akcja**: Użytkownik klika numer telefonu w ShelterHeader
 - **Reakcja**: Otwarcie aplikacji telefonu/dialera z wypełnionym numerem (`tel:` protocol)
 
 ### 8.3. Otwarcie strony WWW schroniska
+
 - **Akcja**: Użytkownik klika link strony WWW w ShelterHeader
 - **Reakcja**: Otwarcie strony w nowej karcie przeglądarki (`target="_blank"`, `rel="noopener noreferrer"`)
 
 ### 8.4. Filtrowanie po kategorii
+
 - **Akcja**: Użytkownik wybiera kategorię z dropdownu (np. "Karma")
-- **Reakcja**: 
+- **Reakcja**:
   - Aktualizacja stanu `filterState.category`
   - Przeliczenie `filteredNeeds` (useMemo)
   - Re-render listy kart potrzeb z tylko tymi, które pasują do wybranej kategorii
   - Jeśli brak wyników → wyświetlenie `<NeedsEmptyState>`
 
 ### 8.5. Filtrowanie po pilności
+
 - **Akcja**: Użytkownik wybiera pilność z dropdownu (np. "Wysoka")
-- **Reakcja**: 
+- **Reakcja**:
   - Aktualizacja stanu `filterState.urgency`
   - Przeliczenie `filteredNeeds` (useMemo)
   - Re-render listy kart potrzeb z tylko tymi, które pasują do wybranego poziomu pilności
   - Jeśli brak wyników → wyświetlenie `<NeedsEmptyState>`
 
 ### 8.6. Combined filtering
+
 - **Akcja**: Użytkownik ustawia zarówno kategorię jak i pilność
 - **Reakcja**: Lista filtrowana według obu kryteriów jednocześnie (AND logic)
 
 ### 8.7. Kliknięcie "Kup online"
+
 - **Akcja**: Użytkownik klika przycisk "Kup online" w NeedCard
-- **Reakcja**: 
+- **Reakcja**:
   - Otwarcie `need.shopping_url` w nowej karcie
   - Użytkownik jest przekierowany do zewnętrznej strony (np. Ceneo, Google Shopping)
   - Oryginalny tab pozostaje na stronie schroniska
 
 ### 8.8. Wizualizacja postępu
+
 - **Akcja**: Użytkownik przegląda karty potrzeb
-- **Reakcja**: 
+- **Reakcja**:
   - Wizualna prezentacja postępu przez `<ProgressBar>`
   - Tekst informacyjny (np. "15/50 kg")
   - Pasek wypełniony proporcjonalnie do `progress_percentage`
@@ -697,18 +775,21 @@ const needsResponse = await NeedsService.getNeeds({
 ### 9.1. Walidacja server-side (Astro frontmatter)
 
 **Walidacja ID parametru**:
+
 - **Warunek**: `id` musi być poprawnym UUID
 - **Komponent**: Astro page frontmatter
 - **Implementacja**: Użycie `ProfileIdParamsSchema` z Zod (z `src/lib/validation/profile.schemas.ts`)
 - **Wpływ na UI**: Jeśli niepoprawny format → zwrócenie 404
 
 **Walidacja istnienia schroniska**:
+
 - **Warunek**: Schronisko o podanym ID musi istnieć w bazie
 - **Komponent**: Astro page frontmatter
 - **Implementacja**: `ProfileService.getProfileById(id)` throw NotFoundError jeśli nie istnieje
 - **Wpływ na UI**: Catch NotFoundError → zwrócenie 404
 
 **Walidacja statusu weryfikacji**:
+
 - **Warunek**: Schronisko musi mieć status `verified`
 - **Komponent**: Astro page frontmatter (logika w ProfileService)
 - **Implementacja**: Service layer filtruje tylko zweryfikowane schroniska
@@ -717,28 +798,36 @@ const needsResponse = await NeedsService.getNeeds({
 ### 9.2. Walidacja client-side (React)
 
 **Walidacja wartości filtrów**:
+
 - **Warunek**: Wybrane wartości filtrów muszą być valid enum values lub 'all'
 - **Komponent**: `<NeedsFilter>`
 - **Implementacja**: TypeScript type checking + controlled Select components (Shadcn/ui)
 - **Wpływ na UI**: Niemożliwe wybranie niepoprawnej wartości dzięki Select options
 
 **Walidacja dostępności shopping_url**:
+
 - **Warunek**: Przycisk "Kup online" wyświetlany tylko gdy `need.shopping_url !== null`
 - **Komponent**: `<NeedCard>`
 - **Implementacja**: Conditional rendering `{need.shopping_url && <a>...}</a>}`
 - **Wpływ na UI**: Przycisk nie jest renderowany jeśli brak linku
 
 **Walidacja opcjonalnych pól kontaktowych**:
+
 - **Warunek**: Telefon i strona WWW wyświetlane tylko gdy nie są null
 - **Komponent**: `<ShelterHeader>`
-- **Implementacja**: 
+- **Implementacja**:
   ```tsx
-  {phoneNumber && <a href={`tel:${phoneNumber}`}>...</a>}
-  {websiteUrl && <a href={websiteUrl}>...</a>}
+  {
+    phoneNumber && <a href={`tel:${phoneNumber}`}>...</a>;
+  }
+  {
+    websiteUrl && <a href={websiteUrl}>...</a>;
+  }
   ```
 - **Wpływ na UI**: Brak wyświetlenia elementu jeśli wartość null
 
 **Walidacja opisu potrzeby**:
+
 - **Warunek**: Opis wyświetlany tylko gdy `need.description !== null`
 - **Komponent**: `<NeedCard>`
 - **Implementacja**: `{need.description && <p>{need.description}</p>}`
@@ -749,24 +838,28 @@ const needsResponse = await NeedsService.getNeeds({
 ### 10.1. Błędy server-side
 
 **Scenario 1: Niepoprawny format ID**
+
 - **Typ błędu**: Validation error
 - **Kod HTTP**: 400 (lub redirect do 404)
 - **Obsługa**: Walidacja w frontmatter → return Astro.redirect('/404')
 - **Komunikat użytkownikowi**: Standardowa strona 404 "Nie znaleziono schroniska"
 
 **Scenario 2: Schronisko nie istnieje**
+
 - **Typ błędu**: NotFoundError
 - **Kod HTTP**: 404
 - **Obsługa**: Catch NotFoundError w try-catch → return Astro.redirect('/404')
 - **Komunikat użytkownikowi**: Standardowa strona 404 "Nie znaleziono schroniska"
 
 **Scenario 3: Schronisko niezweryfikowane**
+
 - **Typ błędu**: Logika biznesowa (traktowane jako not found)
 - **Kod HTTP**: 404
 - **Obsługa**: ProfileService zwraca null → redirect to 404
 - **Komunikat użytkownikowi**: Standardowa strona 404 (z bezpieczeństwa nie ujawniamy, że schronisko istnieje ale jest niezweryfikowane)
 
 **Scenario 4: Błąd połączenia z bazą danych**
+
 - **Typ błędu**: Database error / Internal error
 - **Kod HTTP**: 500
 - **Obsługa**: Catch generic Error → display error page
@@ -774,6 +867,7 @@ const needsResponse = await NeedsService.getNeeds({
 - **Logging**: console.error z pełnymi szczegółami błędu
 
 **Scenario 5: Błąd podczas pobierania listy potrzeb**
+
 - **Typ błędu**: Service error
 - **Kod HTTP**: 500
 - **Obsługa**: Catch w try-catch → display error page lub render page z pustą listą + komunikatem
@@ -782,21 +876,25 @@ const needsResponse = await NeedsService.getNeeds({
 ### 10.2. Błędy client-side
 
 **Scenario 6: Brak wyników po filtrowaniu**
+
 - **Typ błędu**: Nie jest błędem, ale edge case
 - **Obsługa**: Sprawdzenie `filteredNeeds.length === 0` → render `<NeedsEmptyState>`
 - **Komunikat użytkownikowi**: "Nie znaleziono potrzeb pasujących do wybranych filtrów. Spróbuj zmienić kryteria wyszukiwania."
 
 **Scenario 7: Nieprawidłowy shopping_url**
+
 - **Typ błędu**: Potencjalnie malformed URL (nie powinno się zdarzyć przy poprawnej walidacji w backend)
 - **Obsługa**: Walidacja URL przed renderowaniem linku, lub pozwolenie przeglądarce obsłużyć
 - **Komunikat użytkownikowi**: Link może nie działać, użytkownik zobaczy błąd przeglądarki
 
 **Scenario 8: Brak uprawnień do geolokalizacji (nie dotyczy tego widoku)**
+
 - Nie applicable - widok nie używa geolokalizacji
 
 ## 11. Kroki implementacji
 
 ### Krok 1: Przygotowanie struktury plików
+
 1. Utworzenie katalogu `src/pages/shelter/`
 2. Utworzenie pliku `src/pages/shelter/[id].astro`
 3. Utworzenie katalogu `src/components/shelter-detail/`
@@ -814,27 +912,30 @@ const needsResponse = await NeedsService.getNeeds({
    - `src/components/shelter-detail/NeedsSummarySection.astro`
 
 ### Krok 2: Implementacja serwisów (jeśli nie istnieją)
+
 1. Sprawdzenie czy `ProfileService.getProfileById()` istnieje w `src/lib/services/profile.service.ts`
 2. Sprawdzenie czy `NeedsService.getNeeds()` istnieje w `src/lib/services/needs.service.ts`
 3. Implementacja brakujących metod zgodnie z API requirements
 
 ### Krok 3: Implementacja walidacji
+
 1. Sprawdzenie czy `ProfileIdParamsSchema` istnieje w `src/lib/validation/profile.schemas.ts`
 2. Implementacja schematu Zod jeśli nie istnieje:
    ```typescript
    export const ProfileIdParamsSchema = z.object({
-     id: z.string().uuid()
+     id: z.string().uuid(),
    });
    ```
 
 ### Krok 4: Implementacja komponentów leaf (od najmniejszych do największych)
+
 1. **CategoryIcon.tsx**:
    - Import ikon Lucide (Utensils, Shirt, Sparkles, HeartPulse, Dog, Package)
    - Stworzenie mapy category → icon component
    - Implementacja conditional rendering
 
 2. **UrgencyBadge.tsx**:
-   - Stworzenie mapy urgency → klasy Tailwind (bg-*, text-*)
+   - Stworzenie mapy urgency → klasy Tailwind (`bg-*`, `text-*`)
    - Stworzenie mapy urgency → polskie labele
    - Implementacja renderowania span z dynamicznymi klasami
 
@@ -849,6 +950,7 @@ const needsResponse = await NeedsService.getNeeds({
    - Implementacja komunikatu z centrowaniem
 
 ### Krok 5: Implementacja komponentów kompozytowych
+
 1. **NeedCard.tsx**:
    - Import komponentów leaf (CategoryIcon, UrgencyBadge, ProgressBar)
    - Struktura semantyczna HTML (article, h3)
@@ -862,11 +964,13 @@ const needsResponse = await NeedsService.getNeeds({
    - Implementacja controlled components z callbackami onChange
 
 ### Krok 6: Implementacja custom hook (opcjonalnie)
+
 1. Utworzenie pliku `src/components/hooks/useNeedsFilter.ts`
 2. Implementacja hooka zgodnie z sekcją 6.3
 3. Export hooka
 
 ### Krok 7: Implementacja głównego komponentu React
+
 1. **ShelterDetailView.tsx**:
    - Import wszystkich child components
    - Import useState, useMemo z React
@@ -877,6 +981,7 @@ const needsResponse = await NeedsService.getNeeds({
    - Conditional rendering NeedsEmptyState
 
 ### Krok 8: Implementacja komponentów Astro statycznych
+
 1. **Breadcrumb.astro**:
    - Implementacja struktury nav > ol > li
    - Stylowanie z Tailwind
@@ -895,6 +1000,7 @@ const needsResponse = await NeedsService.getNeeds({
    - Stylowanie z Tailwind
 
 ### Krok 9: Implementacja głównej strony Astro
+
 1. **shelter/[id].astro frontmatter**:
    - Import ProfileService, NeedsService
    - Import validation schema
@@ -918,12 +1024,14 @@ const needsResponse = await NeedsService.getNeeds({
    - Renderowanie `<ShelterDetailView needs={needs.data} client:load>`
 
 ### Krok 10: Stylowanie i responsywność
+
 1. Przejście przez wszystkie komponenty i dodanie responsive Tailwind classes
 2. Testowanie na różnych rozmiarach ekranu (mobile, tablet, desktop)
 3. Upewnienie się, że grid layouts adaptują się (np. 1 kolumna na mobile, 2-3 na desktop)
 4. Testowanie dark mode support (jeśli wymagane)
 
 ### Krok 11: Testy accessibility
+
 1. Uruchomienie strony i testowanie z keyboard navigation (Tab, Enter)
 2. Testowanie z screen readerem (VoiceOver na macOS, NVDA na Windows)
 3. Sprawdzenie czy wszystkie elementy interaktywne są focusable
@@ -932,6 +1040,7 @@ const needsResponse = await NeedsService.getNeeds({
 6. Sprawdzenie atrybutów ARIA we wszystkich komponentach
 
 ### Krok 12: Testy funkcjonalne
+
 1. **Test flow 1**: Otwarcie strony z poprawnym ID → sprawdzenie czy dane się ładują
 2. **Test flow 2**: Otwarcie strony z niepoprawnym ID → sprawdzenie 404
 3. **Test flow 3**: Filtrowanie po kategorii "Karma" → sprawdzenie czy lista się aktualizuje
@@ -944,6 +1053,7 @@ const needsResponse = await NeedsService.getNeeds({
 10. **Test flow 10**: Breadcrumb navigation → sprawdzenie przekierowania do home
 
 ### Krok 13: Optymalizacja wydajności
+
 1. Sprawdzenie czy `useMemo` jest użyte dla filtered needs (zapobiega re-computation)
 2. Sprawdzenie czy komponenty child nie re-renderują się niepotrzebnie
 3. Rozważenie użycia `React.memo()` dla drogich komponentów (jeśli potrzebne)
@@ -951,6 +1061,7 @@ const needsResponse = await NeedsService.getNeeds({
 5. Sprawdzenie Lighthouse score (Performance, Accessibility, SEO)
 
 ### Krok 14: SEO i meta tags
+
 1. Implementacja dynamicznych meta tags w head:
    - `<title>{shelter.name} - Shelterly</title>`
    - `<meta name="description" content="...">`
@@ -960,6 +1071,7 @@ const needsResponse = await NeedsService.getNeeds({
 3. Sprawdzenie czy canonical URL jest poprawny
 
 ### Krok 15: Code review i refactoring
+
 1. Review kodu pod kątem zgodności z project coding guidelines
 2. Sprawdzenie type safety (brak any types)
 3. Sprawdzenie czy wszystkie importy są poprawne
@@ -968,11 +1080,13 @@ const needsResponse = await NeedsService.getNeeds({
 6. Dodanie komentarzy JSDoc gdzie potrzebne
 
 ### Krok 16: Dokumentacja
+
 1. Dodanie README.md w `src/components/shelter-detail/` z opisem komponentów
 2. Dokumentacja props interfaces z JSDoc comments
 3. Dodanie przykładów użycia w kommentarzach (jeśli pomocne)
 
 ### Krok 17: Final testing
+
 1. End-to-end test pełnego user flow
 2. Cross-browser testing (Chrome, Firefox, Safari)
 3. Mobile testing (iOS Safari, Android Chrome)
@@ -980,6 +1094,7 @@ const needsResponse = await NeedsService.getNeeds({
 5. Testing z wolnym połączeniem internetowym
 
 ### Krok 18: Deployment preparation
+
 1. Sprawdzenie czy wszystkie environment variables są poprawnie skonfigurowane
 2. Testing na staging environment (jeśli dostępny)
 3. Przygotowanie release notes

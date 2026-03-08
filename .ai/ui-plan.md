@@ -440,16 +440,16 @@ Serwer renderuje navbar warunkowo na podstawie `locals.session` i `locals.profil
 
 ### 4.4. Przepływy nawigacji i guardy
 
-| Ścieżka | Wymaganie auth | Guard middleware | Redirect przy braku dostępu |
-| --- | --- | --- | --- |
-| `/` | Brak | — | — |
-| `/shelter/[id]` | Brak | — | 404 jeśli schronisko nie istnieje |
-| `/auth/login` | Brak | Redirect zalogowanego zgodnie z rolą i statusem (`/admin`, `/dashboard`, `/dashboard/profile`) | — |
-| `/auth/register` | Brak | Redirect zalogowanego zgodnie z rolą i statusem | — |
-| `/auth/pending` | Brak | — | — |
-| `/dashboard` | Sesja wymagana | `locals.session` + redirect `pending/rejected` do `/dashboard/profile` | `/auth/login?return=/dashboard` |
-| `/dashboard/profile` | Sesja wymagana | `locals.session` | `/auth/login?return=/dashboard/profile` |
-| `/admin` | Sesja + super_admin | `locals.session` + `locals.profile.role` | `/auth/login` lub 403 |
+| Ścieżka              | Wymaganie auth      | Guard middleware                                                                               | Redirect przy braku dostępu             |
+| -------------------- | ------------------- | ---------------------------------------------------------------------------------------------- | --------------------------------------- |
+| `/`                  | Brak                | —                                                                                              | —                                       |
+| `/shelter/[id]`      | Brak                | —                                                                                              | 404 jeśli schronisko nie istnieje       |
+| `/auth/login`        | Brak                | Redirect zalogowanego zgodnie z rolą i statusem (`/admin`, `/dashboard`, `/dashboard/profile`) | —                                       |
+| `/auth/register`     | Brak                | Redirect zalogowanego zgodnie z rolą i statusem                                                | —                                       |
+| `/auth/pending`      | Brak                | —                                                                                              | —                                       |
+| `/dashboard`         | Sesja wymagana      | `locals.session` + redirect `pending/rejected` do `/dashboard/profile`                         | `/auth/login?return=/dashboard`         |
+| `/dashboard/profile` | Sesja wymagana      | `locals.session`                                                                               | `/auth/login?return=/dashboard/profile` |
+| `/admin`             | Sesja + super_admin | `locals.session` + `locals.profile.role`                                                       | `/auth/login` lub 403                   |
 
 ---
 
@@ -457,76 +457,76 @@ Serwer renderuje navbar warunkowo na podstawie `locals.session` i `locals.profil
 
 ### 5.1. Komponenty nawigacji i layoutu
 
-| Komponent | Typ | Opis |
-| --- | --- | --- |
-| `Navbar.astro` | Astro | Sticky nawigacja z logo, linkami auth lub avatar dropdown. Renderowany SSR warunkowo wg roli. Zero JS. |
-| `Layout.astro` | Astro | Layout główny z meta tagami, global CSS, Navbar, slot na content. |
-| `DashboardLayout.astro` | Astro | Layout dashboardu z Navbar, StatusBanner, sidebar/bottom nav, slot. |
-| `StatusBanner.astro` | Astro | Warunkowy baner statusu konta (pending/suspended/rejected). Dla `rejected` może wyświetlać zapisany `rejection_reason`. Renderowany SSR — brak flashu. |
+| Komponent               | Typ   | Opis                                                                                                                                                   |
+| ----------------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `Navbar.astro`          | Astro | Sticky nawigacja z logo, linkami auth lub avatar dropdown. Renderowany SSR warunkowo wg roli. Zero JS.                                                 |
+| `Layout.astro`          | Astro | Layout główny z meta tagami, global CSS, Navbar, slot na content.                                                                                      |
+| `DashboardLayout.astro` | Astro | Layout dashboardu z Navbar, StatusBanner, sidebar/bottom nav, slot.                                                                                    |
+| `StatusBanner.astro`    | Astro | Warunkowy baner statusu konta (pending/suspended/rejected). Dla `rejected` może wyświetlać zapisany `rejection_reason`. Renderowany SSR — brak flashu. |
 
 ### 5.2. Komponenty eksploratora schronisk
 
-| Komponent | Typ | Opis |
-| --- | --- | --- |
-| `ShelterExplorer` | React | Root island strony głównej. Zarządza split-view, stanem mapy i listy. Opakowuje `ShelterExplorerContext`. |
-| `ShelterExplorerContext` | React Context | Współdzielony stan: filtry, geolokalizacja, selected marker, mobile view mode. |
-| `MapView` | React | Mapa Leaflet z OpenStreetMap tiles, klasteringiem markerów, obsługą zoomu i centrowania. |
-| `ShelterMarker` | React | Marker na mapie z popup (nazwa, miasto, odległość, potrzeby, przycisk „Zobacz szczegóły"). |
-| `ShelterList` | React | Scrollowalna lista kart schronisk z obsługą loading/empty state. |
-| `ShelterCard` | React | Karta schroniska w liście: nazwa, miasto, odległość, liczba potrzeb, badge pilności. Link do `/shelter/[id]`. |
-| `ShelterFilters` | React | Toggle „Tylko pilne potrzeby" (Switch) + opcjonalne pole wyszukiwania miasta. |
-| `LocationBanner` | React | Baner informacyjny gdy geolokalizacja odrzucona — sugestia wyszukiwania po mieście. |
-| `MobileViewToggle` | React | FAB przełączający widok mapa/lista na mobile. |
+| Komponent                | Typ           | Opis                                                                                                          |
+| ------------------------ | ------------- | ------------------------------------------------------------------------------------------------------------- |
+| `ShelterExplorer`        | React         | Root island strony głównej. Zarządza split-view, stanem mapy i listy. Opakowuje `ShelterExplorerContext`.     |
+| `ShelterExplorerContext` | React Context | Współdzielony stan: filtry, geolokalizacja, selected marker, mobile view mode.                                |
+| `MapView`                | React         | Mapa Leaflet z OpenStreetMap tiles, klasteringiem markerów, obsługą zoomu i centrowania.                      |
+| `ShelterMarker`          | React         | Marker na mapie z popup (nazwa, miasto, odległość, potrzeby, przycisk „Zobacz szczegóły").                    |
+| `ShelterList`            | React         | Scrollowalna lista kart schronisk z obsługą loading/empty state.                                              |
+| `ShelterCard`            | React         | Karta schroniska w liście: nazwa, miasto, odległość, liczba potrzeb, badge pilności. Link do `/shelter/[id]`. |
+| `ShelterFilters`         | React         | Toggle „Tylko pilne potrzeby" (Switch) + opcjonalne pole wyszukiwania miasta.                                 |
+| `LocationBanner`         | React         | Baner informacyjny gdy geolokalizacja odrzucona — sugestia wyszukiwania po mieście.                           |
+| `MobileViewToggle`       | React         | FAB przełączający widok mapa/lista na mobile.                                                                 |
 
 ### 5.3. Komponenty potrzeb (reużywalne)
 
-| Komponent | Typ | Opis |
-| --- | --- | --- |
-| `NeedCard` | React | Karta potrzeby: `CategoryIcon`, tytuł, opis, `ProgressBar`, `UrgencyBadge`, przycisk „Kup online", opcjonalny slot `actions` (wzorzec composition). Używana na stronie publicznej i w dashboardzie. |
-| `ProgressBar` | React | Wizualny pasek postępu z etykietą „X/Y jednostka". `role="progressbar"` z pełnymi atrybutami ARIA. |
-| `UrgencyBadge` | React | Badge z kolorowym oznaczeniem poziomu pilności: low=szary, normal=niebieski, high=pomarańżowy, urgent=czerwony, critical=czerwony pulsujący. Oparty na Shadcn/ui `Badge`. |
-| `CategoryIcon` | React | Ikona Lucide mapowana na kategorię: food→Utensils, textiles→Shirt, cleaning→SprayCan, medical→Stethoscope, toys→ToyBrick, other→Package. |
-| `NeedsFilter` | React | Filtr kategorii i pilności dla listy potrzeb na stronie szczegółów schroniska. |
+| Komponent      | Typ   | Opis                                                                                                                                                                                                |
+| -------------- | ----- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NeedCard`     | React | Karta potrzeby: `CategoryIcon`, tytuł, opis, `ProgressBar`, `UrgencyBadge`, przycisk „Kup online", opcjonalny slot `actions` (wzorzec composition). Używana na stronie publicznej i w dashboardzie. |
+| `ProgressBar`  | React | Wizualny pasek postępu z etykietą „X/Y jednostka". `role="progressbar"` z pełnymi atrybutami ARIA.                                                                                                  |
+| `UrgencyBadge` | React | Badge z kolorowym oznaczeniem poziomu pilności: low=szary, normal=niebieski, high=pomarańżowy, urgent=czerwony, critical=czerwony pulsujący. Oparty na Shadcn/ui `Badge`.                           |
+| `CategoryIcon` | React | Ikona Lucide mapowana na kategorię: food→Utensils, textiles→Shirt, cleaning→SprayCan, medical→Stethoscope, toys→ToyBrick, other→Package.                                                            |
+| `NeedsFilter`  | React | Filtr kategorii i pilności dla listy potrzeb na stronie szczegółów schroniska.                                                                                                                      |
 
 ### 5.4. Komponenty dashboardu
 
-| Komponent | Typ | Opis |
-| --- | --- | --- |
-| `NeedsManager` | React | Root island dashboardu. Tabela potrzeb z paginacją, akcjami CRUD i statusowymi blokadami dla kont niezweryfikowanych. |
-| `NeedFormDialog` | React | Modal (Shadcn/ui Dialog) do tworzenia i edycji potrzeby. Pola: kategoria, tytuł, opis, link zakupowy, pilność, ilość docelowa, ilość obecna, jednostka. Integracja z AI helperami. |
-| `AIGenerateButton` | React | Przycisk inline obok pola formularza. Wywołuje endpoint AI, wstawia wynik do pola. Pokazuje spinner i obsługuje limit/error. |
-| `ProfileForm` | React | Formularz edycji profilu z lokalnym stanem i helperami walidacji. Pokazuje status konta, opcjonalny `rejection_reason`, geokodowanie i upload dokumentu. |
-| `VerificationUpload` | React | Komponent uploadu dokumentu z drag & drop, podglądem pliku, walidacją formatu/rozmiaru. |
+| Komponent            | Typ   | Opis                                                                                                                                                                               |
+| -------------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `NeedsManager`       | React | Root island dashboardu. Tabela potrzeb z paginacją, akcjami CRUD i statusowymi blokadami dla kont niezweryfikowanych.                                                              |
+| `NeedFormDialog`     | React | Modal (Shadcn/ui Dialog) do tworzenia i edycji potrzeby. Pola: kategoria, tytuł, opis, link zakupowy, pilność, ilość docelowa, ilość obecna, jednostka. Integracja z AI helperami. |
+| `AIGenerateButton`   | React | Przycisk inline obok pola formularza. Wywołuje endpoint AI, wstawia wynik do pola. Pokazuje spinner i obsługuje limit/error.                                                       |
+| `ProfileForm`        | React | Formularz edycji profilu z lokalnym stanem i helperami walidacji. Pokazuje status konta, opcjonalny `rejection_reason`, geokodowanie i upload dokumentu.                           |
+| `VerificationUpload` | React | Komponent uploadu dokumentu z drag & drop, podglądem pliku, walidacją formatu/rozmiaru.                                                                                            |
 
 ### 5.5. Komponenty admina
 
-| Komponent | Typ | Opis |
-| --- | --- | --- |
-| `PendingSheltersTable` | React | Tabela Shadcn/ui z listą schronisk pending. Kolumny: nazwa, NIP, miasto, email, data, dokument. Paginacja. |
-| `ShelterReviewPanel` | React | Panel boczny/modal z detalami schroniska, podglądem dokumentu, przyciskami Zweryfikuj/Odrzuć. AlertDialog do potwierdzenia decyzji. |
+| Komponent              | Typ   | Opis                                                                                                                                |
+| ---------------------- | ----- | ----------------------------------------------------------------------------------------------------------------------------------- |
+| `PendingSheltersTable` | React | Tabela Shadcn/ui z listą schronisk pending. Kolumny: nazwa, NIP, miasto, email, data, dokument. Paginacja.                          |
+| `ShelterReviewPanel`   | React | Panel boczny/modal z detalami schroniska, podglądem dokumentu, przyciskami Zweryfikuj/Odrzuć. AlertDialog do potwierdzenia decyzji. |
 
 ### 5.6. Komponenty auth
 
-| Komponent | Typ | Opis |
-| --- | --- | --- |
-| `LoginForm` | React | Formularz logowania z React Hook Form + Zod. Pola: email, hasło. Obsługa błędów auth. |
+| Komponent      | Typ   | Opis                                                                                      |
+| -------------- | ----- | ----------------------------------------------------------------------------------------- |
+| `LoginForm`    | React | Formularz logowania z React Hook Form + Zod. Pola: email, hasło. Obsługa błędów auth.     |
 | `RegisterForm` | React | Formularz rejestracji z walidacją NIP, siłą hasła, uploadem dokumentu. Wieloetapowy flow. |
 
 ### 5.7. Hooki (custom hooks)
 
-| Hook | Opis |
-| --- | --- |
-| `useGeolocation` | Jednokrotne pobranie lokalizacji przeglądarki z timeout 5s. Zwraca `{ coords, status, error }`. Status: `loading` → `granted`/`denied`/`error`. |
-| `useProfiles` | Custom hook pobierający `GET /api/profiles` z parametrami `lat`, `lon`, `urgent_only`. |
-| `useNeeds` | Custom hook pobierający `GET /api/needs` oraz obsługujący odświeżanie i paginację lokalną. |
-| `useAdminPendingShelters` | Custom hook pobierający `GET /api/admin/shelters/pending`, mapujący dane do tabeli i obsługujący `refetch()`. |
-| `useUpdateShelterStatus` | Custom hook wykonujący `PATCH /api/admin/shelters/:id/status` wraz z mapowaniem błędów walidacji. |
-| `useShelterVerificationDocument` | Custom hook pobierający dokument weryfikacyjny dla panelu admina i tworzący bezpieczny preview/download. |
+| Hook                             | Opis                                                                                                                                            |
+| -------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| `useGeolocation`                 | Jednokrotne pobranie lokalizacji przeglądarki z timeout 5s. Zwraca `{ coords, status, error }`. Status: `loading` → `granted`/`denied`/`error`. |
+| `useProfiles`                    | Custom hook pobierający `GET /api/profiles` z parametrami `lat`, `lon`, `urgent_only`.                                                          |
+| `useNeeds`                       | Custom hook pobierający `GET /api/needs` oraz obsługujący odświeżanie i paginację lokalną.                                                      |
+| `useAdminPendingShelters`        | Custom hook pobierający `GET /api/admin/shelters/pending`, mapujący dane do tabeli i obsługujący `refetch()`.                                   |
+| `useUpdateShelterStatus`         | Custom hook wykonujący `PATCH /api/admin/shelters/:id/status` wraz z mapowaniem błędów walidacji.                                               |
+| `useShelterVerificationDocument` | Custom hook pobierający dokument weryfikacyjny dla panelu admina i tworzący bezpieczny preview/download.                                        |
 
 ### 5.8. Warstwa komunikacji z API
 
-| Moduł | Opis |
-| --- | --- |
+| Moduł                   | Opis                                                                                                                                |
+| ----------------------- | ----------------------------------------------------------------------------------------------------------------------------------- |
 | Warstwa request helpers | Zestaw lekkich helperów `fetchWithTimeout`, redirect helpers i mapperów błędów używanych lokalnie przez hooki admin/dashboard/auth. |
 
 ### 5.9. Komponenty Shadcn/ui (istniejące i planowane)

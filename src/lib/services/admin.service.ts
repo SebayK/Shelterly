@@ -129,8 +129,8 @@ export class AdminService {
   /**
    * Updates the verification status of a shelter.
    * Only `verified`, `rejected`, and `suspended` statuses are allowed.
-    * Rejected shelters store an actionable `rejection_reason` that is exposed back
-    * to the shelter in the remediation flow.
+   * Rejected shelters store an actionable `rejection_reason`.
+   * The reason is exposed back to the shelter in the remediation flow.
    *
    * @param shelterId - UUID of the shelter profile to update
    * @param command - Command containing the new status (and optional rejection_reason)
@@ -160,10 +160,10 @@ export class AdminService {
 
     const rejectionReason =
       command.status === "rejected"
-        ? command.rejection_reason?.trim() ?? null
+        ? (command.rejection_reason?.trim() ?? null)
         : command.status === "verified"
           ? null
-          : existing.rejection_reason ?? null;
+          : (existing.rejection_reason ?? null);
 
     if (command.status === "rejected") {
       if (!rejectionReason) {

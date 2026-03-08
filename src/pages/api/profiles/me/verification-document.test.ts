@@ -4,9 +4,7 @@ const USER_ID = "00000000-0000-0000-0000-000000000101";
 
 async function loadRouteWithServiceError() {
   const { ValidationError } = await import("@/lib/errors");
-  const uploadVerificationDocument = vi
-    .fn()
-    .mockRejectedValue(new ValidationError("File must be PDF, JPEG, or PNG"));
+  const uploadVerificationDocument = vi.fn().mockRejectedValue(new ValidationError("File must be PDF, JPEG, or PNG"));
 
   vi.doMock("../../../../lib/services/profile.service", () => ({
     ProfileService: class {

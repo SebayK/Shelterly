@@ -1,10 +1,10 @@
 # Product Requirements Document (PRD) – Shelterly (MVP)
 
-| Wersja                    | 1.1 (MVP)                                     |
-| :------------------------ | :-------------------------------------------- |
-| **Status**                | Zrealizowany z poprawkami status-flow         |
-| **Data**                  | 08.01.2026                                    |
-| **Ostatnia aktualizacja** | 07.03.2026 — admin panel i flow remedialny    |
+| Wersja                    | 1.1 (MVP)                                  |
+| :------------------------ | :----------------------------------------- |
+| **Status**                | Zrealizowany z poprawkami status-flow      |
+| **Data**                  | 08.01.2026                                 |
+| **Ostatnia aktualizacja** | 07.03.2026 — admin panel i flow remedialny |
 
 ---
 

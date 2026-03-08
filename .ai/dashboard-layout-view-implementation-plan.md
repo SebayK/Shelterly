@@ -15,16 +15,16 @@ Wszystkie layouty i komponenty nawigacyjne są komponentami Astro (SSR, zero JS)
 
 Komponenty layoutu i nawigacji nie definiują własnych tras — są wykorzystywane przez strony:
 
-| Ścieżka | Layout | Wymaganie auth |
-|---|---|---|
-| `/` | `Layout.astro` | Brak |
-| `/shelter/[id]` | `Layout.astro` | Brak |
-| `/auth/login` | `Layout.astro` | Brak (redirect zalogowanego → `/dashboard`) |
-| `/auth/register` | `Layout.astro` | Brak (redirect zalogowanego → `/dashboard`) |
-| `/auth/pending` | `Layout.astro` | Brak |
-| `/dashboard` | `DashboardLayout.astro` | Sesja wymagana → `/auth/login?return=/dashboard` |
+| Ścieżka              | Layout                  | Wymaganie auth                                           |
+| -------------------- | ----------------------- | -------------------------------------------------------- |
+| `/`                  | `Layout.astro`          | Brak                                                     |
+| `/shelter/[id]`      | `Layout.astro`          | Brak                                                     |
+| `/auth/login`        | `Layout.astro`          | Brak (redirect zalogowanego → `/dashboard`)              |
+| `/auth/register`     | `Layout.astro`          | Brak (redirect zalogowanego → `/dashboard`)              |
+| `/auth/pending`      | `Layout.astro`          | Brak                                                     |
+| `/dashboard`         | `DashboardLayout.astro` | Sesja wymagana → `/auth/login?return=/dashboard`         |
 | `/dashboard/profile` | `DashboardLayout.astro` | Sesja wymagana → `/auth/login?return=/dashboard/profile` |
-| `/admin` | `Layout.astro` | Sesja + `super_admin` |
+| `/admin`             | `Layout.astro`          | Sesja + `super_admin`                                    |
 
 Aplikacja działa w trybie `output: "server"` (SSR), więc `Astro.locals.supabase` jest dostępny na każdej stronie. Strony mogą opcjonalnie ustawić `prerender = true` (np. strona 404).
 
@@ -310,6 +310,7 @@ Nawigacja i layouty w przeważającej części opierają się na **renderowaniu 
 ### 6.1. Stan serwerowy (Astro frontmatter)
 
 W `Layout.astro` i `DashboardLayout.astro`, frontmatter pobiera dane:
+
 1. `supabase.auth.getUser()` — sprawdzenie sesji
 2. Jeśli sesja istnieje: zapytanie `profiles` o `role` i `name` (dla Navbar)
 3. W `DashboardLayout.astro`: pełne dane profilu przez `ProfileService.getAuthenticatedProfile(userId)` (dla nagłówka, banera)
@@ -329,8 +330,11 @@ Nie jest wymagany żaden nowy custom hook dla tego widoku. Obie wyspy React maj�
 ### 7.1. Pobieranie danych użytkownika (SSR — Astro frontmatter)
 
 **W `Layout.astro`:**
+
 ```typescript
-const { data: { user } } = await Astro.locals.supabase.auth.getUser();
+const {
+  data: { user },
+} = await Astro.locals.supabase.auth.getUser();
 let navbarUser: NavbarUser | null = null;
 
 if (user) {
@@ -347,8 +351,12 @@ if (user) {
 ```
 
 **W `DashboardLayout.astro`:**
+
 ```typescript
-const { data: { user }, error } = await Astro.locals.supabase.auth.getUser();
+const {
+  data: { user },
+  error,
+} = await Astro.locals.supabase.auth.getUser();
 
 if (error || !user) {
   return Astro.redirect(`/auth/login?return=${Astro.url.pathname}`);
@@ -367,6 +375,7 @@ const profile: ProfileMeDTO = await profileService.getAuthenticatedProfile(user.
 **Kody błędów:** `401 UNAUTHORIZED`, `500 INTERNAL_ERROR`
 
 **Implementacja w React:**
+
 ```typescript
 const handleLogout = async () => {
   setIsLoggingOut(true);
@@ -384,25 +393,25 @@ const handleLogout = async () => {
 
 ## 8. Interakcje użytkownika
 
-| Interakcja | Komponent | Oczekiwany wynik |
-|---|---|---|
-| Kliknięcie logo „Shelterly" | `Navbar.astro` | Nawigacja do `/` (strona główna) |
-| Kliknięcie „Zaloguj się" | `Navbar.astro` | Nawigacja do `/auth/login` |
-| Kliknięcie „Zarejestruj schronisko" | `Navbar.astro` | Nawigacja do `/auth/register` |
-| Kliknięcie avatara (desktop) | `UserAvatarMenu.tsx` | Otwarcie dropdown menu z opcjami |
-| Kliknięcie „Dashboard" w dropdown | `UserAvatarMenu.tsx` | Nawigacja do `/dashboard` |
-| Kliknięcie „Profil" w dropdown | `UserAvatarMenu.tsx` | Nawigacja do `/dashboard/profile` |
-| Kliknięcie „Panel admina" w dropdown | `UserAvatarMenu.tsx` | Nawigacja do `/admin` (tylko super_admin) |
-| Kliknięcie „Wyloguj się" w dropdown | `UserAvatarMenu.tsx` | POST `/api/auth/logout`, loading state, redirect do `/auth/login` |
-| Kliknięcie hamburger (mobile) | `MobileNavMenu.tsx` | Otwarcie bocznego panelu Sheet |
-| Kliknięcie linku w Sheet | `MobileNavMenu.tsx` | Nawigacja + zamknięcie Sheet |
-| Kliknięcie „Wyloguj się" w Sheet | `MobileNavMenu.tsx` | POST `/api/auth/logout`, loading state, redirect |
-| Kliknięcie poza Sheet / Escape | `MobileNavMenu.tsx` | Zamknięcie panelu |
-| Kliknięcie „Potrzeby" w sidebar | `DashboardSidebar.astro` | Nawigacja do `/dashboard` |
-| Kliknięcie „Profil" w sidebar | `DashboardSidebar.astro` | Nawigacja do `/dashboard/profile` |
-| Kliknięcie ikony „Potrzeby" (bottom nav) | `DashboardBottomNav.astro` | Nawigacja do `/dashboard` |
-| Kliknięcie ikony „Profil" (bottom nav) | `DashboardBottomNav.astro` | Nawigacja do `/dashboard/profile` |
-| Tab na skip-to-content link | `Layout.astro` / `DashboardLayout.astro` | Focus przeniesiony na `#main-content` |
+| Interakcja                               | Komponent                                | Oczekiwany wynik                                                  |
+| ---------------------------------------- | ---------------------------------------- | ----------------------------------------------------------------- |
+| Kliknięcie logo „Shelterly"              | `Navbar.astro`                           | Nawigacja do `/` (strona główna)                                  |
+| Kliknięcie „Zaloguj się"                 | `Navbar.astro`                           | Nawigacja do `/auth/login`                                        |
+| Kliknięcie „Zarejestruj schronisko"      | `Navbar.astro`                           | Nawigacja do `/auth/register`                                     |
+| Kliknięcie avatara (desktop)             | `UserAvatarMenu.tsx`                     | Otwarcie dropdown menu z opcjami                                  |
+| Kliknięcie „Dashboard" w dropdown        | `UserAvatarMenu.tsx`                     | Nawigacja do `/dashboard`                                         |
+| Kliknięcie „Profil" w dropdown           | `UserAvatarMenu.tsx`                     | Nawigacja do `/dashboard/profile`                                 |
+| Kliknięcie „Panel admina" w dropdown     | `UserAvatarMenu.tsx`                     | Nawigacja do `/admin` (tylko super_admin)                         |
+| Kliknięcie „Wyloguj się" w dropdown      | `UserAvatarMenu.tsx`                     | POST `/api/auth/logout`, loading state, redirect do `/auth/login` |
+| Kliknięcie hamburger (mobile)            | `MobileNavMenu.tsx`                      | Otwarcie bocznego panelu Sheet                                    |
+| Kliknięcie linku w Sheet                 | `MobileNavMenu.tsx`                      | Nawigacja + zamknięcie Sheet                                      |
+| Kliknięcie „Wyloguj się" w Sheet         | `MobileNavMenu.tsx`                      | POST `/api/auth/logout`, loading state, redirect                  |
+| Kliknięcie poza Sheet / Escape           | `MobileNavMenu.tsx`                      | Zamknięcie panelu                                                 |
+| Kliknięcie „Potrzeby" w sidebar          | `DashboardSidebar.astro`                 | Nawigacja do `/dashboard`                                         |
+| Kliknięcie „Profil" w sidebar            | `DashboardSidebar.astro`                 | Nawigacja do `/dashboard/profile`                                 |
+| Kliknięcie ikony „Potrzeby" (bottom nav) | `DashboardBottomNav.astro`               | Nawigacja do `/dashboard`                                         |
+| Kliknięcie ikony „Profil" (bottom nav)   | `DashboardBottomNav.astro`               | Nawigacja do `/dashboard/profile`                                 |
+| Tab na skip-to-content link              | `Layout.astro` / `DashboardLayout.astro` | Focus przeniesiony na `#main-content`                             |
 
 ## 9. Warunki i walidacja
 

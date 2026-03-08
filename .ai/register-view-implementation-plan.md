@@ -126,7 +126,7 @@ register.astro (strona Astro)
   - Kliknięcie przycisku „×" → usunięcie wybranego pliku
 - **Walidacja:**
   - Typ pliku: `application/pdf`, `image/jpeg`, `image/png`
-  - Rozmiar: max 5 MB (5 * 1024 * 1024 bytes)
+  - Rozmiar: max 5 MB (`5 * 1024 * 1024` bytes)
   - Wymagane: plik musi być wybrany przed submitem
 - **Typy:** Brak typów niestandardowych (operuje na natywnym `File`)
 - **Propsy:**
@@ -140,6 +140,7 @@ register.astro (strona Astro)
 ### 5.1. Istniejące typy (z `src/types.ts`)
 
 - **`SignupCommand`** — body żądania POST `/api/auth/signup`:
+
   ```typescript
   interface SignupCommand {
     email: string;
@@ -156,6 +157,7 @@ register.astro (strona Astro)
   ```
 
 - **`SignupResponseDTO`** — odpowiedź 201 z API signup:
+
   ```typescript
   interface SignupResponseDTO {
     message: string;
@@ -165,6 +167,7 @@ register.astro (strona Astro)
   ```
 
 - **`VerificationDocumentUploadResponseDTO`** — odpowiedź z API uploadu dokumentu:
+
   ```typescript
   interface VerificationDocumentUploadResponseDTO {
     verification_doc_path: string;
@@ -182,6 +185,7 @@ register.astro (strona Astro)
 ### 5.2. Nowe typy (do zdefiniowania w `RegisterForm.tsx`)
 
 - **`RegisterFormData`** — stan formularza rejestracji:
+
   ```typescript
   interface RegisterFormData {
     email: string;
@@ -198,6 +202,7 @@ register.astro (strona Astro)
   ```
 
 - **`RegisterFieldErrors`** — błędy walidacji poszczególnych pól:
+
   ```typescript
   interface RegisterFieldErrors {
     email?: string;
@@ -216,12 +221,12 @@ register.astro (strona Astro)
 - **`PasswordStrength`** — wynik analizy siły hasła:
   ```typescript
   interface PasswordStrength {
-    score: 0 | 1 | 2 | 3 | 4 | 5;  // 0-5 na podstawie spełnionych kryteriów
+    score: 0 | 1 | 2 | 3 | 4 | 5; // 0-5 na podstawie spełnionych kryteriów
     checks: {
-      minLength: boolean;      // min 8 znaków
-      hasLowercase: boolean;   // zawiera małą literę
-      hasUppercase: boolean;   // zawiera wielką literę
-      hasDigit: boolean;       // zawiera cyfrę
+      minLength: boolean; // min 8 znaków
+      hasLowercase: boolean; // zawiera małą literę
+      hasUppercase: boolean; // zawiera wielką literę
+      hasDigit: boolean; // zawiera cyfrę
       hasSpecialChar: boolean; // zawiera znak specjalny
     };
     label: "Słabe" | "Średnie" | "Silne";
@@ -234,15 +239,15 @@ register.astro (strona Astro)
 
 Stan zarządzany lokalnie w `RegisterForm` za pomocą hooków `useState`:
 
-| Zmienna stanu | Typ | Cel |
-|---|---|---|
-| `formData` | `RegisterFormData` | Wartości wszystkich pól formularza |
-| `fieldErrors` | `RegisterFieldErrors` | Błędy walidacji per pole |
-| `apiError` | `string \| null` | Komunikat błędu z API (wyświetlany na górze) |
-| `isSubmitting` | `boolean` | Blokada UI podczas wysyłki (spinner, disabled) |
-| `hasSubmitted` | `boolean` | Flaga czy formularz był już submitted (włącza walidację inline) |
-| `showPassword` | `boolean` | Przełącznik widoczności hasła |
-| `showConfirmPassword` | `boolean` | Przełącznik widoczności powtórzenia hasła |
+| Zmienna stanu         | Typ                   | Cel                                                             |
+| --------------------- | --------------------- | --------------------------------------------------------------- |
+| `formData`            | `RegisterFormData`    | Wartości wszystkich pól formularza                              |
+| `fieldErrors`         | `RegisterFieldErrors` | Błędy walidacji per pole                                        |
+| `apiError`            | `string \| null`      | Komunikat błędu z API (wyświetlany na górze)                    |
+| `isSubmitting`        | `boolean`             | Blokada UI podczas wysyłki (spinner, disabled)                  |
+| `hasSubmitted`        | `boolean`             | Flaga czy formularz był już submitted (włącza walidację inline) |
+| `showPassword`        | `boolean`             | Przełącznik widoczności hasła                                   |
+| `showConfirmPassword` | `boolean`             | Przełącznik widoczności powtórzenia hasła                       |
 
 ### 6.2. Custom hook — nie jest wymagany
 
@@ -327,54 +332,54 @@ Rejestracja obejmuje dwa kolejne wywołania API:
 
 ## 8. Interakcje użytkownika
 
-| Interakcja | Oczekiwany rezultat |
-|---|---|
-| Wpisanie tekstu w pole formularza | Aktualizacja stanu `formData`, walidacja inline jeśli `hasSubmitted === true` |
-| Opuszczenie pola (blur) | Walidacja pojedynczego pola, wyświetlenie ewentualnego błędu |
-| Wpisanie hasła | Aktualizacja `PasswordStrengthIndicator` w czasie rzeczywistym |
-| Kliknięcie ikony oka przy haśle | Toggle widoczności hasła (type text/password) |
-| Przeciągnięcie pliku na dropzone | Wizualne podświetlenie dropzone (border highlight), po upuszczeniu: walidacja typu/rozmiaru, wyświetlenie nazwy pliku |
-| Kliknięcie dropzone | Otwarcie natywnego file pickera, po wybraniu: walidacja, wyświetlenie nazwy |
-| Kliknięcie × przy nazwie pliku | Usunięcie wybranego pliku, powrót do stanu pustego dropzone |
-| Kliknięcie „Zarejestruj się" | Pełna walidacja → jeśli błędy: wyświetlenie, focus na pierwsze pole z błędem; jeśli OK: spinner, disable formularza, wywołanie API |
-| Kliknięcie „Zaloguj się" (link) | Nawigacja na `/auth/login` |
-| Pomyślna rejestracja | Przekierowanie na `/auth/pending` |
+| Interakcja                        | Oczekiwany rezultat                                                                                                                |
+| --------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------- |
+| Wpisanie tekstu w pole formularza | Aktualizacja stanu `formData`, walidacja inline jeśli `hasSubmitted === true`                                                      |
+| Opuszczenie pola (blur)           | Walidacja pojedynczego pola, wyświetlenie ewentualnego błędu                                                                       |
+| Wpisanie hasła                    | Aktualizacja `PasswordStrengthIndicator` w czasie rzeczywistym                                                                     |
+| Kliknięcie ikony oka przy haśle   | Toggle widoczności hasła (type text/password)                                                                                      |
+| Przeciągnięcie pliku na dropzone  | Wizualne podświetlenie dropzone (border highlight), po upuszczeniu: walidacja typu/rozmiaru, wyświetlenie nazwy pliku              |
+| Kliknięcie dropzone               | Otwarcie natywnego file pickera, po wybraniu: walidacja, wyświetlenie nazwy                                                        |
+| Kliknięcie × przy nazwie pliku    | Usunięcie wybranego pliku, powrót do stanu pustego dropzone                                                                        |
+| Kliknięcie „Zarejestruj się"      | Pełna walidacja → jeśli błędy: wyświetlenie, focus na pierwsze pole z błędem; jeśli OK: spinner, disable formularza, wywołanie API |
+| Kliknięcie „Zaloguj się" (link)   | Nawigacja na `/auth/login`                                                                                                         |
+| Pomyślna rejestracja              | Przekierowanie na `/auth/pending`                                                                                                  |
 
 ## 9. Warunki i walidacja
 
 ### 9.1. Walidacja po stronie klienta (synchroniczna)
 
-| Pole | Warunek | Komunikat błędu | Komponent |
-|---|---|---|---|
-| email | Niepuste | „Adres e-mail jest wymagany." | RegisterForm |
-| email | Format email | „Podaj poprawny adres e-mail." | RegisterForm |
-| email | Max 255 znaków | „Adres e-mail może mieć maksymalnie 255 znaków." | RegisterForm |
-| password | Niepuste | „Hasło jest wymagane." | RegisterForm |
-| password | Min 8 znaków | „Hasło musi mieć co najmniej 8 znaków." | RegisterForm |
-| password | Max 128 znaków | „Hasło może mieć maksymalnie 128 znaków." | RegisterForm |
-| password | Mała litera | „Hasło musi zawierać co najmniej jedną małą literę." | RegisterForm |
-| password | Wielka litera | „Hasło musi zawierać co najmniej jedną wielką literę." | RegisterForm |
-| password | Cyfra | „Hasło musi zawierać co najmniej jedną cyfrę." | RegisterForm |
-| password | Znak specjalny | „Hasło musi zawierać co najmniej jeden znak specjalny." | RegisterForm |
-| confirmPassword | Niepuste | „Powtórzenie hasła jest wymagane." | RegisterForm |
-| confirmPassword | Zgodność z hasłem | „Hasła nie są identyczne." | RegisterForm |
-| name | Niepuste | „Nazwa schroniska jest wymagana." | RegisterForm |
-| name | Min 2 znaki | „Nazwa schroniska musi mieć co najmniej 2 znaki." | RegisterForm |
-| name | Max 255 znaków | „Nazwa schroniska może mieć maksymalnie 255 znaków." | RegisterForm |
-| nip | Niepuste | „NIP jest wymagany." | RegisterForm |
-| nip | Dokładnie 10 cyfr | „NIP musi składać się z dokładnie 10 cyfr." | RegisterForm |
-| nip | Suma kontrolna | „Podany NIP jest nieprawidłowy (błąd sumy kontrolnej)." | RegisterForm |
-| city | Niepuste | „Miasto jest wymagane." | RegisterForm |
-| city | Min 2 znaki | „Miasto musi mieć co najmniej 2 znaki." | RegisterForm |
-| city | Max 100 znaków | „Nazwa miasta może mieć maksymalnie 100 znaków." | RegisterForm |
-| address | Niepusty | „Adres jest wymagany." | RegisterForm |
-| address | Min 5 znaków | „Adres musi mieć co najmniej 5 znaków." | RegisterForm |
-| address | Max 255 znaków | „Adres może mieć maksymalnie 255 znaków." | RegisterForm |
-| phone_number | Format (opcjonalne) | „Podaj poprawny numer telefonu." | RegisterForm |
-| website_url | Format URL (opcjonalne) | „Podaj poprawny adres URL." | RegisterForm |
-| file | Niepusty (wymagany) | „Dokument weryfikacyjny jest wymagany." | FileUploadDropzone |
-| file | Typ: PDF, JPEG, PNG | „Akceptowane formaty: PDF, JPG, PNG." | FileUploadDropzone |
-| file | Max 5 MB | „Plik nie może przekraczać 5 MB." | FileUploadDropzone |
+| Pole            | Warunek                 | Komunikat błędu                                         | Komponent          |
+| --------------- | ----------------------- | ------------------------------------------------------- | ------------------ |
+| email           | Niepuste                | „Adres e-mail jest wymagany."                           | RegisterForm       |
+| email           | Format email            | „Podaj poprawny adres e-mail."                          | RegisterForm       |
+| email           | Max 255 znaków          | „Adres e-mail może mieć maksymalnie 255 znaków."        | RegisterForm       |
+| password        | Niepuste                | „Hasło jest wymagane."                                  | RegisterForm       |
+| password        | Min 8 znaków            | „Hasło musi mieć co najmniej 8 znaków."                 | RegisterForm       |
+| password        | Max 128 znaków          | „Hasło może mieć maksymalnie 128 znaków."               | RegisterForm       |
+| password        | Mała litera             | „Hasło musi zawierać co najmniej jedną małą literę."    | RegisterForm       |
+| password        | Wielka litera           | „Hasło musi zawierać co najmniej jedną wielką literę."  | RegisterForm       |
+| password        | Cyfra                   | „Hasło musi zawierać co najmniej jedną cyfrę."          | RegisterForm       |
+| password        | Znak specjalny          | „Hasło musi zawierać co najmniej jeden znak specjalny." | RegisterForm       |
+| confirmPassword | Niepuste                | „Powtórzenie hasła jest wymagane."                      | RegisterForm       |
+| confirmPassword | Zgodność z hasłem       | „Hasła nie są identyczne."                              | RegisterForm       |
+| name            | Niepuste                | „Nazwa schroniska jest wymagana."                       | RegisterForm       |
+| name            | Min 2 znaki             | „Nazwa schroniska musi mieć co najmniej 2 znaki."       | RegisterForm       |
+| name            | Max 255 znaków          | „Nazwa schroniska może mieć maksymalnie 255 znaków."    | RegisterForm       |
+| nip             | Niepuste                | „NIP jest wymagany."                                    | RegisterForm       |
+| nip             | Dokładnie 10 cyfr       | „NIP musi składać się z dokładnie 10 cyfr."             | RegisterForm       |
+| nip             | Suma kontrolna          | „Podany NIP jest nieprawidłowy (błąd sumy kontrolnej)." | RegisterForm       |
+| city            | Niepuste                | „Miasto jest wymagane."                                 | RegisterForm       |
+| city            | Min 2 znaki             | „Miasto musi mieć co najmniej 2 znaki."                 | RegisterForm       |
+| city            | Max 100 znaków          | „Nazwa miasta może mieć maksymalnie 100 znaków."        | RegisterForm       |
+| address         | Niepusty                | „Adres jest wymagany."                                  | RegisterForm       |
+| address         | Min 5 znaków            | „Adres musi mieć co najmniej 5 znaków."                 | RegisterForm       |
+| address         | Max 255 znaków          | „Adres może mieć maksymalnie 255 znaków."               | RegisterForm       |
+| phone_number    | Format (opcjonalne)     | „Podaj poprawny numer telefonu."                        | RegisterForm       |
+| website_url     | Format URL (opcjonalne) | „Podaj poprawny adres URL."                             | RegisterForm       |
+| file            | Niepusty (wymagany)     | „Dokument weryfikacyjny jest wymagany."                 | FileUploadDropzone |
+| file            | Typ: PDF, JPEG, PNG     | „Akceptowane formaty: PDF, JPG, PNG."                   | FileUploadDropzone |
+| file            | Max 5 MB                | „Plik nie może przekraczać 5 MB."                       | FileUploadDropzone |
 
 ### 9.2. Algorytm walidacji NIP (suma kontrolna)
 
@@ -399,21 +404,22 @@ Wyświetlane inline pod polem formularza (element `<p>` z `role="alert"`, powią
 
 ### 10.2. Błędy API signup
 
-| Kod HTTP | `ErrorCode` | Komunikat dla użytkownika |
-|---|---|---|
-| 400 | `VALIDATION_ERROR` | „Nieprawidłowe dane. Sprawdź formularz i spróbuj ponownie." |
-| 400 | `INVALID_REQUEST` | „Nieprawidłowe żądanie. Sprawdź dane i spróbuj ponownie." |
-| 409 | `CONFLICT` | „Konto z podanym adresem e-mail lub NIP już istnieje." |
-| 429 | `RATE_LIMIT_EXCEEDED` | „Zbyt wiele prób. Spróbuj ponownie za chwilę." |
-| 500 | `INTERNAL_ERROR` | „Wystąpił problem z serwerem. Spróbuj ponownie za chwilę." |
-| 503 | `SERVICE_UNAVAILABLE` | „Serwis jest chwilowo niedostępny. Spróbuj ponownie później." |
-| — | (brak odpowiedzi / network error) | „Nie można połączyć się z serwerem. Sprawdź połączenie internetowe." |
+| Kod HTTP | `ErrorCode`                       | Komunikat dla użytkownika                                            |
+| -------- | --------------------------------- | -------------------------------------------------------------------- |
+| 400      | `VALIDATION_ERROR`                | „Nieprawidłowe dane. Sprawdź formularz i spróbuj ponownie."          |
+| 400      | `INVALID_REQUEST`                 | „Nieprawidłowe żądanie. Sprawdź dane i spróbuj ponownie."            |
+| 409      | `CONFLICT`                        | „Konto z podanym adresem e-mail lub NIP już istnieje."               |
+| 429      | `RATE_LIMIT_EXCEEDED`             | „Zbyt wiele prób. Spróbuj ponownie za chwilę."                       |
+| 500      | `INTERNAL_ERROR`                  | „Wystąpił problem z serwerem. Spróbuj ponownie za chwilę."           |
+| 503      | `SERVICE_UNAVAILABLE`             | „Serwis jest chwilowo niedostępny. Spróbuj ponownie później."        |
+| —        | (brak odpowiedzi / network error) | „Nie można połączyć się z serwerem. Sprawdź połączenie internetowe." |
 
 Błędy API wyświetlane w `FormErrorAlert` na górze formularza (wzorzec z `LoginForm`).
 
 ### 10.3. Błędy uploadu dokumentu
 
 Jeśli rejestracja (signup) się powiodła, ale upload dokumentu nie:
+
 - Wyświetl informację ostrzegawczą, ale **przekieruj na `/auth/pending`** — konto zostało utworzone, dokument można dodać później
 - Nie blokuj procesu rejestracji z powodu błędu uploadu
 

@@ -17,7 +17,7 @@ npx supabase start
 admin@shelterly.dev
 ```
 
-   Hasło używane w kolekcji Postmana:
+Hasło używane w kolekcji Postmana:
 
 ```text
 Admin123!

@@ -41,9 +41,11 @@ const navbarUser: NavbarUser = {
 
     <Navbar user={navbarUser} />
 
-    {profile.role === "shelter" && profile.status !== "verified" && (
-      <StatusBanner status={profile.status} rejectionReason={profile.rejection_reason} />
-    )}
+    {
+      profile.role === "shelter" && profile.status !== "verified" && (
+        <StatusBanner status={profile.status} rejectionReason={profile.rejection_reason} />
+      )
+    }
 
     <DashboardHeader
       name={profile.name}
