@@ -4,14 +4,14 @@ import type { PendingSheltersPaginationProps } from "./types";
 
 function formatResultsLabel(total: number): string {
   if (total === 1) {
-    return "zgłoszenia";
+    return "zgłoszenie";
   }
 
   const lastTwoDigits = total % 100;
   const lastDigit = total % 10;
 
   if (lastDigit >= 2 && lastDigit <= 4 && (lastTwoDigits < 12 || lastTwoDigits > 14)) {
-    return "zgłoszeń";
+    return "zgłoszenia";
   }
 
   return "zgłoszeń";

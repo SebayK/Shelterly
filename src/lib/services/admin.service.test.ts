@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { AdminService } from "./admin.service";
-import { InternalError, NotFoundError } from "@/lib/errors";
+import { InternalError, NotFoundError, ValidationError } from "@/lib/errors";
 import type { SupabaseClient } from "@/db/supabase.client";
 
 // ---------------------------------------------------------------------------
@@ -242,6 +242,21 @@ describe("AdminService.updateShelterStatus()", () => {
       status: "rejected",
       rejection_reason: "Dokument nie potwierdza umocowania placowki.",
     });
+  });
+
+  it("throws ValidationError when trimmed rejection_reason is shorter than 3 characters", async () => {
+    const supabase = buildUpdateStatusMock();
+    service = new AdminService(supabase);
+
+    const resultPromise = service.updateShelterStatus(SHELTER_ID, {
+      status: "rejected",
+      rejection_reason: "  ab  ",
+    });
+
+    await expect(resultPromise).rejects.toThrow(ValidationError);
+    await expect(resultPromise).rejects.toThrow("Rejection reason must be at least 3 characters");
+
+    expect(supabase.__updateChain).not.toHaveBeenCalled();
   });
 
   it("clears rejection_reason when status changes to 'verified'", async () => {

@@ -11,7 +11,7 @@ import type {
   ShelterStatusUpdateResponseDTO,
   UpdateShelterStatusCommand,
 } from "@/types";
-import { InternalError, NotFoundError } from "@/lib/errors";
+import { InternalError, NotFoundError, ValidationError } from "@/lib/errors";
 import { APP_CONFIG } from "@/lib/config";
 
 /**
@@ -156,6 +156,20 @@ export class AdminService {
     }
 
     const rejectionReason = command.status === "rejected" ? command.rejection_reason?.trim() ?? null : null;
+
+    if (command.status === "rejected") {
+      if (!rejectionReason) {
+        throw new ValidationError("Rejection reason is required when status is 'rejected'");
+      }
+
+      if (rejectionReason.length < 3) {
+        throw new ValidationError("Rejection reason must be at least 3 characters");
+      }
+
+      if (rejectionReason.length > 500) {
+        throw new ValidationError("Rejection reason must not exceed 500 characters");
+      }
+    }
 
     // 2. Update status and clear stale rejection reasons when the decision changes
     const { data: updated, error: updateError } = await this.supabase
