@@ -265,6 +265,7 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
       if (field === "address" || field === "city") {
         setGeocodeResult(null);
         setGeocodeError(null);
+        setCurrentLocation(null);
       }
       if (!hasSubmitted) return;
       updateFieldValidation(field, value);

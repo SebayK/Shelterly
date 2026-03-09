@@ -2,6 +2,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ProfileService } from "./profile.service";
 import { NotFoundError, ValidationError } from "@/lib/errors";
 import type { SupabaseClient } from "@/db/supabase.client";
+import type { Location } from "@/types";
+
+interface EwkbParserAccess {
+  parseEwkbPoint: (hex: string) => Location | null;
+}
 
 describe("ProfileService.parseEwkbPoint", () => {
   it("parses EWKB hex for POINT with SRID 4326 (little endian)", () => {
@@ -29,12 +34,12 @@ describe("ProfileService.parseEwkbPoint", () => {
 
     const hex = buffer.toString("hex");
 
-    const svc = new ProfileService({} as any);
-    const result = (svc as any).parseEwkbPoint(hex);
+    const svc = new ProfileService({} as SupabaseClient);
+    const result = (svc as unknown as EwkbParserAccess).parseEwkbPoint(hex);
 
     expect(result).not.toBeNull();
-    expect(result!.lat).toBeCloseTo(lat, 6);
-    expect(result!.lon).toBeCloseTo(lon, 6);
+    expect(result?.lat).toBeCloseTo(lat, 6);
+    expect(result?.lon).toBeCloseTo(lon, 6);
   });
 
   it("parses EWKB hex for POINT without SRID (big endian)", () => {
@@ -59,12 +64,12 @@ describe("ProfileService.parseEwkbPoint", () => {
 
     const hex = buffer.toString("hex");
 
-    const svc = new ProfileService({} as any);
-    const result = (svc as any).parseEwkbPoint(hex);
+    const svc = new ProfileService({} as SupabaseClient);
+    const result = (svc as unknown as EwkbParserAccess).parseEwkbPoint(hex);
 
     expect(result).not.toBeNull();
-    expect(result!.lat).toBeCloseTo(lat, 6);
-    expect(result!.lon).toBeCloseTo(lon, 6);
+    expect(result?.lat).toBeCloseTo(lat, 6);
+    expect(result?.lon).toBeCloseTo(lon, 6);
   });
 });
 
@@ -100,22 +105,48 @@ function buildSupabaseMock({
 
 function buildProfilesListSupabaseMock({
   profiles,
+  count = profiles?.length ?? 0,
   error = null as { message: string } | null,
 }: {
   profiles: Record<string, unknown>[] | null;
+  count?: number;
   error?: { message: string } | null;
 }) {
-  const query = {
+  const dataQuery = {
     data: profiles,
     error,
     eq: vi.fn(),
     filter: vi.fn(),
+    not: vi.fn(),
+    order: vi.fn(),
+    range: vi.fn(),
   };
 
-  query.eq.mockReturnValue(query);
-  query.filter.mockReturnValue(query);
+  dataQuery.eq.mockReturnValue(dataQuery);
+  dataQuery.filter.mockReturnValue(dataQuery);
+  dataQuery.not.mockReturnValue(dataQuery);
+  dataQuery.order.mockReturnValue(dataQuery);
+  dataQuery.range.mockReturnValue(dataQuery);
 
-  const select = vi.fn().mockReturnValue(query);
+  const countQuery = {
+    count,
+    error,
+    eq: vi.fn(),
+    filter: vi.fn(),
+    not: vi.fn(),
+  };
+
+  countQuery.eq.mockReturnValue(countQuery);
+  countQuery.filter.mockReturnValue(countQuery);
+  countQuery.not.mockReturnValue(countQuery);
+
+  const select = vi.fn().mockImplementation((_columns: string, options?: { count?: string; head?: boolean }) => {
+    if (options?.head) {
+      return countQuery;
+    }
+
+    return dataQuery;
+  });
   const from = vi.fn().mockReturnValue({ select });
 
   return { from } as unknown as SupabaseClient;
@@ -240,6 +271,7 @@ describe("ProfileService.getVerifiedProfiles()", () => {
             needs: [],
           },
         ],
+        count: 1,
       })
     );
 
@@ -302,6 +334,7 @@ describe("ProfileService.getVerifiedProfiles()", () => {
             needs: [],
           },
         ],
+        count: 1,
       })
     );
 
@@ -316,6 +349,31 @@ describe("ProfileService.getVerifiedProfiles()", () => {
     expect(result.data[0]?.id).toBe("nearest-profile");
     expect(result.data[0]?.distance_km).toBe(0);
     expect(result.pagination.total).toBe(1);
+  });
+
+  it("uses DB-level pagination order and count when distance sorting is not requested", async () => {
+    const service = new ProfileService(
+      buildProfilesListSupabaseMock({
+        profiles: [
+          {
+            id: "paged-profile",
+            name: "Schronisko Paginowane",
+            city: "Poznań",
+            location: "POINT(16.9252 52.4064)",
+            created_at: "2026-03-07T10:00:00Z",
+            needs: [],
+          },
+        ],
+        count: 7,
+      })
+    );
+
+    const result = await service.getVerifiedProfiles({ limit: 1, offset: 2 });
+
+    expect(result.data).toHaveLength(1);
+    expect(result.pagination.total).toBe(7);
+    expect(result.pagination.limit).toBe(1);
+    expect(result.pagination.offset).toBe(2);
   });
 });
 

@@ -38,6 +38,61 @@ const EWKB_MIN_HEX_LENGTH_NO_SRID = 42;
 export class ProfileService {
   constructor(private supabase: SupabaseClient) {}
 
+  private buildVerifiedProfilesQuery() {
+    return this.supabase
+      .from("profiles")
+      .select(
+        `
+        id,
+        name,
+        city,
+        location,
+        created_at,
+        needs:needs!shelter_id(urgency, is_fulfilled)
+      `
+      )
+      .eq("status", "verified")
+      .eq("role", "shelter")
+      .not("location", "is", null)
+      .not("name", "is", null)
+      .not("city", "is", null)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true });
+  }
+
+  private async countVerifiedProfiles(urgentOnly?: boolean): Promise<number> {
+    let countQuery = urgentOnly
+      ? this.supabase
+          .from("profiles")
+          .select("id, needs!inner(id)", { count: "exact", head: true })
+          .eq("status", "verified")
+          .eq("role", "shelter")
+          .not("location", "is", null)
+          .not("name", "is", null)
+          .not("city", "is", null)
+      : this.supabase
+          .from("profiles")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "verified")
+          .eq("role", "shelter")
+          .not("location", "is", null)
+          .not("name", "is", null)
+          .not("city", "is", null);
+
+    if (urgentOnly) {
+      countQuery = countQuery.filter("needs.urgency", "in", "(high,critical)").filter("needs.deleted_at", "is", null);
+    }
+
+    const { count, error } = await countQuery;
+
+    if (error) {
+      logError("[ProfileService.countVerifiedProfiles]", error);
+      throw new InternalError("Unable to retrieve shelter profiles count");
+    }
+
+    return count ?? 0;
+  }
+
   /**
    * Get list of verified shelters with optional geolocation filtering
    * Uses aggregated query to avoid N+1 problem
@@ -52,29 +107,23 @@ export class ProfileService {
     offset: number;
   }): Promise<ProfileListResponseDTO> {
     const { lat, lon, urgent_only, limit, offset } = params;
+    const shouldSortByDistance = lat !== undefined && lon !== undefined;
 
     // Build aggregated query using LEFT JOIN to get needs counts in one query
     // This avoids N+1 problem where we'd query needs for each profile separately
-    let query = this.supabase
-      .from("profiles")
-      .select(
-        `
-        id,
-        name,
-        city,
-        location,
-        created_at,
-        needs:needs!shelter_id(urgency, is_fulfilled)
-      `
-      )
-      .eq("status", "verified")
-      .eq("role", "shelter"); // Only show shelters, not admins
+    let query = this.buildVerifiedProfilesQuery();
 
     // If urgent_only filter is requested, we need to filter profiles that have urgent needs
     // This must be done at query level to get correct total count for pagination
     if (urgent_only) {
       // Use EXISTS subquery to filter only profiles with urgent needs
       query = query.filter("needs.urgency", "in", "(high,critical)").filter("needs.deleted_at", "is", null);
+    }
+
+    const total = shouldSortByDistance ? undefined : await this.countVerifiedProfiles(urgent_only);
+
+    if (!shouldSortByDistance) {
+      query = query.range(offset, offset + limit - 1);
     }
 
     // Execute query
@@ -89,7 +138,7 @@ export class ProfileService {
       return {
         data: [],
         pagination: {
-          total: 0,
+          total: total ?? 0,
           limit,
           offset,
         },
@@ -148,12 +197,12 @@ export class ProfileService {
       })
       .filter((p): p is ProfileListItemDTO => p !== null);
 
-    const total = profilesWithStats.length;
+    const filteredTotal = profilesWithStats.length;
 
     // Sort by distance if coordinates provided
     // Note: When using distance sorting, we need to sort ALL results before pagination
     // This means we fetch all profiles and paginate in-memory
-    if (lat !== undefined && lon !== undefined) {
+    if (shouldSortByDistance) {
       profilesWithStats.sort((a, b) => {
         const distA = a.distance_km ?? Infinity;
         const distB = b.distance_km ?? Infinity;
@@ -166,7 +215,7 @@ export class ProfileService {
       return {
         data: paginatedProfiles,
         pagination: {
-          total,
+          total: filteredTotal,
           limit,
           offset,
         },
@@ -174,13 +223,10 @@ export class ProfileService {
     }
 
     // Without distance sorting, we can paginate at database level
-    // Apply offset/limit to the already fetched results
-    const paginatedProfiles = profilesWithStats.slice(offset, offset + limit);
-
     return {
-      data: paginatedProfiles,
+      data: profilesWithStats,
       pagination: {
-        total,
+        total: total ?? filteredTotal,
         limit,
         offset,
       },
