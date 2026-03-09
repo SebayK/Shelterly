@@ -39,18 +39,15 @@ try {
   }
 
   const profileService = new ProfileService(supabase);
+  shelter = await profileService.getProfileById(id);
+
   const needsService = new NeedsService(supabase);
+  const needsResponseData = await needsService.getNeeds({
+    shelter_id: id,
+    limit: 100,
+    offset: 0,
+  });
 
-  const [profileData, needsResponseData] = await Promise.all([
-    profileService.getProfileById(id),
-    needsService.getNeeds({
-      shelter_id: id,
-      limit: 100,
-      offset: 0,
-    }),
-  ]);
-
-  shelter = profileData;
   needs = needsResponseData.data;
 } catch (error) {
   // eslint-disable-next-line no-console

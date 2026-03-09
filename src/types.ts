@@ -137,7 +137,7 @@ export interface ProfileMeDTO {
 
 /**
  * DTO 4: PATCH /api/profiles/me - Response after profile update
- * Fields are nullable because super_admin role can have null values
+ * Update responses always return persisted `name` and `city`; `location` can be null.
  */
 export interface ProfileUpdateResponseDTO {
   id: string;

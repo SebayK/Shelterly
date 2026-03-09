@@ -1,8 +1,72 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-
-import { NotFoundError, ValidationError } from "@/lib/errors";
 import { ProfileService } from "./profile.service";
+import { NotFoundError, ValidationError } from "@/lib/errors";
 import type { SupabaseClient } from "@/db/supabase.client";
+
+describe("ProfileService.parseEwkbPoint", () => {
+  it("parses EWKB hex for POINT with SRID 4326 (little endian)", () => {
+    // Build EWKB for little-endian POINT with SRID 4326
+    // Layout: 1 byte byte-order, 4 bytes geom type, optional 4 bytes SRID, then two doubles (lon, lat)
+    const buffer = Buffer.alloc(1 + 4 + 4 + 8 + 8);
+    let offset = 0;
+    // little-endian
+    buffer.writeUInt8(1, offset);
+    offset += 1;
+    // geometry type: POINT (1) with SRID flag (0x20000000)
+    buffer.writeUInt32LE(0x20000000 | 1, offset);
+    offset += 4;
+    // SRID 4326
+    buffer.writeUInt32LE(4326, offset);
+    offset += 4;
+
+    const lon = 21.0122;
+    const lat = 52.2297;
+
+    buffer.writeDoubleLE(lon, offset);
+    offset += 8;
+    buffer.writeDoubleLE(lat, offset);
+    offset += 8;
+
+    const hex = buffer.toString("hex");
+
+    const svc = new ProfileService({} as any);
+    const result = (svc as any).parseEwkbPoint(hex);
+
+    expect(result).not.toBeNull();
+    expect(result!.lat).toBeCloseTo(lat, 6);
+    expect(result!.lon).toBeCloseTo(lon, 6);
+  });
+
+  it("parses EWKB hex for POINT without SRID (big endian)", () => {
+    // Build EWKB for big-endian POINT without SRID
+    // Layout: 1 byte byte-order (0) + 4 bytes geom type (1) + two doubles (lon, lat)
+    const buffer = Buffer.alloc(1 + 4 + 8 + 8);
+    let offset = 0;
+    // big-endian
+    buffer.writeUInt8(0, offset);
+    offset += 1;
+    // geometry type: POINT (1) without SRID flag
+    buffer.writeUInt32BE(1, offset);
+    offset += 4;
+
+    const lon = 18.9496;
+    const lat = 50.1372;
+
+    buffer.writeDoubleBE(lon, offset);
+    offset += 8;
+    buffer.writeDoubleBE(lat, offset);
+    offset += 8;
+
+    const hex = buffer.toString("hex");
+
+    const svc = new ProfileService({} as any);
+    const result = (svc as any).parseEwkbPoint(hex);
+
+    expect(result).not.toBeNull();
+    expect(result!.lat).toBeCloseTo(lat, 6);
+    expect(result!.lon).toBeCloseTo(lon, 6);
+  });
+});
 
 const USER_ID = "00000000-0000-0000-0000-000000000101";
 

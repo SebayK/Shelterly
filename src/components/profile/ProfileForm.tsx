@@ -265,7 +265,6 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
       if (field === "address" || field === "city") {
         setGeocodeResult(null);
         setGeocodeError(null);
-        setCurrentLocation(null);
       }
       if (!hasSubmitted) return;
       updateFieldValidation(field, value);
@@ -314,10 +313,13 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
           name: trimmedName || undefined,
           city: trimmedCity || undefined,
           address: trimmedAddress || undefined,
-          location: currentLocation,
           phone_number: normalizedPhoneNumber || null,
           website_url: normalizedWebsiteUrl || null,
         };
+
+        if (geocodeResult && currentLocation) {
+          command.location = currentLocation;
+        }
 
         const response = await fetchWithTimeout(
           "/api/profiles/me",
@@ -363,7 +365,7 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
         setIsSaving(false);
       }
     },
-    [currentLocation, formData, ids]
+    [currentLocation, formData, geocodeResult, ids]
   );
 
   // =========================================================================
@@ -726,10 +728,7 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
         )}
 
         {currentLocation && (
-          <ProfileLocationPreviewMap
-            location={currentLocation}
-            formattedAddress={geocodeResult?.formatted_address}
-          />
+          <ProfileLocationPreviewMap location={currentLocation} formattedAddress={geocodeResult?.formatted_address} />
         )}
       </section>
 

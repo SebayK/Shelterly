@@ -26,6 +26,11 @@ const VERIFICATION_DOCUMENT_EXTENSIONS = {
   "image/png": "png",
 } as const;
 
+// EWKB (hex) length constants (hex chars). Calculations:
+// - byte-order (1) + geometry type (4) + coordinates (2 * 8) = 1+4+16 = 21 bytes => 42 hex chars
+// - with SRID present add 4 bytes => 25 bytes => 50 hex chars
+const EWKB_MIN_HEX_LENGTH_NO_SRID = 42;
+
 /**
  * Profile Service
  * Handles all business logic related to shelter profiles
@@ -60,8 +65,7 @@ export class ProfileService {
         location,
         created_at,
         needs:needs!shelter_id(urgency, is_fulfilled)
-      `,
-        { count: "exact" }
+      `
       )
       .eq("status", "verified")
       .eq("role", "shelter"); // Only show shelters, not admins
@@ -455,6 +459,18 @@ export class ProfileService {
     }
   }
 
+  /**
+   * Build a prioritized list of address query variants for the geocoding service.
+   * The list is de-duplicated but preserves order of preference:
+   *  1. The original normalized address.
+   *  2. Address with common Polish street prefixes removed (shorter fallback).
+   *  3. The original address with an explicit ", Polska" suffix to hint country.
+   *  4. The shortened address with ", Polska" suffix.
+   *
+   * Rationale: Nominatim/OpenStreetMap sometimes resolves better with or without
+   * street-type prefixes (e.g. "ul.") or when the country is explicit. The
+   * service will attempt variants in this order until a result is found.
+   */
   private buildGeocodingQueries(address: string): string[] {
     const normalizedAddress = address.trim().replace(/\s+/g, " ");
     const withoutStreetPrefix = normalizedAddress.replace(/^(ul\.?|al\.?|aleja|pl\.?|plac|os\.?|osiedle)\s+/i, "");
@@ -465,6 +481,14 @@ export class ProfileService {
     );
   }
 
+  /**
+   * Serialize a `Location` object into PostGIS WKT `POINT(lon lat)` format.
+   *
+   * Note: PostGIS WKT uses the coordinate order `X Y` which for geographic
+   * coordinates corresponds to `lon lat` (longitude then latitude). This method
+   * returns the WKT string (without SRID); callers may store it in PostGIS
+   * geography/geometry columns which may include SRID metadata separately.
+   */
   private serializeLocation(location: Location): string {
     return `POINT(${location.lon} ${location.lat})`;
   }
@@ -546,10 +570,27 @@ export class ProfileService {
   }
 
   /**
-   * Helper: Parse PostGIS EWKB hex string returned by Supabase/PostgREST for geography(Point, 4326)
+   * Parse a PostGIS EWKB (Extended WKB) hex string for a POINT geometry.
+   *
+   * Implementation notes:
+   * - EWKB layout: 1 byte byte-order flag (1 = little-endian, 0 = big-endian),
+   *   followed by a 4-byte unsigned integer for the geometry type (EWKB may set
+   *   the SRID-present flag 0x20000000), optional 4-byte SRID, then the
+   *   coordinate values (double-precision floats).
+   * - We accept POINT only (base geometry type code = 1). If the SRID flag is
+   *   present, the SRID is skipped but not validated here (Supabase typically
+   *   returns SRID 4326 for geography(Point,4326)).
+   * - Coordinate byte order follows the initial byte-order flag; coordinates
+   *   are read as two consecutive 64-bit floats: X then Y (i.e. lon then lat).
+   *
+   * Returns a `Location` with numeric `lat` and `lon` or `null` if parsing fails
+   * or values are out of valid geographic ranges.
    */
   private parseEwkbPoint(hex: string): Location | null {
-    if (!/^[0-9a-f]+$/i.test(hex) || hex.length < 42 || hex.length % 2 !== 0) {
+    // Basic sanity checks: must be hex, even length, and at least the minimum
+    // size for a POINT without SRID (42 hex chars). We validate exact byte
+    // lengths later after reading the geometry header (SRID flag).
+    if (!/^[0-9a-f]+$/i.test(hex) || hex.length < EWKB_MIN_HEX_LENGTH_NO_SRID || hex.length % 2 !== 0) {
       return null;
     }
 

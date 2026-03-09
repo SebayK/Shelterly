@@ -282,13 +282,10 @@ END $$;
 -- 3. Seed deterministic needs for verified shelters
 -- --------------------------------------------------------------------------
 
-DELETE FROM public.needs
-WHERE id IN (
-  'aaaaaaaa-1111-4111-8111-111111111111',
-  'bbbbbbbb-1111-4111-8111-111111111111',
-  'cccccccc-2222-4222-8222-222222222222'
-);
+-- Use idempotent upsert below; avoid deleting specific UUIDs which is brittle.
+-- If you still need to remove legacy rows, prefer deleting by shelter_id.
 
+-- Idempotent upsert: insert or update existing seeded needs
 INSERT INTO public.needs (
   id,
   shelter_id,
@@ -305,7 +302,10 @@ INSERT INTO public.needs (
   created_at,
   updated_at
 )
-VALUES
+SELECT id, shelter_id, category, urgency, title, description, shopping_url,
+       target_quantity, current_quantity, unit, is_fulfilled, deleted_at,
+       created_at, updated_at
+FROM (VALUES
   (
     'aaaaaaaa-1111-4111-8111-111111111111',
     '11111111-1111-4111-8111-111111111111',
@@ -353,4 +353,23 @@ VALUES
     NULL,
     NOW() - INTERVAL '2 days',
     NOW() - INTERVAL '12 hours'
-  );
+  )
+) AS v(
+  id, shelter_id, category, urgency, title, description, shopping_url,
+  target_quantity, current_quantity, unit, is_fulfilled, deleted_at, created_at, updated_at
+)
+ON CONFLICT (id) DO UPDATE
+SET
+  shelter_id = EXCLUDED.shelter_id,
+  category = EXCLUDED.category,
+  urgency = EXCLUDED.urgency,
+  title = EXCLUDED.title,
+  description = EXCLUDED.description,
+  shopping_url = EXCLUDED.shopping_url,
+  target_quantity = EXCLUDED.target_quantity,
+  current_quantity = EXCLUDED.current_quantity,
+  unit = EXCLUDED.unit,
+  is_fulfilled = EXCLUDED.is_fulfilled,
+  deleted_at = EXCLUDED.deleted_at,
+  -- preserve original created_at, refresh updated_at
+  updated_at = NOW();
