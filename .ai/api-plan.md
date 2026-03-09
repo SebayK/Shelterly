@@ -1,5 +1,9 @@
 # REST API Plan – Shelterly MVP
 
+## Runtime Data Source
+
+Publiczny runtime aplikacji powinien używać realnych endpointów `/api/*` zarówno w development, jak i w production. Historyczne mock endpoints zostały usunięte z runtime codebase, więc lokalne testy publicznych flow wymagają danych z realnego backendu Supabase.
+
 ## 1. Resources
 
 | Resource     | Database Table          | Description                                                                         |
@@ -152,6 +156,10 @@ Authorization: Bearer {access_token}
   "name": "Updated Shelter Name",
   "city": "Warszawa",
   "address": "ul. Nowa 456",
+  "location": {
+    "lat": 52.2297,
+    "lon": 21.0122
+  },
   "phone_number": "+48987654321",
   "website_url": "https://newshelter.com"
 }
@@ -164,6 +172,10 @@ Authorization: Bearer {access_token}
   "id": "uuid",
   "name": "Updated Shelter Name",
   "city": "Warszawa",
+  "location": {
+    "lat": 52.2297,
+    "lon": 21.0122
+  },
   "updated_at": "2026-01-21T09:15:00Z"
 }
 ```
@@ -223,7 +235,8 @@ Authorization: Bearer {access_token}
 
 ```json
 {
-  "address": "ul. Przykładowa 123, Warszawa"
+  "address": "ul. Przykładowa 123",
+  "city": "Warszawa"
 }
 ```
 

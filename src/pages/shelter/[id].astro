@@ -7,8 +7,6 @@ import Breadcrumb from "../../components/shelter-detail/Breadcrumb.astro";
 import ShelterHeader from "../../components/shelter-detail/ShelterHeader.astro";
 import NeedsSummarySection from "../../components/shelter-detail/NeedsSummarySection.astro";
 import { ShelterDetailView } from "../../components/shelter-detail/ShelterDetailView";
-import profilesData from "../../../__mocks__/data/profiles.json";
-import needsData from "../../../__mocks__/data/needs.json";
 
 export const prerender = false;
 
@@ -32,57 +30,25 @@ if (!id || !uuidRegex.test(id)) {
 let shelter: ProfileDetailDTO;
 let needs: NeedListItemDTO[] = [];
 
-// Check if we should use mock data (in development, when no real data exists)
-const useMockData = import.meta.env.DEV;
-
 try {
-  if (useMockData) {
-    // Use imported mock data in development (direct import, not fetch)
-    const basicProfile = profilesData.profilesWithNeeds.find((p) => p.id === id);
-
-    if (!basicProfile) {
-      throw new Error("Shelter not found");
-    }
-
-    // Build ProfileDetailDTO from mock data
-    shelter = {
-      id: basicProfile.id,
-      name: basicProfile.name,
-      city: basicProfile.city,
-      address: `ul. Testowa ${Math.floor(Math.random() * 100)}, ${basicProfile.city}`,
-      location: basicProfile.location,
-      phone_number: "+48 123 456 789",
-      website_url: `https://www.${basicProfile.name.toLowerCase().replace(/\s+/g, "")}.pl`,
-      created_at: new Date().toISOString(),
-      needs_summary: {
-        total: basicProfile.needs_count,
-        urgent: basicProfile.has_urgent_needs ? Math.ceil(basicProfile.needs_count / 3) : 0,
-        fulfilled: Math.floor(basicProfile.needs_count / 2),
-      },
-    };
-
-    // Filter needs for this shelter from mock data (cast to proper type)
-    needs = needsData.needs.filter((need) => need.shelter.id === id) as NeedListItemDTO[];
-  } else {
-    // Use real API in production
-    const supabase = Astro.locals.supabase;
-    if (!supabase) {
-      // eslint-disable-next-line no-console
-      console.error("Supabase client not available in Astro.locals");
-      return rewriteToNotFound();
-    }
-    const profileService = new ProfileService(supabase);
-    shelter = await profileService.getProfileById(id);
-
-    const needsService = new NeedsService(supabase);
-    const needsResponseData = await needsService.getNeeds({
-      shelter_id: id,
-      limit: 100,
-      offset: 0,
-    });
-
-    needs = needsResponseData.data;
+  const supabase = Astro.locals.supabase;
+  if (!supabase) {
+    // eslint-disable-next-line no-console
+    console.error("Supabase client not available in Astro.locals");
+    return rewriteToNotFound();
   }
+
+  const profileService = new ProfileService(supabase);
+  shelter = await profileService.getProfileById(id);
+
+  const needsService = new NeedsService(supabase);
+  const needsResponseData = await needsService.getNeeds({
+    shelter_id: id,
+    limit: 100,
+    offset: 0,
+  });
+
+  needs = needsResponseData.data;
 } catch (error) {
   // eslint-disable-next-line no-console
   console.error("Error fetching shelter details:", error);

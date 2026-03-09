@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { FormErrorAlert } from "@/components/auth/FormErrorAlert";
 import FileUploadDropzone from "@/components/auth/FileUploadDropzone";
+import { ProfileLocationPreviewMap } from "@/components/profile/ProfileLocationPreviewMap";
 import type {
   ProfileMeDTO,
   UpdateProfileCommand,
@@ -69,6 +70,23 @@ function mapApiErrorCode(errorData: ErrorResponse): string {
       return "Serwis jest chwilowo niedostępny. Spróbuj ponownie później.";
     default:
       return errorData.error.message ?? "Wystąpił nieoczekiwany błąd.";
+  }
+}
+
+function mapGeocodeError(errorData: ErrorResponse): string {
+  switch (errorData.error.code) {
+    case "VALIDATION_ERROR":
+    case "INVALID_REQUEST":
+      return "Uzupełnij poprawny adres i miasto przed geokodowaniem.";
+    case "NOT_FOUND":
+      return "Nie znaleziono takiego adresu w podanym mieście. Sprawdź dane i spróbuj ponownie.";
+    case "UNAUTHORIZED":
+      return "Sesja wygasła. Zaloguj się ponownie.";
+    case "INTERNAL_ERROR":
+    case "SERVICE_UNAVAILABLE":
+      return "Usługa geokodowania jest chwilowo niedostępna. Spróbuj ponownie za chwilę.";
+    default:
+      return errorData.error.message ?? "Nie udało się geokodować adresu. Spróbuj ponownie.";
   }
 }
 
@@ -244,9 +262,10 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
     (field: keyof ProfileFormData) => (e: React.ChangeEvent<HTMLInputElement>) => {
       const value = e.target.value;
       setFormData((prev) => ({ ...prev, [field]: value }));
-      if (field === "address") {
+      if (field === "address" || field === "city") {
         setGeocodeResult(null);
         setGeocodeError(null);
+        setCurrentLocation(null);
       }
       if (!hasSubmitted) return;
       updateFieldValidation(field, value);
@@ -299,6 +318,10 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
           website_url: normalizedWebsiteUrl || null,
         };
 
+        if (geocodeResult && currentLocation) {
+          command.location = currentLocation;
+        }
+
         const response = await fetchWithTimeout(
           "/api/profiles/me",
           {
@@ -331,6 +354,7 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
           phone_number: normalizedPhoneNumber,
           website_url: normalizedWebsiteUrl,
         });
+        setCurrentLocation(result.location);
         toast.success("Profil został zapisany pomyślnie.");
       } catch (err) {
         if (err instanceof Error && err.name === "AbortError") {
@@ -342,7 +366,7 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
         setIsSaving(false);
       }
     },
-    [formData, ids]
+    [currentLocation, formData, geocodeResult, ids]
   );
 
   // =========================================================================
@@ -351,8 +375,14 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
 
   const handleGeocode = useCallback(async () => {
     const address = formData.address.trim();
+    const city = formData.city.trim();
     if (!address) {
       setGeocodeError("Wpisz adres przed geokodowaniem.");
+      return;
+    }
+
+    if (!city) {
+      setGeocodeError("Wpisz miasto przed geokodowaniem.");
       return;
     }
 
@@ -361,7 +391,10 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
     setGeocodeResult(null);
 
     try {
-      const command: GeocodeCommand = { address };
+      const command: GeocodeCommand = {
+        address,
+        city,
+      };
       const response = await fetchWithTimeout(
         "/api/profiles/me/geocode",
         {
@@ -377,11 +410,12 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
           window.location.href = `/auth/login?return=/dashboard/profile`;
           return;
         }
-        if (response.status === 400) {
-          setGeocodeError("Nie znaleziono adresu. Sprawdź jego poprawność i spróbuj ponownie.");
-          return;
+        try {
+          const data = (await response.json()) as ErrorResponse;
+          setGeocodeError(mapGeocodeError(data));
+        } catch {
+          setGeocodeError("Nie udało się geokodować adresu. Spróbuj ponownie za chwilę.");
         }
-        setGeocodeError("Nie udało się geokodować adresu. Spróbuj ponownie za chwilę.");
         return;
       }
 
@@ -398,7 +432,7 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
     } finally {
       setIsGeocoding(false);
     }
-  }, [formData.address]);
+  }, [formData.address, formData.city]);
 
   // =========================================================================
   // Document upload (POST /api/profiles/me/verification-document)
@@ -659,7 +693,7 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
           type="button"
           variant="outline"
           onClick={handleGeocode}
-          disabled={isGeocoding || isAnyLoading || !formData.address.trim()}
+          disabled={isGeocoding || isAnyLoading || !formData.address.trim() || !formData.city.trim()}
           aria-busy={isGeocoding}
         >
           {isGeocoding ? (
@@ -692,6 +726,10 @@ export default function ProfileForm({ profile }: ProfileFormProps) {
           <p role="alert" aria-live="assertive" className="mt-2 text-sm text-destructive">
             {geocodeError}
           </p>
+        )}
+
+        {currentLocation && (
+          <ProfileLocationPreviewMap location={currentLocation} formattedAddress={geocodeResult?.formatted_address} />
         )}
       </section>
 

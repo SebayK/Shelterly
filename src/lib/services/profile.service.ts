@@ -26,12 +26,72 @@ const VERIFICATION_DOCUMENT_EXTENSIONS = {
   "image/png": "png",
 } as const;
 
+// EWKB (hex) length constants (hex chars). Calculations:
+// - byte-order (1) + geometry type (4) + coordinates (2 * 8) = 1+4+16 = 21 bytes => 42 hex chars
+// - with SRID present add 4 bytes => 25 bytes => 50 hex chars
+const EWKB_MIN_HEX_LENGTH_NO_SRID = 42;
+
 /**
  * Profile Service
  * Handles all business logic related to shelter profiles
  */
 export class ProfileService {
   constructor(private supabase: SupabaseClient) {}
+
+  private buildVerifiedProfilesQuery() {
+    return this.supabase
+      .from("profiles")
+      .select(
+        `
+        id,
+        name,
+        city,
+        location,
+        created_at,
+        needs:needs!shelter_id(urgency, is_fulfilled)
+      `
+      )
+      .eq("status", "verified")
+      .eq("role", "shelter")
+      .not("location", "is", null)
+      .not("name", "is", null)
+      .not("city", "is", null)
+      .order("created_at", { ascending: false })
+      .order("id", { ascending: true });
+  }
+
+  private async countVerifiedProfiles(urgentOnly?: boolean): Promise<number> {
+    let countQuery = urgentOnly
+      ? this.supabase
+          .from("profiles")
+          .select("id, needs!inner(id)", { count: "exact", head: true })
+          .eq("status", "verified")
+          .eq("role", "shelter")
+          .not("location", "is", null)
+          .not("name", "is", null)
+          .not("city", "is", null)
+      : this.supabase
+          .from("profiles")
+          .select("id", { count: "exact", head: true })
+          .eq("status", "verified")
+          .eq("role", "shelter")
+          .not("location", "is", null)
+          .not("name", "is", null)
+          .not("city", "is", null);
+
+    if (urgentOnly) {
+      countQuery = countQuery.filter("needs.urgency", "in", "(high,critical)").filter("needs.deleted_at", "is", null);
+    }
+
+    const { count, error } = await countQuery;
+
+    if (error) {
+      logError("[ProfileService.countVerifiedProfiles]", error);
+      throw new InternalError("Unable to retrieve shelter profiles count");
+    }
+
+    return count ?? 0;
+  }
 
   /**
    * Get list of verified shelters with optional geolocation filtering
@@ -47,24 +107,11 @@ export class ProfileService {
     offset: number;
   }): Promise<ProfileListResponseDTO> {
     const { lat, lon, urgent_only, limit, offset } = params;
+    const shouldSortByDistance = lat !== undefined && lon !== undefined;
 
     // Build aggregated query using LEFT JOIN to get needs counts in one query
     // This avoids N+1 problem where we'd query needs for each profile separately
-    let query = this.supabase
-      .from("profiles")
-      .select(
-        `
-        id,
-        name,
-        city,
-        location,
-        created_at,
-        needs:needs!shelter_id(urgency, is_fulfilled)
-      `,
-        { count: "exact" }
-      )
-      .eq("status", "verified")
-      .eq("role", "shelter"); // Only show shelters, not admins
+    let query = this.buildVerifiedProfilesQuery();
 
     // If urgent_only filter is requested, we need to filter profiles that have urgent needs
     // This must be done at query level to get correct total count for pagination
@@ -73,8 +120,14 @@ export class ProfileService {
       query = query.filter("needs.urgency", "in", "(high,critical)").filter("needs.deleted_at", "is", null);
     }
 
+    const total = shouldSortByDistance ? undefined : await this.countVerifiedProfiles(urgent_only);
+
+    if (!shouldSortByDistance) {
+      query = query.range(offset, offset + limit - 1);
+    }
+
     // Execute query
-    const { data: profiles, error, count } = await query;
+    const { data: profiles, error } = await query;
 
     if (error) {
       logError("[ProfileService.getVerifiedProfiles]", error);
@@ -85,7 +138,7 @@ export class ProfileService {
       return {
         data: [],
         pagination: {
-          total: 0,
+          total: total ?? 0,
           limit,
           offset,
         },
@@ -106,14 +159,17 @@ export class ProfileService {
         // Parse location from PostGIS geography
         const location = this.parseLocation(profile.location);
 
-        // Skip profiles without valid location if coordinates provided
-        if (lat !== undefined && lon !== undefined && !location) {
+        if (!location) {
+          logWarningWithContext(
+            { endpoint: "ProfileService.getVerifiedProfiles", shelter_id: profile.id },
+            "Skipping verified profile without valid location"
+          );
           return null;
         }
 
         // Calculate distance if both coordinates and location exist
         let distance_km: number | undefined;
-        if (lat !== undefined && lon !== undefined && location) {
+        if (lat !== undefined && lon !== undefined) {
           distance_km = this.calculateDistance(lat, lon, location.lat, location.lon);
         }
 
@@ -130,7 +186,7 @@ export class ProfileService {
           id: profile.id,
           name: profile.name,
           city: profile.city,
-          location: location as Location, // Type guard ensures this is not null
+          location,
           distance_km,
           has_urgent_needs: hasUrgentNeeds,
           needs_count: needsCount,
@@ -141,10 +197,12 @@ export class ProfileService {
       })
       .filter((p): p is ProfileListItemDTO => p !== null);
 
+    const filteredTotal = profilesWithStats.length;
+
     // Sort by distance if coordinates provided
     // Note: When using distance sorting, we need to sort ALL results before pagination
     // This means we fetch all profiles and paginate in-memory
-    if (lat !== undefined && lon !== undefined) {
+    if (shouldSortByDistance) {
       profilesWithStats.sort((a, b) => {
         const distA = a.distance_km ?? Infinity;
         const distB = b.distance_km ?? Infinity;
@@ -157,7 +215,7 @@ export class ProfileService {
       return {
         data: paginatedProfiles,
         pagination: {
-          total: profilesWithStats.length,
+          total: filteredTotal,
           limit,
           offset,
         },
@@ -165,13 +223,10 @@ export class ProfileService {
     }
 
     // Without distance sorting, we can paginate at database level
-    // Apply offset/limit to the already fetched results
-    const paginatedProfiles = profilesWithStats.slice(offset, offset + limit);
-
     return {
-      data: paginatedProfiles,
+      data: profilesWithStats,
       pagination: {
-        total: count || 0,
+        total: total ?? filteredTotal,
         limit,
         offset,
       },
@@ -285,18 +340,29 @@ export class ProfileService {
       name?: string;
       city?: string;
       address?: string;
+      location?: Location | null;
       phone_number?: string | null;
       website_url?: string | null;
     }
   ): Promise<ProfileUpdateResponseDTO> {
+    const profileUpdates: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (updates.name !== undefined) profileUpdates.name = updates.name;
+    if (updates.city !== undefined) profileUpdates.city = updates.city;
+    if (updates.address !== undefined) profileUpdates.address = updates.address;
+    if (updates.phone_number !== undefined) profileUpdates.phone_number = updates.phone_number;
+    if (updates.website_url !== undefined) profileUpdates.website_url = updates.website_url;
+    if (updates.location !== undefined) {
+      profileUpdates.location = updates.location ? this.serializeLocation(updates.location) : null;
+    }
+
     const { data: profile, error } = await this.supabase
       .from("profiles")
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
+      .update(profileUpdates)
       .eq("id", userId)
-      .select("id, name, city, updated_at")
+      .select("id, name, city, location, updated_at")
       .single();
 
     if (error) {
@@ -316,10 +382,14 @@ export class ProfileService {
       );
       throw new NotFoundError("Profile data incomplete");
     }
+
+    const location = this.parseLocation(profile.location);
+
     return {
       id: profile.id,
       name: profile.name,
       city: profile.city,
+      location,
       updated_at: profile.updated_at || new Date().toISOString(),
     };
   }
@@ -382,39 +452,45 @@ export class ProfileService {
    * Uses Nominatim (OpenStreetMap) geocoding service
    */
   async geocodeAddress(address: string): Promise<{ location: Location; formatted_address: string }> {
-    const encodedAddress = encodeURIComponent(address);
-    const url = `${APP_CONFIG.GEOCODING.BASE_URL}?q=${encodedAddress}&format=json&limit=1&countrycodes=${APP_CONFIG.GEOCODING.COUNTRY_CODES}`;
+    const queries = this.buildGeocodingQueries(address);
 
     try {
-      const response = await fetch(url, {
-        headers: {
-          "User-Agent": APP_CONFIG.GEOCODING.USER_AGENT,
-        },
-      });
+      for (const query of queries) {
+        const encodedAddress = encodeURIComponent(query);
+        const url = `${APP_CONFIG.GEOCODING.BASE_URL}?q=${encodedAddress}&format=jsonv2&limit=1&countrycodes=${APP_CONFIG.GEOCODING.COUNTRY_CODES}`;
 
-      if (!response.ok) {
-        logErrorWithContext(
-          { endpoint: "ProfileService.geocodeAddress" },
-          new Error(`Geocoding service returned status ${response.status}`)
-        );
-        throw new InternalError("Geocoding service unavailable");
+        const response = await fetch(url, {
+          headers: {
+            "User-Agent": APP_CONFIG.GEOCODING.USER_AGENT,
+          },
+        });
+
+        if (!response.ok) {
+          logErrorWithContext(
+            { endpoint: "ProfileService.geocodeAddress", request_body: { geocode_query: query } },
+            new Error(`Geocoding service returned status ${response.status}`)
+          );
+          throw new InternalError("Geocoding service unavailable");
+        }
+
+        const data = await response.json();
+
+        if (!Array.isArray(data) || data.length === 0) {
+          continue;
+        }
+
+        const result = data[0];
+
+        return {
+          location: {
+            lat: parseFloat(result.lat),
+            lon: parseFloat(result.lon),
+          },
+          formatted_address: result.display_name,
+        };
       }
 
-      const data = await response.json();
-
-      if (!Array.isArray(data) || data.length === 0) {
-        throw new AddressNotFoundError("Address not found by geocoding service");
-      }
-
-      const result = data[0];
-
-      return {
-        location: {
-          lat: parseFloat(result.lat),
-          lon: parseFloat(result.lon),
-        },
-        formatted_address: result.display_name,
-      };
+      throw new AddressNotFoundError("Address not found by geocoding service");
     } catch (error) {
       if (error instanceof AddressNotFoundError) {
         throw error;
@@ -427,6 +503,40 @@ export class ProfileService {
       logError("[ProfileService.geocodeAddress]", error);
       throw new InternalError("Unable to geocode address");
     }
+  }
+
+  /**
+   * Build a prioritized list of address query variants for the geocoding service.
+   * The list is de-duplicated but preserves order of preference:
+   *  1. The original normalized address.
+   *  2. Address with common Polish street prefixes removed (shorter fallback).
+   *  3. The original address with an explicit ", Polska" suffix to hint country.
+   *  4. The shortened address with ", Polska" suffix.
+   *
+   * Rationale: Nominatim/OpenStreetMap sometimes resolves better with or without
+   * street-type prefixes (e.g. "ul.") or when the country is explicit. The
+   * service will attempt variants in this order until a result is found.
+   */
+  private buildGeocodingQueries(address: string): string[] {
+    const normalizedAddress = address.trim().replace(/\s+/g, " ");
+    const withoutStreetPrefix = normalizedAddress.replace(/^(ul\.?|al\.?|aleja|pl\.?|plac|os\.?|osiedle)\s+/i, "");
+    const withCountry = `${withoutStreetPrefix}, Polska`;
+
+    return Array.from(
+      new Set([normalizedAddress, withoutStreetPrefix, `${normalizedAddress}, Polska`, withCountry].filter(Boolean))
+    );
+  }
+
+  /**
+   * Serialize a `Location` object into PostGIS WKT `POINT(lon lat)` format.
+   *
+   * Note: PostGIS WKT uses the coordinate order `X Y` which for geographic
+   * coordinates corresponds to `lon lat` (longitude then latitude). This method
+   * returns the WKT string (without SRID); callers may store it in PostGIS
+   * geography/geometry columns which may include SRID metadata separately.
+   */
+  private serializeLocation(location: Location): string {
+    return `POINT(${location.lon} ${location.lat})`;
   }
 
   /**
@@ -488,6 +598,11 @@ export class ProfileService {
         logWarningWithContext({ endpoint: "ProfileService.parseLocation" }, "Invalid WKT coordinates", { lat, lon });
         return null;
       }
+
+      const ewkbLocation = this.parseEwkbPoint(geography);
+      if (ewkbLocation) {
+        return ewkbLocation;
+      }
     }
 
     // Unable to parse location
@@ -498,6 +613,65 @@ export class ProfileService {
     }
 
     return null;
+  }
+
+  /**
+   * Parse a PostGIS EWKB (Extended WKB) hex string for a POINT geometry.
+   *
+   * Implementation notes:
+   * - EWKB layout: 1 byte byte-order flag (1 = little-endian, 0 = big-endian),
+   *   followed by a 4-byte unsigned integer for the geometry type (EWKB may set
+   *   the SRID-present flag 0x20000000), optional 4-byte SRID, then the
+   *   coordinate values (double-precision floats).
+   * - We accept POINT only (base geometry type code = 1). If the SRID flag is
+   *   present, the SRID is skipped but not validated here (Supabase typically
+   *   returns SRID 4326 for geography(Point,4326)).
+   * - Coordinate byte order follows the initial byte-order flag; coordinates
+   *   are read as two consecutive 64-bit floats: X then Y (i.e. lon then lat).
+   *
+   * Returns a `Location` with numeric `lat` and `lon` or `null` if parsing fails
+   * or values are out of valid geographic ranges.
+   */
+  private parseEwkbPoint(hex: string): Location | null {
+    // Basic sanity checks: must be hex, even length, and at least the minimum
+    // size for a POINT without SRID (42 hex chars). We validate exact byte
+    // lengths later after reading the geometry header (SRID flag).
+    if (!/^[0-9a-f]+$/i.test(hex) || hex.length < EWKB_MIN_HEX_LENGTH_NO_SRID || hex.length % 2 !== 0) {
+      return null;
+    }
+
+    try {
+      const bytes = Buffer.from(hex, "hex");
+      const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+      const littleEndian = view.getUint8(0) === 1;
+      const geometryType = view.getUint32(1, littleEndian);
+      const hasSrid = (geometryType & 0x20000000) !== 0;
+      const baseGeometryType = geometryType & 0x0fffffff;
+
+      if (baseGeometryType !== 1) {
+        return null;
+      }
+
+      let offset = 5;
+      if (hasSrid) {
+        offset += 4;
+      }
+
+      if (bytes.byteLength < offset + 16) {
+        return null;
+      }
+
+      const lon = view.getFloat64(offset, littleEndian);
+      const lat = view.getFloat64(offset + 8, littleEndian);
+
+      if (isFinite(lat) && isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+        return { lat, lon };
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
   }
 
   /**

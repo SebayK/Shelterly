@@ -147,6 +147,12 @@ npx supabase db reset
 npx supabase stop
 ```
 
+After `npx supabase db reset`, the seed creates a verified public shelter for runtime checks:
+
+- Email: `test-shelter@shelterly.dev`
+
+This deterministic local record is meant for development only and ensures that the public explorer and shelter detail work immediately on real `/api/*` endpoints.
+
 **Note:** In local development, Row Level Security (RLS) is **disabled** for easier testing. See [supabase/DEPLOYMENT.md](supabase/DEPLOYMENT.md) for details.
 
 ### Migrations

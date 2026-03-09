@@ -6,6 +6,9 @@
 
 - RLS **wyłączony** dla łatwiejszego testowania
 - Wszystkie migracje są stosowane automatycznie przez `supabase db reset`
+- Publiczne flow runtime używają tych samych endpointów `/api/*` co produkcja
+- Po `supabase db reset` seed powinien zapewniać co najmniej jedno `verified` shelter z lokalizacją i aktywnymi potrzebami
+- Seed tworzy też deterministyczny rekord `test-shelter@shelterly.dev`, więc explorer i detail nie wymagają ręcznego signupu przed resetem
 
 ### Production
 
@@ -93,6 +96,15 @@ WHERE schemaname = 'public';
 ```
 
 ## Troubleshooting
+
+### Problem: Explorer lub detal schroniska są puste lokalnie
+
+**Przyczyna:** Seed nie został wykonany po resecie bazy albo lokalne dane zostały później nadpisane/uszkodzone.
+**Rozwiązanie:**
+
+1. Wykonaj `supabase db reset`, aby ponownie zastosować seed.
+2. Sprawdź, czy istnieje użytkownik `test-shelter@shelterly.dev`.
+3. Sprawdź, czy profil ma status `verified`, ustawioną `location` i powiązane rekordy w `needs`.
 
 ### Problem: RLS zablokował wszystkie zapytania w produkcji
 

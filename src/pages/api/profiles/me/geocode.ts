@@ -89,11 +89,12 @@ export const POST: APIRoute = async ({ request, locals }) => {
       });
     }
 
-    const { address } = validationResult.data;
+    const { address, city } = validationResult.data;
+    const geocodeQuery = [address.trim(), city?.trim()].filter(Boolean).join(", ");
 
     // Execute business logic
     const profileService = new ProfileService(supabase);
-    const result = await profileService.geocodeAddress(address);
+    const result = await profileService.geocodeAddress(geocodeQuery);
 
     return new Response(JSON.stringify(result), {
       status: 200,

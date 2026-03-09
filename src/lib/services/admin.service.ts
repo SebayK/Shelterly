@@ -100,7 +100,7 @@ export class AdminService {
     });
 
     if (error) {
-      throw new InternalError("Failed to fetch pending shelters");
+      throw new InternalError(`Failed to fetch pending shelters: ${error.message}`);
     }
 
     const rows = (data ?? []) as PendingShelterRPCRow[];
