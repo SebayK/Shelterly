@@ -112,13 +112,13 @@ Wszystkie interaktywne elementy mają odpowiednie `aria-label`:
 
 ## Testowanie
 
-### Mock endpoint
-W trybie dev (`npm run dev`) automatycznie używany jest mock endpoint:
+### Runtime endpoint
+W trybie dev i production explorer korzysta z tego samego endpointu runtime:
 ```
-/api/mocks/profiles
+/api/profiles
 ```
 
-Zawiera 20 przykładowych schronisk z całej Polski.
+Lokalny development wymaga seedowanych danych Supabase zamiast automatycznego fallbacku do mocków.
 
 ### Funkcje do przetestowania
 - ✓ Wyświetlanie mapy z markerami

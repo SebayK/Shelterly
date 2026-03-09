@@ -138,7 +138,7 @@ describe("AdminService.getPendingShelters()", () => {
     service = new AdminService(buildSupabaseMock({ error: { message: "permission denied" } }));
 
     await expect(service.getPendingShelters({ limit: 20, offset: 0 })).rejects.toThrow(
-      "Failed to fetch pending shelters"
+      "Failed to fetch pending shelters: permission denied"
     );
   });
 

@@ -42,6 +42,7 @@ Zarządzanie stanem opiera się na trzech filarach:
   - `LocationBanner` — baner informacyjny gdy geolokalizacja odrzucona
   - `MobileViewToggle` — FAB przełączający widok mapa/lista na mobile
 - **Źródła danych API:** `GET /api/profiles` z opcjonalnymi parametrami `lat`, `lon`, `urgent_only`
+- **Runtime source of truth:** w development i production explorer korzysta z realnego `/api/profiles`; mock endpoints nie są domyślnym źródłem danych UI
 - **UX:**
   - Desktop: split-view mapa 60% + lista 40%
   - Mobile: toggle mapa/lista via FAB; kliknięcie markera wysuwa bottom sheet (`Sheet`)
@@ -74,6 +75,7 @@ Zarządzanie stanem opiera się na trzech filarach:
   - `UrgencyBadge` — kolorowy badge poziomu pilności
   - `CategoryIcon` — ikona Lucide odpowiadająca kategorii
 - **Źródła danych API:** Dane pobierane w Astro frontmatter bezpośrednio przez serwisy: `ProfileService.getProfileById(id)` + `NeedsService.getNeeds({ shelter_id: id })`
+- **Runtime source of truth:** widok detalu nie importuje danych z `__mocks__`; lokalnie również korzysta z backendu i seedowanych danych Supabase
 - **UX:**
   - SSR — szybkie ładowanie i SEO-friendly
   - Dynamiczne meta tagi (OG title, description) generowane na podstawie danych schroniska
@@ -228,15 +230,15 @@ Zarządzanie stanem opiera się na trzech filarach:
   - `ProfileForm` — wyspa React (`client:load`) z formularzem edycji profilu
   - `VerificationUpload` — komponent uploadu dokumentu weryfikacyjnego (ten sam co w rejestracji, ale w kontekście edycji)
   - Przycisk „Geokoduj adres" uruchamiający `POST /api/profiles/me/geocode`
-  - Podgląd aktualnych współrzędnych na mini-mapie (opcjonalnie)
+  - `ProfileLocationPreviewMap` — mała mapa Leaflet pokazująca aktualne lub właśnie zgeokodowane współrzędne przed zapisem
 - **Źródła danych API:**
   - `GET /api/profiles/me` — bieżące dane profilu
-  - `PATCH /api/profiles/me` — aktualizacja danych
+  - `PATCH /api/profiles/me` — aktualizacja danych wraz z `location`, jeśli użytkownik zatwierdził wynik geokodowania
   - `POST /api/profiles/me/verification-document` — upload/zmiana dokumentu
   - `POST /api/profiles/me/geocode` — geokodowanie adresu
 - **UX:**
   - Formularz pre-wypełniony aktualnymi danymi
-  - Przycisk geokodowania inline obok pola adresu — po kliknięciu wyświetla sformatowany adres i współrzędne
+  - Przycisk geokodowania inline obok pola adresu — po kliknięciu wyświetla sformatowany adres i współrzędne, które są zapisywane po zatwierdzeniu formularza
   - Komunikat sukcesu po zapisie (toast Sonner)
   - Informacja o statusie dokumentu weryfikacyjnego (wgrany / brak)
   - Dla statusu `rejected` wyraźny komunikat z powodem odrzucenia nad formularzem

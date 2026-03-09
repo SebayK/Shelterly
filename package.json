@@ -7,6 +7,10 @@
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
+    "supabase": "supabase",
+    "db:start": "supabase start",
+    "db:reset": "supabase db reset",
+    "db:stop": "supabase stop",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
@@ -64,6 +68,7 @@
     "jsdom": "^28.1.0",
     "lint-staged": "15.5.0",
     "prettier-plugin-astro": "0.14.1",
+    "supabase": "2.77.0",
     "typescript-eslint": "8.28.0",
     "vitest": "^4.0.18"
   },

@@ -39,6 +39,6 @@ if (isSuspendedShelterSession(profile.role, profile.status)) {
 }
 ---
 
-<DashboardLayout title="Edycja profilu — Shelterly" profile={profile} currentPath={currentPath}>
+<DashboardLayout title="Edycja profilu — Shelterly" profile={profile} currentPath={currentPath} withLeaflet={true}>
   <ProfileForm profile={profile} client:load />
 </DashboardLayout>

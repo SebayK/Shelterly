@@ -143,6 +143,7 @@ export interface ProfileUpdateResponseDTO {
   id: string;
   name: string;
   city: string;
+  location: Location | null;
   updated_at: string;
 }
 
@@ -394,6 +395,7 @@ export interface UpdateProfileCommand {
   name?: string;
   city?: string;
   address?: string;
+  location?: Location | null;
   phone_number?: string | null;
   website_url?: string | null;
 }
@@ -403,6 +405,7 @@ export interface UpdateProfileCommand {
  */
 export interface GeocodeCommand {
   address: string;
+  city: string;
 }
 
 /**

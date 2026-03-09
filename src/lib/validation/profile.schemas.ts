@@ -85,6 +85,16 @@ export const UpdateProfileCommandSchema = z
       .max(255, "URL must not exceed 255 characters")
       .nullable()
       .optional(),
+    location: z
+      .object({
+        lat: z.number().min(-90, "Latitude must be between -90 and 90").max(90, "Latitude must be between -90 and 90"),
+        lon: z
+          .number()
+          .min(-180, "Longitude must be between -180 and 180")
+          .max(180, "Longitude must be between -180 and 180"),
+      })
+      .nullable()
+      .optional(),
   })
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field must be provided for update",
@@ -96,6 +106,7 @@ export const UpdateProfileCommandSchema = z
  */
 export const GeocodeCommandSchema = z.object({
   address: z.string().min(1, "Address must not be empty").max(500, "Address must not exceed 500 characters"),
+  city: z.string().min(1, "City must not be empty").max(100, "City must not exceed 100 characters"),
 });
 
 /**

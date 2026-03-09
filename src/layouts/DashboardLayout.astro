@@ -12,9 +12,10 @@ interface Props {
   title?: string;
   profile: ProfileMeDTO;
   currentPath: string;
+  withLeaflet?: boolean;
 }
 
-const { title = "Dashboard — Shelterly", profile, currentPath } = Astro.props;
+const { title = "Dashboard — Shelterly", profile, currentPath, withLeaflet = false } = Astro.props;
 
 const navbarUser: NavbarUser = {
   name: profile.name,
@@ -29,6 +30,16 @@ const navbarUser: NavbarUser = {
     <meta name="viewport" content="width=device-width" />
     <link rel="icon" type="image/png" href="/favicon.png" />
     <meta name="generator" content={Astro.generator} />
+    {
+      withLeaflet && (
+        <link
+          rel="stylesheet"
+          href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+          integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+          crossorigin="anonymous"
+        />
+      )
+    }
     <title>{title}</title>
   </head>
   <body>

@@ -68,9 +68,7 @@ export function useShelters(options: UseSheltersOptions = {}): UseSheltersResult
         ).toString();
 
         // Wykonaj request
-        // W trybie dev możesz użyć mock endpointu: /api/mocks/profiles
-        const endpoint = import.meta.env.DEV ? "/api/mocks/profiles" : "/api/profiles";
-        const response = await fetch(`${endpoint}?${queryString}`);
+        const response = await fetch(`/api/profiles?${queryString}`);
 
         if (!response.ok) {
           throw new Error(`Błąd pobierania schronisk: ${response.status}`);

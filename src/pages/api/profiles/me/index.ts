@@ -173,7 +173,7 @@ export const PATCH: APIRoute = async ({ request, locals }) => {
     }
 
     // Check for forbidden fields
-    const forbiddenFields = ["status", "role", "nip", "location", "verification_doc_path", "ai_usage_count"];
+    const forbiddenFields = ["status", "role", "nip", "verification_doc_path", "ai_usage_count"];
     const attemptedForbiddenFields = forbiddenFields.filter((field) => field in body);
 
     if (attemptedForbiddenFields.length > 0) {

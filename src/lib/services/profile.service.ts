@@ -74,7 +74,7 @@ export class ProfileService {
     }
 
     // Execute query
-    const { data: profiles, error, count } = await query;
+    const { data: profiles, error } = await query;
 
     if (error) {
       logError("[ProfileService.getVerifiedProfiles]", error);
@@ -106,14 +106,17 @@ export class ProfileService {
         // Parse location from PostGIS geography
         const location = this.parseLocation(profile.location);
 
-        // Skip profiles without valid location if coordinates provided
-        if (lat !== undefined && lon !== undefined && !location) {
+        if (!location) {
+          logWarningWithContext(
+            { endpoint: "ProfileService.getVerifiedProfiles", shelter_id: profile.id },
+            "Skipping verified profile without valid location"
+          );
           return null;
         }
 
         // Calculate distance if both coordinates and location exist
         let distance_km: number | undefined;
-        if (lat !== undefined && lon !== undefined && location) {
+        if (lat !== undefined && lon !== undefined) {
           distance_km = this.calculateDistance(lat, lon, location.lat, location.lon);
         }
 
@@ -130,7 +133,7 @@ export class ProfileService {
           id: profile.id,
           name: profile.name,
           city: profile.city,
-          location: location as Location, // Type guard ensures this is not null
+          location,
           distance_km,
           has_urgent_needs: hasUrgentNeeds,
           needs_count: needsCount,
@@ -140,6 +143,8 @@ export class ProfileService {
         return dto;
       })
       .filter((p): p is ProfileListItemDTO => p !== null);
+
+    const total = profilesWithStats.length;
 
     // Sort by distance if coordinates provided
     // Note: When using distance sorting, we need to sort ALL results before pagination
@@ -157,7 +162,7 @@ export class ProfileService {
       return {
         data: paginatedProfiles,
         pagination: {
-          total: profilesWithStats.length,
+          total,
           limit,
           offset,
         },
@@ -171,7 +176,7 @@ export class ProfileService {
     return {
       data: paginatedProfiles,
       pagination: {
-        total: count || 0,
+        total,
         limit,
         offset,
       },
@@ -285,18 +290,29 @@ export class ProfileService {
       name?: string;
       city?: string;
       address?: string;
+      location?: Location | null;
       phone_number?: string | null;
       website_url?: string | null;
     }
   ): Promise<ProfileUpdateResponseDTO> {
+    const profileUpdates: Record<string, unknown> = {
+      updated_at: new Date().toISOString(),
+    };
+
+    if (updates.name !== undefined) profileUpdates.name = updates.name;
+    if (updates.city !== undefined) profileUpdates.city = updates.city;
+    if (updates.address !== undefined) profileUpdates.address = updates.address;
+    if (updates.phone_number !== undefined) profileUpdates.phone_number = updates.phone_number;
+    if (updates.website_url !== undefined) profileUpdates.website_url = updates.website_url;
+    if (updates.location !== undefined) {
+      profileUpdates.location = updates.location ? this.serializeLocation(updates.location) : null;
+    }
+
     const { data: profile, error } = await this.supabase
       .from("profiles")
-      .update({
-        ...updates,
-        updated_at: new Date().toISOString(),
-      })
+      .update(profileUpdates)
       .eq("id", userId)
-      .select("id, name, city, updated_at")
+      .select("id, name, city, location, updated_at")
       .single();
 
     if (error) {
@@ -316,10 +332,14 @@ export class ProfileService {
       );
       throw new NotFoundError("Profile data incomplete");
     }
+
+    const location = this.parseLocation(profile.location);
+
     return {
       id: profile.id,
       name: profile.name,
       city: profile.city,
+      location,
       updated_at: profile.updated_at || new Date().toISOString(),
     };
   }
@@ -382,39 +402,45 @@ export class ProfileService {
    * Uses Nominatim (OpenStreetMap) geocoding service
    */
   async geocodeAddress(address: string): Promise<{ location: Location; formatted_address: string }> {
-    const encodedAddress = encodeURIComponent(address);
-    const url = `${APP_CONFIG.GEOCODING.BASE_URL}?q=${encodedAddress}&format=json&limit=1&countrycodes=${APP_CONFIG.GEOCODING.COUNTRY_CODES}`;
+    const queries = this.buildGeocodingQueries(address);
 
     try {
-      const response = await fetch(url, {
-        headers: {
-          "User-Agent": APP_CONFIG.GEOCODING.USER_AGENT,
-        },
-      });
+      for (const query of queries) {
+        const encodedAddress = encodeURIComponent(query);
+        const url = `${APP_CONFIG.GEOCODING.BASE_URL}?q=${encodedAddress}&format=jsonv2&limit=1&countrycodes=${APP_CONFIG.GEOCODING.COUNTRY_CODES}`;
 
-      if (!response.ok) {
-        logErrorWithContext(
-          { endpoint: "ProfileService.geocodeAddress" },
-          new Error(`Geocoding service returned status ${response.status}`)
-        );
-        throw new InternalError("Geocoding service unavailable");
+        const response = await fetch(url, {
+          headers: {
+            "User-Agent": APP_CONFIG.GEOCODING.USER_AGENT,
+          },
+        });
+
+        if (!response.ok) {
+          logErrorWithContext(
+            { endpoint: "ProfileService.geocodeAddress", request_body: { geocode_query: query } },
+            new Error(`Geocoding service returned status ${response.status}`)
+          );
+          throw new InternalError("Geocoding service unavailable");
+        }
+
+        const data = await response.json();
+
+        if (!Array.isArray(data) || data.length === 0) {
+          continue;
+        }
+
+        const result = data[0];
+
+        return {
+          location: {
+            lat: parseFloat(result.lat),
+            lon: parseFloat(result.lon),
+          },
+          formatted_address: result.display_name,
+        };
       }
 
-      const data = await response.json();
-
-      if (!Array.isArray(data) || data.length === 0) {
-        throw new AddressNotFoundError("Address not found by geocoding service");
-      }
-
-      const result = data[0];
-
-      return {
-        location: {
-          lat: parseFloat(result.lat),
-          lon: parseFloat(result.lon),
-        },
-        formatted_address: result.display_name,
-      };
+      throw new AddressNotFoundError("Address not found by geocoding service");
     } catch (error) {
       if (error instanceof AddressNotFoundError) {
         throw error;
@@ -427,6 +453,20 @@ export class ProfileService {
       logError("[ProfileService.geocodeAddress]", error);
       throw new InternalError("Unable to geocode address");
     }
+  }
+
+  private buildGeocodingQueries(address: string): string[] {
+    const normalizedAddress = address.trim().replace(/\s+/g, " ");
+    const withoutStreetPrefix = normalizedAddress.replace(/^(ul\.?|al\.?|aleja|pl\.?|plac|os\.?|osiedle)\s+/i, "");
+    const withCountry = `${withoutStreetPrefix}, Polska`;
+
+    return Array.from(
+      new Set([normalizedAddress, withoutStreetPrefix, `${normalizedAddress}, Polska`, withCountry].filter(Boolean))
+    );
+  }
+
+  private serializeLocation(location: Location): string {
+    return `POINT(${location.lon} ${location.lat})`;
   }
 
   /**
@@ -488,6 +528,11 @@ export class ProfileService {
         logWarningWithContext({ endpoint: "ProfileService.parseLocation" }, "Invalid WKT coordinates", { lat, lon });
         return null;
       }
+
+      const ewkbLocation = this.parseEwkbPoint(geography);
+      if (ewkbLocation) {
+        return ewkbLocation;
+      }
     }
 
     // Unable to parse location
@@ -498,6 +543,48 @@ export class ProfileService {
     }
 
     return null;
+  }
+
+  /**
+   * Helper: Parse PostGIS EWKB hex string returned by Supabase/PostgREST for geography(Point, 4326)
+   */
+  private parseEwkbPoint(hex: string): Location | null {
+    if (!/^[0-9a-f]+$/i.test(hex) || hex.length < 42 || hex.length % 2 !== 0) {
+      return null;
+    }
+
+    try {
+      const bytes = Buffer.from(hex, "hex");
+      const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
+      const littleEndian = view.getUint8(0) === 1;
+      const geometryType = view.getUint32(1, littleEndian);
+      const hasSrid = (geometryType & 0x20000000) !== 0;
+      const baseGeometryType = geometryType & 0x0fffffff;
+
+      if (baseGeometryType !== 1) {
+        return null;
+      }
+
+      let offset = 5;
+      if (hasSrid) {
+        offset += 4;
+      }
+
+      if (bytes.byteLength < offset + 16) {
+        return null;
+      }
+
+      const lon = view.getFloat64(offset, littleEndian);
+      const lat = view.getFloat64(offset + 8, littleEndian);
+
+      if (isFinite(lat) && isFinite(lon) && lat >= -90 && lat <= 90 && lon >= -180 && lon <= 180) {
+        return { lat, lon };
+      }
+
+      return null;
+    } catch {
+      return null;
+    }
   }
 
   /**
