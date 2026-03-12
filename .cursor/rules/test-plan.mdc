@@ -1,0 +1,123 @@
+<analiza_projektu>
+1.  **Kluczowe komponenty projektu:**
+    *   **Autoryzacja i Rejestracja (Auth):** System oparty na Supabase. Obejmuje role (`shelter`, `super_admin`) oraz stany konta schroniska (`pending`, `verified`, `suspended`, `rejected`).
+    *   **Panel Administracyjny (Admin):** Interfejs dla `super_admin` do przeglądania oczekujących schronisk, pobierania dokumentów weryfikacyjnych i zmiany ich statusu (akceptacja/odrzucenie z powodem).
+    *   **Profil Schroniska:** Zarządzanie danymi schroniska, wgrywanie dokumentów weryfikacyjnych, geokodowanie adresu (Nominatim) do współrzędnych (PostGIS).
+    *   **Zarządzanie Potrzebami (Dashboard):** CRUD dla potrzeb schroniska (tworzenie, edycja, usuwanie, oznaczanie jako zrealizowane). Zablokowane dla niezweryfikowanych kont.
+    *   **Asystent AI:** Integracja z OpenRouter (modele GPT) do generowania empatycznych opisów potrzeb oraz linków zakupowych (Allegro/Ceneo). Ograniczone własnym mechanizmem Rate Limitingu.
+    *   **Eksplorator Schronisk (Mapa/Lista):** Publiczny widok mapy oparty na Leaflet i klastrowaniu znaczników, połączony z listą schronisk. Sortowanie po odległości (geolokalizacja przeglądarki) i filtracja (np. "Tylko pilne").
+2.  **Specyfika stosu technologicznego:**
+    *   **Astro v5 & React v19:** Astro jako framework główny (API routes, layouty SSR), React jako interaktywne "wyspy" (islands). Wymaga testowania hydracji i poprawnego przekazywania stanu między Astro a React.
+    *   **Supabase (PostgreSQL + PostGIS):** Silne uzależnienie od bazy danych. Wymaga testów integracyjnych z prawdziwą lub mockowaną instancją bazy. PostGIS wymaga specyficznych testów dla zapytań przestrzennych (odległości, granice mapy).
+    *   **Zod:** Używany do walidacji DTO i formularzy. Pozwala na oparcie testów jednostkowych o gotowe schematy.
+    *   **Vitest & Testing Library:** Kod zawiera już rozbudowaną bazę testów jednostkowych dla serwisów i komponentów UI. Strategia powinna zakładać ich utrzymanie i rozszerzenie o testy E2E.
+3.  **Priorytety testowe:**
+    *   *P1: Bezpieczeństwo i Autoryzacja.* Rygorystyczny podział na role. Schronisko `pending` nie może dodać potrzeby. Schronisko nie może widzieć/pobrać dokumentów innych schronisk.
+    *   *P2: Proces weryfikacji (Krytyczna ścieżka biznesowa).* Rejestracja -> Wgranie pliku -> Admin akceptuje -> Schronisko zyskuje dostęp do CRUD potrzeb.
+    *   *P3: Integracje zewnętrzne.* AI (generowanie opisów/linków z uwzględnieniem Rate Limitu) oraz Geokodowanie.
+    *   *P4: UI/UX Eksploratora.* Poprawne renderowanie mapy Leaflet, klastrowanie, filtrowanie i responsywność (Mobile View Toggle).
+4.  **Potencjalne obszary ryzyka:**
+    *   *Path Traversal przy dokumentach:* Serwis administracyjny ma własne zabezpieczenia przed path traversal. Należy to dogłębnie przetestować (security testing).
+    *   *Rate Limiting i AI Usage Limit:* Generowanie AI kosztuje. Logika limitów w `RateLimiter` oraz w bazie (`ai_usage_count`) musi działać bezbłędnie (ryzyko race conditions).
+    *   *Zależność od serwisów trzecich:* Błędy Nominatim (geokodowanie) lub OpenRouter (AI) muszą być odpowiednio mapowane i nie mogą psuć UI (graceful degradation).
+    *   *Walidacja krzyżowa (Cross-field validation):* Np. `current_quantity` nie może przekroczyć `target_quantity`.
+</analiza_projektu>
+
+# Kompleksowy Plan Testów: Projekt Shelterly
+
+## 1. Wprowadzenie i cele testowania
+Niniejszy dokument definiuje strategię i plan testów dla platformy **Shelterly** – aplikacji łączącej schroniska dla zwierząt z darczyńcami. Projekt oparty jest na nowoczesnym stosie technologicznym (Astro, React, Supabase, PostGIS) i wykorzystuje mechanizmy AI. 
+
+**Główne cele testowania to:**
+* Zapewnienie niezawodności krytycznych ścieżek biznesowych (rejestracja schroniska, weryfikacja przez administratora, dodawanie potrzeb).
+* Weryfikacja bezpieczeństwa i separacji uprawnień (Role-Based Access Control) między użytkownikami (`shelter`, `super_admin`, użytkownik niezalogowany).
+* Walidacja poprawności działania zewnętrznych integracji (OpenRouter dla AI, Nominatim dla geokodowania, Supabase Storage).
+* Zapewnienie stabilności i wydajności interaktywnej mapy schronisk (Leaflet/PostGIS).
+
+## 2. Zakres testów
+
+**W zakresie (In-Scope):**
+*   Moduł Autoryzacji (Logowanie, Rejestracja, Odświeżanie tokenów, Wylogowywanie).
+*   Moduł Zarządzania Profilem (Geokodowanie adresu, wgrywanie dokumentów weryfikacyjnych < 5MB).
+*   Panel Administracyjny (Przeglądanie listy oczekujących, zatwierdzanie/odrzucanie z podaniem powodu, bezpieczne pobieranie dokumentów).
+*   Zarządzanie Potrzebami schroniska (CRUD, logika walidacji ilości docelowej vs bieżącej).
+*   Integracja AI (Generowanie opisu, generowanie linków do Ceneo/Allegro, weryfikacja logiki *Rate Limitingu* i limitu użyć per konto).
+*   Eksplorator Schronisk (Filtrowanie, geolokalizacja przeglądarki, renderowanie mapy Leaflet, obliczanie odległości).
+
+**Poza zakresem (Out-of-Scope):**
+*   Testy obciążeniowe infrastruktury bazy danych (zarządzane przez usługodawcę Supabase).
+*   Uptime i SLA usług zewnętrznych (Nominatim, OpenRouter).
+*   Testowanie wydajności i bezpieczeństwa samego frameworka Astro/React na poziomie kodu źródłowego dostawcy.
+
+## 3. Typy testów do przeprowadzenia
+
+1.  **Testy jednostkowe (Unit Tests):** Utrzymanie i rozbudowa istniejącej bazy w `Vitest`. Skupienie na walidatorach Zod (np. walidacja NIP, adresów URL), funkcjach pomocniczych, serwisach (`admin.service.ts`, `ai.service.ts`) oraz logice biznesowej w hookach.
+2.  **Testy komponentowe (Component Tests):** Weryfikacja zachowania wysp Reactowych (React Islands) za pomocą `React Testing Library`, w tym obsługa stanów formularzy, okien dialogowych (`Alert Dialogs`) i powiadomień (`Sonner`).
+3.  **Testy integracyjne API (Integration Tests):** Walidacja endpointów `src/pages/api/*` – w tym sprawdzanie kodów HTTP (200, 400, 401, 403, 404, 429), obsługi błędów oraz komunikacji z mockowanym klientem Supabase.
+4.  **Testy End-to-End (E2E):** Automatyzacja pełnych ścieżek użytkownika (np. od rejestracji do opublikowania pierwszej potrzeby) przy użyciu narzędzia `Playwright`.
+5.  **Testy Bezpieczeństwa (Security):** Testy penetracyjne skupione na weryfikacji izolacji danych (RLS), testy na podatność Path Traversal przy pobieraniu plików (`/api/admin/shelters/[id]/verification-document`) oraz ataki XSS na formularze (szczególnie opisy potrzeb i powody odrzucenia).
+6.  **Testy Eksploracyjne i UX:** Ręczne testowanie mapy na urządzeniach mobilnych (interakcja dotykowa z Leaflet, przełącznik "Mapa / Lista").
+
+## 4. Scenariusze testowe dla kluczowych funkcjonalności
+
+### 4.1. Ścieżka Weryfikacji Schroniska (Role & Permissions)
+*   **TC-01:** Rejestracja schroniska z błędnym formatem NIP i niespełnionymi wymogami hasła (Oczekiwane: błędy walidacji formularza, brak zapytania do API).
+*   **TC-02:** Rejestracja z poprawnymi danymi -> Próba dodania potrzeby (Oczekiwane: Zablokowane, status konta `pending`, wymóg wgrania dokumentu).
+*   **TC-03:** Użytkownik `super_admin` loguje się, weryfikuje dokument pobrany z chronionego storage'u i odrzuca schronisko z powodem (Oczekiwane: Schronisko widzi powód w dashboardzie, nadal nie może tworzyć potrzeb).
+*   **TC-04:** Użytkownik `super_admin` akceptuje schronisko (Oczekiwane: Użytkownik `shelter` odzyskuje pełen dostęp do CRUD w dashboardzie bez konieczności ponownego logowania).
+
+### 4.2. Zarządzanie Potrzebami i Integracja AI
+*   **TC-05:** Dodanie potrzeby z `current_quantity` większym niż `target_quantity` (Oczekiwane: Wyjątek walidacji cross-field, kod 400).
+*   **TC-06:** Pomyślne użycie AI do wygenerowania opisu dla nowo utworzonej potrzeby (Oczekiwane: Wygenerowany tekst, inkrementacja licznika `ai_usage_count`).
+*   **TC-07:** Próba generowania linku zakupowego AI, gdy licznik przekroczy `APP_CONFIG.AI.USAGE_LIMIT` (Oczekiwane: Błąd 403 Forbidden, przycisk w UI wyszarzony/zablokowany).
+*   **TC-08:** Wysłanie >10 zapytań do AI w ciągu 1 minuty (Oczekiwane: Działanie instancji `RateLimiter`, zwrot błędu 429 Too Many Requests z nagłówkiem `Retry-After`).
+*   **TC-09:** Oznaczenie potrzeby jako "Zrealizowana" (Oczekiwane: Potrzeba wyszarzona w tabeli, brak możliwości dalszej edycji, wykluczenie z filtrowania "Tylko pilne" na publicznej mapie).
+
+### 4.3. Profil, Mapa i Geokodowanie
+*   **TC-10:** Wgranie dokumentu weryfikacyjnego > 5MB lub w niedozwolonym formacie (np. `.gif`) (Oczekiwane: Walidacja front-endowa i backendowa odrzuca plik).
+*   **TC-11:** Zmiana adresu schroniska i uruchomienie geokodowania (Oczekiwane: Zapytanie do Nominatim, aktualizacja współrzędnych, wyświetlenie podglądu mapy, aktualizacja w PostGIS).
+*   **TC-12:** Widok publiczny: Użytkownik nie udziela zgody na geolokalizację w przeglądarce (Oczekiwane: Pokazanie `LocationBanner`, domyślny widok mapy wycentrowany na Polskę, brak dystansu w km na kartach).
+*   **TC-13:** Interakcja klastrowa w widoku mapy – przybliżanie i oddalanie przy dużej ilości schronisk (Oczekiwane: Poprawne łączenie/rozdział znaczników przez `MarkerClusterGroup`).
+
+## 5. Środowisko testowe
+Proces testowy będzie realizowany w oparciu o trzy środowiska:
+1.  **Local (Dev):** Uruchamiane lokalnie przez programistów (`npm run dev`). Podłączone do lokalnej instancji bazy Supabase (przez Supabase CLI) z mockowanymi odpowiedziami OpenRouter (API AI).
+2.  **Staging (Preview):** Zautomatyzowane środowiska "Preview Deployments" (Vercel/Netlify), połączone ze środowiskiem testowym Supabase (Staging Project). Tutaj wykonywane są testy E2E.
+3.  **Production:** Po wdrożeniu wykonanie testów typu "Sanity / Smoke Test" (bez operacji modyfikujących rzeczywiste dane darczyńców, weryfikacja wyłącznie dostępności usług).
+
+## 6. Narzędzia do testowania
+*   **Testy Jednostkowe/Komponentowe:** `Vitest`, `@testing-library/react`, `jsdom`.
+*   **Testy End-to-End (E2E):** `Playwright` (ze wsparciem dla symulacji geolokalizacji w testach mapy).
+*   **API & Security:** `Postman` / `Insomnia` do testów eksploracyjnych API, `OWASP ZAP` do weryfikacji nagłówków (nosniff) i prób ataku Path Traversal na załączniki.
+*   **Statyczna Analiza Kodu:** `ESLint`, `Prettier`, `TypeScript` (strict mode), `Husky` + `Lint-staged` przed commitami.
+*   **CI/CD:** GitHub Actions (automatyczne uruchamianie Vitest i Playwright na każdym Pull Requeście).
+
+## 7. Harmonogram testów
+*   **Sprint x (Rozwój bieżący):** Deweloperzy piszą testy w `Vitest` (TDD lub równolegle z kodem). Skrypty walidujące przechodzą w CI.
+*   **Przed każdym wdrożeniem na Staging:** Pełen zestaw testów jednostkowych i komponentowych.
+*   **Na środowisku Staging (Automatycznie):** Wykonanie testów E2E (Playwright) pokrywających 3 główne ścieżki krytyczne (Rejestracja, Panel Admina, CRUD Potrzeb).
+*   **Sesja testów eksploracyjnych (QA):** Raz w sprincie. Koncentracja na UX mapy, nawigacji mobilnej i zachowaniu interfejsu (toasty, modale) przy symulowanych błędach sieci (`Offline mode` w Chrome DevTools).
+
+## 8. Kryteria akceptacji testów (Definition of Done)
+1.  Wszystkie testy jednostkowe i E2E przechodzą poprawnie w pipeline CI (0 faili).
+2.  Pokrycie kodu (Code Coverage) nie spada poniżej zdefiniowanego poziomu bazowego (rekomendowane 80% dla serwisów backendowych w `src/lib/services`).
+3.  Brak otwartych błędów (Bugów) o krytyczności `Critical` i `High`.
+4.  Endpointy AI i geokodowania prawidłowo raportują przekroczenia timeoutów (15-20 sekund) nie powodując zawieszenia aplikacji.
+5.  Mechanizm RLS i role w Supabase zostały pomyślnie zweryfikowane - nie nastąpił żaden wyciek danych (np. danych niezatwierdzonych schronisk do publicznego widoku).
+
+## 9. Role i odpowiedzialności w procesie testowania
+*   **Deweloper (Frontend/Backend):** Pisanie i utrzymywanie testów w `Vitest`, stosowanie narzędzi analizy statycznej, naprawa zgłoszonych defektów.
+*   **Inżynier QA (Automatyzacja):** Konfiguracja środowiska Playwright, pisanie skryptów dla testów E2E, integracja testów z GitHub Actions.
+*   **Inżynier QA (Manual / Exploratory):** Wykonywanie testów eksploracyjnych na urządzeniach mobilnych (responsywność mapy), testowanie krawędziowe (Edge cases) np. przerywanie wgrywania dokumentu.
+*   **Product Owner:** Weryfikacja akceptacyjna (UAT) zrealizowanych funkcji przed wdrożeniem na produkcję.
+
+## 10. Procedury raportowania błędów
+Błędy będą raportowane w systemie do zarządzania projektami (np. Jira, Linear).
+**Każde zgłoszenie błędu musi zawierać:**
+1.  Tytuł (zwięzły opis błędu).
+2.  Krytyczność (Blocker, Critical, High, Medium, Low).
+3.  Środowisko (Local, Staging, Prod / Przeglądarka / Urządzenie).
+4.  Dokładne kroki do reprodukcji (Steps to reproduce).
+5.  Spodziewany rezultat wg wymagań.
+6.  Rzeczywisty rezultat.
+7.  Załączniki: Skrzynki błędów z konsoli, logi sieciowe z zakładki Network (szczególnie `x-correlation-id` wspierany w `middleware/index.ts`), zrzuty ekranu lub nagrania wideo. Zrzuty z logów bazy Supabase w przypadku błędu `INTERNAL_ERROR`.

@@ -56,6 +56,15 @@ Shelterly provides a centralized platform where:
 
 - **OpenRouter.ai** - Access to multiple AI models for text generation and search query construction
 
+### Testing
+
+- **Vitest 4** - Test runner for unit and integration tests of business logic, API handlers, and React components
+- **React Testing Library** - Component testing focused on user-visible behavior
+- **Testing Library User Event** - Simulation of realistic user interactions in React component tests
+- **jsdom** - Browser-like environment for frontend unit tests running outside a real browser
+- **@vitest/coverage-v8** - Coverage reports based on the V8 engine
+- **E2E status** - The test plan defines end-to-end scenarios for key user flows, but the repository does not yet include a dedicated automated E2E framework or `npm` script for those tests
+
 ### Infrastructure & Deployment
 
 - **Vercel** - Serverless hosting with automatic Git integration

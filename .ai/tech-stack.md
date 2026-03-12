@@ -18,6 +18,14 @@ AI - Komunikacja z modelami przez usługę Openrouter.ai:
 - Dostęp do szerokiej gamy modeli (OpenAI, Anthropic, Google i wiele innych), które pozwolą nam znaleźć rozwiązanie zapewniające wysoką efektywność i niskie koszta
 - Pozwala na ustawianie limitów finansowych na klucze API
 
+Testy:
+
+- Testy jednostkowe i integracyjne są realizowane przy użyciu Vitest 4
+- Testy komponentów React wykorzystują React Testing Library oraz `@testing-library/user-event`
+- Testy frontendowe uruchamiane poza prawdziwą przeglądarką korzystają ze środowiska `jsdom`
+- Pokrycie kodu jest mierzone przez `@vitest/coverage-v8`
+- Plan testów zakłada także testy E2E dla kluczowych flow użytkownika, ale repozytorium nie ma obecnie skonfigurowanego dedykowanego frameworka automatyzacji E2E
+
 CI/CD i Hosting:
 
 - Github Actions do tworzenia pipeline’ów testowych i linterów

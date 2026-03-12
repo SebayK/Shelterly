@@ -15,15 +15,15 @@ Poniżej rozpiska per dokument, z podziałem na: zrobione, częściowo zrobione,
 7. Primitives UI z planu są już w repo, m.in. `src/components/ui/dialog.tsx`, `src/components/ui/alert-dialog.tsx`, `src/components/ui/tooltip.tsx`, `src/components/ui/sheet.tsx`, `src/components/ui/label.tsx`, `src/components/ui/textarea.tsx`, `src/components/ui/switch.tsx`.
 8. Panel administracyjny UI został wdrożony w `src/pages/admin/index.astro` wraz z komponentami `src/components/admin/AdminPendingSheltersView.tsx`, `src/components/admin/PendingSheltersTable.tsx`, `src/components/admin/ShelterReviewPanel.tsx`, `src/components/admin/ShelterStatusConfirmationDialog.tsx`.
 9. Flow statusów `pending`, `rejected` i `suspended` jest domknięty w widokach i redirectach, w tym ograniczony dostęp do `/dashboard/profile` dla kont niezweryfikowanych oraz prezentacja powodu odrzucenia w UI.
+10. Strona 404 z planu UI istnieje w `src/pages/404.astro`.
 
 ### Częściowo zrealizowane
 
-1. Profil schroniska ma formularz, upload dokumentu i geokodowanie w `src/components/profile/ProfileForm.tsx`, ale geokodowanie nie zapisuje współrzędnych do profilu, tylko do lokalnego stanu.
-2. Niektóre założenia architektoniczne z dokumentu nie zostały wdrożone literalnie: nie ma TanStack Query ani centralnego api clienta, zamiast tego są własne hooki fetchujące, np. `src/components/hooks/useNeeds.ts`, `src/components/hooks/useShelters.ts`, `src/components/hooks/useAdminPendingShelters.ts`.
+1. Niektóre założenia architektoniczne z dokumentu nie zostały wdrożone literalnie: nie ma TanStack Query ani centralnego api clienta, zamiast tego są własne hooki fetchujące, np. `src/components/hooks/useNeeds.ts`, `src/components/hooks/useShelters.ts`, `src/components/hooks/useAdminPendingShelters.ts`.
 
 ### Brakujące
 
-1. Strona 404 z planu UI: nie ma `src/pages/404.astro`, mimo że redirect do `/404` już jest używany w `src/pages/shelter/[id].astro`.
+1. Brak istotnych braków widoków z planu UI; pozostały głównie odchylenia architektoniczne opisane wyżej.
 
 ## prd.md
 
@@ -40,7 +40,7 @@ Poniżej rozpiska per dokument, z podziałem na: zrobione, częściowo zrobione,
 
 ### Częściowo zrealizowane
 
-1. Geolokalizacja i sortowanie po odległości działają po stronie publicznej, ale trwałe przypisanie coordinates do profilu schroniska nadal nie jest domknięte.
+1. Geolokalizacja i sortowanie po odległości działają po stronie publicznej, ale logika rekomendacji z PRD nie jest domknięta: brak wydzielonej funkcji `suggestShelterForUser`, brak testu tej logiki i brak sortowania łączącego odległość z pilnością.
 
 ### Brakujące
 
@@ -61,7 +61,7 @@ Poniżej rozpiska per dokument, z podziałem na: zrobione, częściowo zrobione,
 
 ### Częściowo zrealizowane
 
-1. `PATCH /api/profiles/me` celowo blokuje modyfikację `location`, więc endpoint geocode istnieje, ale planowany efekt biznesowy aktualizacji `location` w profilu nie jest domknięty.
+1. `POST /api/profiles/me/geocode` oraz `PATCH /api/profiles/me` pozwalają już zapisać `location` do profilu, ale publiczna logika rekomendacji nadal odbiega od planu API i PRD.
 2. Caching jest wdrożony wybiórczo. `GET /api/needs` ma cache, admin ma `no-store`, ale `GET /api/profiles` nie ma deklarowanego cache-control z planu.
 3. Bezpieczeństwo w praktyce opiera się dziś bardziej na warstwie API niż na RLS.
 
@@ -69,12 +69,11 @@ Poniżej rozpiska per dokument, z podziałem na: zrobione, częściowo zrobione,
 
 1. Pełne RLS zgodne z planem. Schemat startowy je przewiduje w `supabase/migrations/20260119000000_init_schema.sql`, ale potem polityki są usuwane w `supabase/migrations/20260119120000_disable_rls_policies.sql` i RLS jest wyłączane w `supabase/migrations/20260224000000_disable_rls.sql`.
 2. Rate limiting dla auth i general API zgodnie z `api-plan.md`.
-3. Domknięcie update `location` po geocodingu.
-4. Pełna zgodność z deklarowanym middleware chain z planu. Middleware istnieje w `src/middleware/index.ts`, ale obecnie robi głównie inicjalizację Supabase clienta, nie całą zaplanowaną sekwencję CORS, auth validator, rate limiter, formatter.
+3. Pełna zgodność z deklarowanym middleware chain z planu. Middleware istnieje w `src/middleware/index.ts`, ale obecnie robi głównie inicjalizację Supabase clienta, nie całą zaplanowaną sekwencję CORS, auth validator, rate limiter, formatter.
 
 ## Najkrótsza wersja priorytetów
 
-1. Brakuje strony 404 oraz trwałego zapisu `location` po geokodowaniu.
-2. RLS i część wymagań bezpieczeństwa z `api-plan.md` nadal są niespełnione.
-3. Brakuje CI oraz testu logiki rekomendacji z PRD.
+1. RLS i część wymagań bezpieczeństwa z `api-plan.md` nadal są niespełnione.
+2. Brakuje CI oraz testu i implementacji pełnej logiki rekomendacji z PRD.
+3. Brakuje rate limitingu dla auth i general API oraz pełniejszego middleware chain zgodnego z planem.
 4. Architektura UI odbiega od planu, ale to jest raczej dług techniczny niż blocker MVP.
