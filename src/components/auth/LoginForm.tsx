@@ -183,9 +183,9 @@ export default function LoginForm({ returnUrl = "/dashboard" }: LoginFormProps) 
         <CardDescription>Wpisz dane logowania, aby zarządzać schroniskiem</CardDescription>
       </CardHeader>
 
-      <form onSubmit={handleSubmit} noValidate aria-label="Formularz logowania">
+      <form onSubmit={handleSubmit} noValidate aria-label="Formularz logowania" data-test-id="login-form">
         <CardContent className="space-y-4">
-          {apiError && <FormErrorAlert message={apiError} />}
+          {apiError && <FormErrorAlert message={apiError} testId="login-form-error-alert" />}
 
           {/* Email field */}
           <div className="space-y-1">
@@ -195,6 +195,7 @@ export default function LoginForm({ returnUrl = "/dashboard" }: LoginFormProps) 
             <Input
               id={emailId}
               type="email"
+              data-test-id="login-email-input"
               autoComplete="email"
               placeholder="shelter@example.com"
               value={email}
@@ -220,6 +221,7 @@ export default function LoginForm({ returnUrl = "/dashboard" }: LoginFormProps) 
               <Input
                 id={passwordId}
                 type={showPassword ? "text" : "password"}
+                data-test-id="login-password-input"
                 autoComplete="current-password"
                 placeholder="••••••••"
                 value={password}
@@ -234,6 +236,7 @@ export default function LoginForm({ returnUrl = "/dashboard" }: LoginFormProps) 
                 type="button"
                 onClick={handleTogglePassword}
                 aria-label={showPassword ? "Ukryj hasło" : "Pokaż hasło"}
+                data-test-id="login-password-toggle"
                 className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
                 tabIndex={0}
               >
@@ -279,7 +282,13 @@ export default function LoginForm({ returnUrl = "/dashboard" }: LoginFormProps) 
         </CardContent>
 
         <CardFooter className="flex flex-col gap-4">
-          <Button type="submit" className="w-full" disabled={isSubmitting} aria-busy={isSubmitting}>
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={isSubmitting}
+            aria-busy={isSubmitting}
+            data-test-id="login-submit-button"
+          >
             {isSubmitting ? (
               <span className="flex items-center gap-2">
                 <svg

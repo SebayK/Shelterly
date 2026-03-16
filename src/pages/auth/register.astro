@@ -2,18 +2,19 @@
 import Layout from "@/layouts/Layout.astro";
 import RegisterForm from "@/components/auth/RegisterForm";
 import { logError } from "@/lib/errors";
+import { getOptionalUser } from "@/lib/supabase-auth";
 
 export const prerender = false;
 
 // Server-side session guard: if a valid Supabase session exists,
 // redirect immediately without rendering the form.
-const { data, error } = await Astro.locals.supabase.auth.getUser();
+const { user, error } = await getOptionalUser(Astro.locals.supabase);
 
 if (error) {
   logError("[register.astro] Failed to validate Supabase user", error);
 }
 
-if (data?.user) {
+if (user) {
   return Astro.redirect("/dashboard");
 }
 ---

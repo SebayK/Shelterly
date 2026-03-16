@@ -2,6 +2,7 @@
 import "../styles/global.css";
 import Navbar from "@/components/Navbar.astro";
 import { logError } from "@/lib/errors";
+import { getOptionalUser } from "@/lib/supabase-auth";
 import type { NavbarUser } from "@/types";
 
 interface Props {
@@ -14,9 +15,11 @@ const { title = "Shelterly", withLeaflet = false } = Astro.props;
 let navbarUser: NavbarUser | null = null;
 
 try {
-  const {
-    data: { user },
-  } = await Astro.locals.supabase.auth.getUser();
+  const { user, error } = await getOptionalUser(Astro.locals.supabase);
+
+  if (error) {
+    logError("[Layout] Failed to fetch user session", error);
+  }
 
   if (user) {
     const { data: profile } = await Astro.locals.supabase

@@ -1,11 +1,13 @@
 interface FormErrorAlertProps {
   message: string;
+  testId?: string;
 }
 
-export function FormErrorAlert({ message }: FormErrorAlertProps) {
+export function FormErrorAlert({ message, testId }: FormErrorAlertProps) {
   return (
     <div
       role="alert"
+      data-test-id={testId}
       className="rounded-md border border-destructive/50 bg-destructive/10 px-4 py-3 text-sm text-destructive"
     >
       <div className="flex items-center gap-2">

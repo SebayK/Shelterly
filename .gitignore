@@ -17,6 +17,7 @@ pnpm-debug.log*
 .env
 .env.production
 .env.test
+.env.test.local
 
 
 # macOS-specific files
@@ -32,3 +33,7 @@ supabase/.temp
 
 # newman reports
 newman-report*.json
+
+# playwright artifacts
+test-results/
+playwright-report/

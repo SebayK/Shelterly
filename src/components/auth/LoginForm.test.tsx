@@ -35,6 +35,12 @@ function createDeferredResponse() {
   return { promise, resolve };
 }
 
+function getByDataTestId(container: HTMLElement, value: string) {
+  const element = container.querySelector(`[data-test-id="${value}"]`);
+  expect(element).toBeTruthy();
+  return element as HTMLElement;
+}
+
 describe("LoginForm", () => {
   beforeEach(() => {
     vi.restoreAllMocks();
@@ -47,7 +53,13 @@ describe("LoginForm", () => {
   it("shows client-side validation errors and skips the request when required fields are missing", async () => {
     const user = userEvent.setup();
 
-    renderForm();
+    const { container } = renderForm();
+
+    expect(getByDataTestId(container, "login-form")).toBeTruthy();
+    expect(getByDataTestId(container, "login-email-input")).toBeTruthy();
+    expect(getByDataTestId(container, "login-password-input")).toBeTruthy();
+    expect(getByDataTestId(container, "login-password-toggle")).toBeTruthy();
+    expect(getByDataTestId(container, "login-submit-button")).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Zaloguj się" }));
 
@@ -180,6 +192,7 @@ describe("LoginForm", () => {
     await user.click(screen.getByRole("button", { name: "Zaloguj się" }));
 
     expect(await screen.findByText("Nieprawidłowy adres e-mail lub hasło.")).toBeTruthy();
+    expect(document.querySelector('[data-test-id="login-form-error-alert"]')).toBeTruthy();
     expect(mocks.getPostLoginDestination).not.toHaveBeenCalled();
   });
 

@@ -1,28 +1,19 @@
 -- ============================================================================
--- SEED DATA: Deterministic Local Development Dataset
+-- SEED DATA: Deterministic E2E Dataset
 -- ============================================================================
 -- Purpose:
---   1. Remove historical throwaway signup-test accounts from local auth tables.
---   2. Create a deterministic set of auth users, profiles, and needs.
---   3. Ensure explorer, shelter detail, dashboard, and admin flows work after
---      `supabase db reset` without manual signup.
+--   1. Extend the default local seed with accounts reserved for Playwright E2E.
+--   2. Keep E2E credentials stable across `supabase db reset`.
+--   3. Ensure every seeded auth user has a matching `public.profiles` row.
+--
+-- Notes:
+--   - This file is intentionally separate from `seed.sql` so development data
+--     and E2E-only credentials stay easy to reason about.
+--   - The primary verified shelter matches the current `.env.test` login.
 -- ============================================================================
 
 -- --------------------------------------------------------------------------
--- 1. Cleanup historical local throwaway accounts
--- --------------------------------------------------------------------------
-
-DO $$
-BEGIN
-  DELETE FROM auth.identities
-  WHERE identity_data ->> 'email' LIKE 'signup-test+%@example.com';
-
-  DELETE FROM auth.users
-  WHERE email LIKE 'signup-test+%@example.com';
-END $$;
-
--- --------------------------------------------------------------------------
--- 2. Seed deterministic auth users + profiles
+-- 1. Seed deterministic E2E auth users + profiles
 -- --------------------------------------------------------------------------
 
 DO $$
@@ -30,71 +21,56 @@ DECLARE
   seed_user JSONB;
   seed_users JSONB := jsonb_build_array(
     jsonb_build_object(
-      'id', '11111111-1111-4111-8111-111111111111',
-      'email', 'test-shelter@shelterly.dev',
-      'password', 'Shelterly123!',
+      'id', '1ea66789-a3a1-41bf-9f6c-84fb518107b1',
+      'email', 'login-e2e@example.test',
+      'password', 'Tester123!',
       'role', 'shelter',
       'status', 'verified',
-      'name', 'Test Shelter Warsaw',
-      'nip', '1234567890',
+      'name', 'E2E Verified Shelter',
+      'nip', '5234567890',
       'city', 'Warszawa',
-      'address', 'ul. Testowa 123, Warszawa',
-      'phone_number', '+48 123 456 789',
-      'website_url', 'https://test-shelter.shelterly.dev',
+      'address', 'ul. E2E 10, Warszawa',
+      'phone_number', '+48 501 600 700',
+      'website_url', 'https://e2e-verified.shelterly.dev',
       'location_lon', 21.0122,
       'location_lat', 52.2297
     ),
     jsonb_build_object(
-      'id', '22222222-2222-4222-8222-222222222222',
-      'email', 'second-shelter@shelterly.dev',
-      'password', 'Shelterly123!',
-      'role', 'shelter',
-      'status', 'verified',
-      'name', 'Test Shelter Krakow',
-      'nip', '2234567890',
-      'city', 'Kraków',
-      'address', 'ul. Floriańska 1, Kraków',
-      'phone_number', '+48 223 456 789',
-      'website_url', 'https://second-shelter.shelterly.dev',
-      'location_lon', 19.9372,
-      'location_lat', 50.0614
-    ),
-    jsonb_build_object(
-      'id', '33333333-3333-4333-8333-333333333333',
-      'email', 'pending-shelter@shelterly.dev',
-      'password', 'Shelterly123!',
+      'id', '55555555-5555-4555-8555-555555555555',
+      'email', 'pending-e2e@shelterly.dev',
+      'password', 'Tester123!',
       'role', 'shelter',
       'status', 'pending',
-      'name', 'Pending Shelter',
-      'nip', '3234567890',
+      'name', 'E2E Pending Shelter',
+      'nip', '6234567890',
       'city', 'Gdańsk',
-      'address', 'ul. Długa 1, Gdańsk',
-      'phone_number', '+48 323 456 789',
-      'website_url', 'https://pending-shelter.shelterly.dev'
+      'address', 'ul. Testowa 5, Gdańsk',
+      'phone_number', '+48 502 600 700',
+      'website_url', 'https://e2e-pending.shelterly.dev'
     ),
     jsonb_build_object(
-      'id', '44444444-4444-4444-8444-444444444444',
-      'email', 'rejected-shelter@shelterly.dev',
-      'password', 'Shelterly123!',
+      'id', '66666666-6666-4666-8666-666666666666',
+      'email', 'rejected-e2e@shelterly.dev',
+      'password', 'Tester123!',
       'role', 'shelter',
       'status', 'rejected',
-      'name', 'Rejected Shelter',
-      'nip', '4234567890',
+      'name', 'E2E Rejected Shelter',
+      'nip', '7234567890',
       'city', 'Poznań',
-      'address', 'ul. Półwiejska 10, Poznań',
-      'phone_number', '+48 423 456 789',
-      'website_url', 'https://rejected-shelter.shelterly.dev',
-      'rejection_reason', 'Brak poprawnego dokumentu potwierdzającego prowadzenie schroniska.'
+      'address', 'ul. Testowa 6, Poznań',
+      'phone_number', '+48 503 600 700',
+      'website_url', 'https://e2e-rejected.shelterly.dev',
+      'rejection_reason', 'Dokument weryfikacyjny wymaga poprawy.'
     ),
     jsonb_build_object(
-      'id', '99999999-9999-4999-8999-999999999999',
-      'email', 'admin@shelterly.dev',
+      'id', '77777777-7777-4777-8777-777777777777',
+      'email', 'admin-e2e@shelterly.dev',
       'password', 'Admin123!',
       'role', 'super_admin',
       'status', 'verified',
-      'name', 'System Administrator',
+      'name', 'E2E Administrator',
       'city', 'Warszawa',
-      'address', 'Biuro administracji Shelterly'
+      'address', 'Biuro E2E Shelterly'
     )
   );
   auth_user_id UUID;
@@ -274,18 +250,14 @@ BEGIN
       ai_usage_count = EXCLUDED.ai_usage_count,
       updated_at = NOW();
 
-    RAISE NOTICE 'Seeded auth/profile user: % (% / %)', auth_user_email, auth_user_id, profile_status;
+    RAISE NOTICE 'Seeded E2E auth/profile user: % (% / %)', auth_user_email, auth_user_id, profile_status;
   END LOOP;
 END $$;
 
 -- --------------------------------------------------------------------------
--- 3. Seed deterministic needs for verified shelters
+-- 2. Seed deterministic needs for the primary verified E2E shelter
 -- --------------------------------------------------------------------------
 
--- Use idempotent upsert below; avoid deleting specific UUIDs which is brittle.
--- If you still need to remove legacy rows, prefer deleting by shelter_id.
-
--- Idempotent upsert: insert or update existing seeded needs
 INSERT INTO public.needs (
   id,
   shelter_id,
@@ -304,52 +276,36 @@ INSERT INTO public.needs (
 )
 VALUES
   (
-    'aaaaaaaa-1111-4111-8111-111111111111'::UUID,
-    '11111111-1111-4111-8111-111111111111'::UUID,
+    'eeeeeeee-1111-4111-8111-111111111111'::UUID,
+    '1ea66789-a3a1-41bf-9f6c-84fb518107b1'::UUID,
     'food'::public.need_category,
-    'critical'::public.urgency_level,
-    'Karma sucha dla psów',
-    'Pilnie potrzebujemy karmy suchej dla dorosłych psów dużych ras.',
-    'https://example.com/dry-dog-food',
-    120::NUMERIC,
-    35::NUMERIC,
+    'high'::public.urgency_level,
+    'Sucha karma dla psów',
+    'Zapas pod scenariusze e2e związane z listą potrzeb i dashboardem.',
+    'https://example.com/e2e-dog-food',
+    60::NUMERIC,
+    15::NUMERIC,
     'kg'::public.need_unit,
     false,
     NULL::TIMESTAMPTZ,
-    NOW() - INTERVAL '3 days',
+    NOW() - INTERVAL '2 days',
     NOW() - INTERVAL '1 day'
   ),
   (
-    'bbbbbbbb-1111-4111-8111-111111111111'::UUID,
-    '11111111-1111-4111-8111-111111111111'::UUID,
-    'medical'::public.need_category,
-    'high'::public.urgency_level,
-    'Środki do odrobaczania',
-    'Potrzebne preparaty do podstawowej opieki weterynaryjnej nowych podopiecznych.',
-    NULL,
-    40::NUMERIC,
-    40::NUMERIC,
-    'pcs'::public.need_unit,
-    true,
-    NULL::TIMESTAMPTZ,
-    NOW() - INTERVAL '6 days',
-    NOW() - INTERVAL '2 days'
-  ),
-  (
-    'cccccccc-2222-4222-8222-222222222222'::UUID,
-    '22222222-2222-4222-8222-222222222222'::UUID,
+    'ffffffff-1111-4111-8111-111111111111'::UUID,
+    '1ea66789-a3a1-41bf-9f6c-84fb518107b1'::UUID,
     'cleaning'::public.need_category,
     'normal'::public.urgency_level,
     'Środki czystości',
-    'Płyny do mycia podłóg i dezynfekcji boksów.',
-    'https://example.com/cleaning-supplies',
-    25::NUMERIC,
-    0::NUMERIC,
+    'Dane pomocnicze dla e2e dotyczących zarządzania potrzebami.',
+    NULL,
+    20::NUMERIC,
+    5::NUMERIC,
     'l'::public.need_unit,
     false,
     NULL::TIMESTAMPTZ,
-    NOW() - INTERVAL '2 days',
-    NOW() - INTERVAL '12 hours'
+    NOW() - INTERVAL '1 day',
+    NOW()
   )
 ON CONFLICT (id) DO UPDATE
 SET
@@ -364,5 +320,4 @@ SET
   unit = EXCLUDED.unit,
   is_fulfilled = EXCLUDED.is_fulfilled,
   deleted_at = EXCLUDED.deleted_at,
-  -- preserve original created_at, refresh updated_at
   updated_at = NOW();

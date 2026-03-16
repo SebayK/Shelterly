@@ -24,6 +24,20 @@ import {
 export class AuthService {
   constructor(private supabase: SupabaseClient) {}
 
+  private isSignupConflictError(authError: { message: string; code?: string }): boolean {
+    const message = authError.message.toLowerCase();
+    const code = authError.code?.toLowerCase();
+
+    return (
+      code === "23505" ||
+      message.includes("already registered") ||
+      message.includes("already exists") ||
+      message.includes("duplicate") ||
+      message.includes("unique") ||
+      (message.includes("violates") && message.includes("constraint"))
+    );
+  }
+
   /**
    * Signs out the current session and logs a warning if signOut itself fails.
    * Used to invalidate sessions for pending/suspended accounts before throwing.
@@ -141,14 +155,20 @@ export class AuthService {
     if (authError) {
       // Supabase wraps trigger exceptions and surfaces them as auth errors.
       // A UNIQUE constraint violation on profiles.nip (or auth.users.email)
-      // appears here as a message containing "already registered" or "duplicate".
-      if (
-        authError.message.includes("User already registered") ||
-        authError.message.includes("duplicate") ||
-        authError.message.includes("unique")
-      ) {
+      // may come back either as a human-readable message or only as code 23505.
+      if (this.isSignupConflictError(authError)) {
         throw new ConflictError("An account with this email or NIP already exists");
       }
+
+      logWarningWithContext(
+        { endpoint: "AuthService.signup" },
+        "Supabase signUp failed",
+        {
+          auth_error_message: authError.message,
+          auth_error_code: authError.code,
+        }
+      );
+
       throw new InternalError("Registration failed");
     }
 

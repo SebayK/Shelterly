@@ -32,12 +32,12 @@ export function MobileNavMenu({ user }: MobileNavMenuProps) {
   return (
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger asChild>
-        <Button variant="ghost" size="icon" aria-label="Otwórz menu">
+        <Button variant="ghost" size="icon" aria-label="Otwórz menu" data-test-id="mobile-nav-trigger">
           <Menu className="h-5 w-5" />
         </Button>
       </SheetTrigger>
 
-      <SheetContent side="right" className="w-72">
+      <SheetContent side="right" className="w-72" data-test-id="mobile-nav-panel" aria-describedby={undefined}>
         <SheetHeader>
           <SheetTitle>Shelterly</SheetTitle>
         </SheetHeader>
@@ -48,6 +48,7 @@ export function MobileNavMenu({ user }: MobileNavMenuProps) {
               <button
                 className="flex w-full items-center rounded-md px-3 py-2.5 text-left text-sm font-medium transition-colors hover:bg-accent"
                 onClick={() => closeAndNavigate("/auth/login")}
+                data-test-id="mobile-nav-login-button"
               >
                 Zaloguj się
               </button>
