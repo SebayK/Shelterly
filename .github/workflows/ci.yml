@@ -1,13 +1,13 @@
-name: Test & Build Master
+name: Test & Build Main
 
 on:
   workflow_dispatch:
   push:
     branches:
-      - master
+      - main
   pull_request:
     branches:
-      - master
+      - main
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}
