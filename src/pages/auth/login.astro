@@ -3,6 +3,7 @@ import Layout from "@/layouts/Layout.astro";
 import LoginForm from "@/components/auth/LoginForm";
 import { getPostLoginDestination, isSuspendedShelterSession } from "@/lib/auth-access";
 import { logError } from "@/lib/errors";
+import { getOptionalUser } from "@/lib/supabase-auth";
 import type { ShelterStatus, UserRole } from "@/types";
 
 export const prerender = false;
@@ -23,17 +24,17 @@ const returnUrl = sanitizeReturnUrl(Astro.url.searchParams.get("return"));
 // Server-side session guard: if a valid Supabase session exists,
 // redirect immediately without rendering the form.
 // With @supabase/ssr, the auth state is automatically read from cookies.
-const { data, error } = await Astro.locals.supabase.auth.getUser();
+const { user, error } = await getOptionalUser(Astro.locals.supabase);
 
 if (error) {
   logError("[login.astro] Failed to validate Supabase user", error);
 }
 
-if (data?.user) {
+if (user) {
   const { data: profile, error: profileError } = await Astro.locals.supabase
     .from("profiles")
     .select("role, status")
-    .eq("id", data.user.id)
+    .eq("id", user.id)
     .maybeSingle<{ role: UserRole; status: ShelterStatus }>();
 
   if (profileError) {
@@ -55,7 +56,7 @@ if (data?.user) {
 ---
 
 <Layout title="Zaloguj się — Shelterly">
-  <main class="flex min-h-screen items-center justify-center bg-background px-4">
+  <main class="flex min-h-screen items-center justify-center bg-background px-4" data-test-id="login-page">
     <LoginForm returnUrl={returnUrl} client:load />
   </main>
 </Layout>

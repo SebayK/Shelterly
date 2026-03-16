@@ -353,11 +353,11 @@ describe("POST /api/auth/signup", () => {
   // 14. NIP already exists (unique constraint 23505)
   // -------------------------------------------------------------------------
 
-  it("returns 409 CONFLICT when NIP already exists (unique constraint violation)", async () => {
+  it("returns 409 CONFLICT when NIP already exists even if Supabase returns a generic DB message", async () => {
     const supabase = buildSupabaseMock({
       authResult: {
         data: { user: null },
-        error: { message: "duplicate key value violates unique constraint", code: "23505" },
+        error: { message: "Database error saving new user", code: "23505" },
       },
     });
     const ctx = buildContext({ supabase });

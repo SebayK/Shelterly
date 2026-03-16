@@ -4,6 +4,8 @@
   "version": "0.0.1",
   "scripts": {
     "dev": "astro dev",
+    "dev:e2e": "astro dev --mode test --host 127.0.0.1",
+    "preview:e2e": "astro build --mode test && astro preview --host 127.0.0.1 --port 3000",
     "build": "astro build",
     "preview": "astro preview",
     "astro": "astro",
@@ -15,6 +17,9 @@
     "lint:fix": "eslint . --fix",
     "format": "prettier --write .",
     "test": "vitest run",
+    "test:e2e": "playwright test --config=playwright.local.config.ts",
+    "test:e2e:local": "playwright test --config=playwright.local.config.ts",
+    "test:e2e:remote": "playwright test --ui --config=playwright.remote.config.ts",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage"
   },
@@ -47,6 +52,7 @@
   "devDependencies": {
     "@eslint/compat": "1.2.7",
     "@eslint/js": "9.23.0",
+    "@playwright/test": "^1.58.2",
     "@testing-library/react": "^16.3.2",
     "@testing-library/user-event": "^14.6.1",
     "@types/leaflet": "^1.9.21",
@@ -54,6 +60,7 @@
     "@typescript-eslint/eslint-plugin": "8.28.0",
     "@typescript-eslint/parser": "8.28.0",
     "@vitest/coverage-v8": "^4.0.18",
+    "dotenv": "^17.3.1",
     "eslint": "9.23.0",
     "eslint-config-prettier": "10.1.1",
     "eslint-import-resolver-typescript": "4.2.5",
