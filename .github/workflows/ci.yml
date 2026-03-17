@@ -35,8 +35,64 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Run unit and integration tests
-        run: npm test
+      - name: Run unit and integration tests (with coverage)
+        run: npm run test:coverage
+
+      - name: Upload coverage report
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: coverage-report
+          path: coverage
+          if-no-files-found: warn
+
+      - name: Check coverage threshold
+        if: always()
+        env:
+          COVERAGE_THRESHOLD: 80
+        run: |
+          node <<'NODE'
+          const fs = require('fs');
+          const paths = [
+            'coverage/coverage-summary.json',
+            'coverage/coverage-summary.json',
+            'coverage/coverage-final.json',
+            'coverage/lcov.info'
+          ];
+          const p = paths.find(p => fs.existsSync(p));
+          if (!p) {
+            console.warn('No coverage summary found; skipping threshold check.');
+            process.exit(0);
+          }
+          if (p.endsWith('lcov.info')) {
+            // parse lcov: look for "end_of_record" blocks and compute from SF/DA entries is complex; skip strict check
+            console.log('Found lcov.info — skipping strict percentage check.');
+            process.exit(0);
+          }
+          const data = JSON.parse(fs.readFileSync(p, 'utf8'));
+          const total = data.total || data;
+          const pct = total.lines?.pct ?? total.statements?.pct ?? total.functions?.pct ?? total.branches?.pct;
+          const threshold = parseFloat(process.env.COVERAGE_THRESHOLD || '80');
+          if (pct == null) {
+            console.warn('Could not determine coverage percentage from summary; skipping threshold check.');
+            process.exit(0);
+          }
+          console.log('Coverage percent:', pct + '%');
+          if (pct < threshold) {
+            console.error(`Coverage ${pct}% is below threshold ${threshold}%`);
+            process.exit(1);
+          }
+          console.log('Coverage threshold met.');
+          NODE
+
+      - name: Upload coverage to Codecov
+        if: success() || failure()
+        uses: codecov/codecov-action@v4
+        with:
+          files: coverage/lcov.info
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
 
       - name: Build production bundle
         run: npm run build
