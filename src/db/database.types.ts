@@ -1106,6 +1106,89 @@ export interface Database {
           total_count: number;
         }[];
       };
+      get_public_need_detail: {
+        Args: { p_need_id: string };
+        Returns: {
+          category: Database["public"]["Enums"]["need_category"];
+          created_at: string;
+          current_quantity: number;
+          description: string | null;
+          id: string;
+          is_fulfilled: boolean;
+          shelter_city: string | null;
+          shelter_id: string | null;
+          shelter_name: string | null;
+          shelter_phone_number: string | null;
+          shopping_url: string | null;
+          target_quantity: number;
+          title: string;
+          unit: Database["public"]["Enums"]["need_unit"];
+          updated_at: string | null;
+          urgency: Database["public"]["Enums"]["urgency_level"];
+        }[];
+      };
+      get_public_needs: {
+        Args: {
+          p_category?: Database["public"]["Enums"]["need_category"] | null;
+          p_fulfilled?: boolean | null;
+          p_limit?: number;
+          p_offset?: number;
+          p_shelter_id?: string | null;
+          p_urgency?: Database["public"]["Enums"]["urgency_level"] | null;
+        };
+        Returns: {
+          category: Database["public"]["Enums"]["need_category"];
+          created_at: string;
+          current_quantity: number;
+          description: string | null;
+          id: string;
+          is_fulfilled: boolean;
+          shelter_city: string | null;
+          shelter_id: string | null;
+          shelter_name: string | null;
+          target_quantity: number;
+          title: string;
+          total_count: number;
+          unit: Database["public"]["Enums"]["need_unit"];
+          urgency: Database["public"]["Enums"]["urgency_level"];
+        }[];
+      };
+      get_public_verified_profile_detail: {
+        Args: { p_profile_id: string };
+        Returns: {
+          address: string | null;
+          city: string | null;
+          created_at: string;
+          id: string;
+          location: string | null;
+          name: string | null;
+          needs_fulfilled: number;
+          needs_total: number;
+          needs_urgent: number;
+          phone_number: string | null;
+          website_url: string | null;
+        }[];
+      };
+      get_public_verified_profiles: {
+        Args: {
+          p_lat?: number | null;
+          p_limit?: number;
+          p_lon?: number | null;
+          p_offset?: number;
+          p_urgent_only?: boolean;
+        };
+        Returns: {
+          city: string | null;
+          created_at: string;
+          distance_meters: number | null;
+          id: string;
+          location: string | null;
+          name: string | null;
+          needs_count: number;
+          total_count: number;
+          urgent_needs_count: number;
+        }[];
+      };
     };
     Enums: {
       need_category: "food" | "textiles" | "cleaning" | "medical" | "toys" | "other";

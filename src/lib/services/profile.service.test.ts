@@ -105,76 +105,37 @@ function buildSupabaseMock({
 
 function buildProfilesListSupabaseMock({
   profiles,
-  count = profiles?.length ?? 0,
   error = null as { message: string } | null,
 }: {
   profiles: Record<string, unknown>[] | null;
-  count?: number;
   error?: { message: string } | null;
 }) {
-  const dataQuery = {
-    data: profiles,
-    error,
-    eq: vi.fn(),
-    filter: vi.fn(),
-    not: vi.fn(),
-    order: vi.fn(),
-    range: vi.fn(),
-  };
+  const rpc = vi.fn().mockResolvedValue({ data: profiles, error });
 
-  dataQuery.eq.mockReturnValue(dataQuery);
-  dataQuery.filter.mockReturnValue(dataQuery);
-  dataQuery.not.mockReturnValue(dataQuery);
-  dataQuery.order.mockReturnValue(dataQuery);
-  dataQuery.range.mockReturnValue(dataQuery);
-
-  const countQuery = {
-    count,
-    error,
-    eq: vi.fn(),
-    filter: vi.fn(),
-    not: vi.fn(),
-  };
-
-  countQuery.eq.mockReturnValue(countQuery);
-  countQuery.filter.mockReturnValue(countQuery);
-  countQuery.not.mockReturnValue(countQuery);
-
-  const select = vi.fn().mockImplementation((_columns: string, options?: { count?: string; head?: boolean }) => {
-    if (options?.head) {
-      return countQuery;
-    }
-
-    return dataQuery;
-  });
-  const from = vi.fn().mockReturnValue({ select });
-
-  return { from } as unknown as SupabaseClient;
+  return { rpc } as unknown as SupabaseClient;
 }
 
 function buildProfileDetailSupabaseMock({
   profile,
   profileError = null as { message: string } | null,
   needs = [] as { urgency: string; is_fulfilled: boolean }[],
-  needsError = null as { message: string } | null,
 }) {
-  const single = vi.fn().mockResolvedValue({ data: profile, error: profileError });
-  const profileQuery = {
-    eq: vi.fn(),
-    single,
-  };
-  profileQuery.eq.mockReturnValue(profileQuery);
+  const needs_total = needs.length;
+  const needs_urgent = needs.filter((need) => need.urgency === "high" || need.urgency === "critical").length;
+  const needs_fulfilled = needs.filter((need) => need.is_fulfilled).length;
+  const data = profile
+    ? [
+        {
+          ...profile,
+          needs_total,
+          needs_urgent,
+          needs_fulfilled,
+        },
+      ]
+    : [];
+  const rpc = vi.fn().mockResolvedValue({ data, error: profileError });
 
-  const is = vi.fn().mockResolvedValue({ data: needs, error: needsError });
-  const needsQuery = {
-    eq: vi.fn().mockReturnValue({ is }),
-  };
-
-  const select = vi.fn().mockReturnValueOnce(profileQuery).mockReturnValueOnce(needsQuery);
-
-  const from = vi.fn().mockReturnValue({ select });
-
-  return { from } as unknown as SupabaseClient;
+  return { rpc } as unknown as SupabaseClient;
 }
 
 function buildProfileUpdateSupabaseMock({
@@ -260,7 +221,10 @@ describe("ProfileService.getVerifiedProfiles()", () => {
             city: "Gdańsk",
             location: "POINT(18.6466 54.3520)",
             created_at: "2026-03-07T10:00:00Z",
-            needs: [{ urgency: "critical", is_fulfilled: false }],
+            needs_count: 1,
+            urgent_needs_count: 1,
+            distance_meters: null,
+            total_count: 1,
           },
           {
             id: "invalid-profile",
@@ -268,10 +232,12 @@ describe("ProfileService.getVerifiedProfiles()", () => {
             city: "Warszawa",
             location: null,
             created_at: "2026-03-07T10:00:00Z",
-            needs: [],
+            needs_count: 0,
+            urgent_needs_count: 0,
+            distance_meters: null,
+            total_count: 1,
           },
         ],
-        count: 1,
       })
     );
 
@@ -297,7 +263,10 @@ describe("ProfileService.getVerifiedProfiles()", () => {
             city: "Tychy",
             location: "0101000020E6100000174850FC18F332406F8104C58F114940",
             created_at: "2026-03-07T10:00:00Z",
-            needs: [{ urgency: "high", is_fulfilled: false }],
+            needs_count: 1,
+            urgent_needs_count: 1,
+            distance_meters: null,
+            total_count: 1,
           },
         ],
       })
@@ -323,7 +292,10 @@ describe("ProfileService.getVerifiedProfiles()", () => {
             city: "Warszawa",
             location: "POINT(21.0122 52.2297)",
             created_at: "2026-03-07T10:00:00Z",
-            needs: [],
+            needs_count: 0,
+            urgent_needs_count: 0,
+            distance_meters: 0,
+            total_count: 1,
           },
           {
             id: "skipped-profile",
@@ -331,10 +303,12 @@ describe("ProfileService.getVerifiedProfiles()", () => {
             city: "Łódź",
             location: null,
             created_at: "2026-03-07T10:00:00Z",
-            needs: [],
+            needs_count: 0,
+            urgent_needs_count: 0,
+            distance_meters: 1000,
+            total_count: 1,
           },
         ],
-        count: 1,
       })
     );
 
@@ -361,10 +335,12 @@ describe("ProfileService.getVerifiedProfiles()", () => {
             city: "Poznań",
             location: "POINT(16.9252 52.4064)",
             created_at: "2026-03-07T10:00:00Z",
-            needs: [],
+            needs_count: 0,
+            urgent_needs_count: 0,
+            distance_meters: null,
+            total_count: 7,
           },
         ],
-        count: 7,
       })
     );
 
@@ -374,6 +350,41 @@ describe("ProfileService.getVerifiedProfiles()", () => {
     expect(result.pagination.total).toBe(7);
     expect(result.pagination.limit).toBe(1);
     expect(result.pagination.offset).toBe(2);
+  });
+
+  it("preserves total count when a paginated rpc page is empty", async () => {
+    const rpc = vi
+      .fn()
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({
+        data: [
+          {
+            id: "count-only-profile",
+            name: "Schronisko Licznik",
+            city: "Kraków",
+            location: "POINT(19.9445 50.0497)",
+            created_at: "2026-03-07T10:00:00Z",
+            needs_count: 0,
+            urgent_needs_count: 0,
+            distance_meters: null,
+            total_count: 7,
+          },
+        ],
+        error: null,
+      });
+
+    const service = new ProfileService({ rpc } as unknown as SupabaseClient);
+
+    const result = await service.getVerifiedProfiles({ limit: 20, offset: 40 });
+
+    expect(result).toEqual({
+      data: [],
+      pagination: {
+        total: 7,
+        limit: 20,
+        offset: 40,
+      },
+    });
   });
 });
 

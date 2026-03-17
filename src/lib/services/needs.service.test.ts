@@ -55,9 +55,225 @@ const DB_ROW = {
   created_at: "2026-01-21T10:30:00Z",
 };
 
+function buildPublicNeedsRpcMock({
+  rows = [] as Record<string, unknown>[],
+  error = null as { message: string; code?: string } | null,
+} = {}) {
+  const rpc = vi.fn().mockResolvedValue({ data: rows, error });
+
+  return { rpc } as unknown as import("@/db/supabase.client").SupabaseClient;
+}
+
 // ---------------------------------------------------------------------------
 // Tests
 // ---------------------------------------------------------------------------
+
+describe("NeedsService.getNeeds()", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("maps public needs rpc rows to NeedListResponseDTO", async () => {
+    const service = new NeedsService(
+      buildPublicNeedsRpcMock({
+        rows: [
+          {
+            id: "need-1",
+            category: "food",
+            title: "Karma mokra",
+            description: "Dla kotów",
+            urgency: "high",
+            target_quantity: 20,
+            current_quantity: 5,
+            unit: "kg",
+            is_fulfilled: false,
+            created_at: "2026-03-10T10:00:00Z",
+            shelter_id: SHELTER_ID,
+            shelter_name: "Azyl Testowy",
+            shelter_city: "Warszawa",
+            total_count: 3,
+          },
+        ],
+      })
+    );
+
+    const result = await service.getNeeds({ limit: 20, offset: 0 });
+
+    expect(result).toEqual({
+      data: [
+        {
+          id: "need-1",
+          shelter: {
+            id: SHELTER_ID,
+            name: "Azyl Testowy",
+            city: "Warszawa",
+          },
+          category: "food",
+          title: "Karma mokra",
+          description: "Dla kotów",
+          urgency: "high",
+          target_quantity: 20,
+          current_quantity: 5,
+          unit: "kg",
+          progress_percentage: 25,
+          is_fulfilled: false,
+          created_at: "2026-03-10T10:00:00Z",
+        },
+      ],
+      pagination: {
+        total: 3,
+        limit: 20,
+        offset: 0,
+      },
+    });
+  });
+
+  it("passes optional filters to get_public_needs rpc", async () => {
+    const supabase = buildPublicNeedsRpcMock();
+    const service = new NeedsService(supabase);
+
+    await service.getNeeds({
+      shelter_id: SHELTER_ID,
+      category: "food",
+      urgency: "critical",
+      fulfilled: false,
+      limit: 10,
+      offset: 20,
+    });
+
+    expect(supabase.rpc).toHaveBeenCalledWith("get_public_needs", {
+      p_limit: 10,
+      p_offset: 20,
+      p_shelter_id: SHELTER_ID,
+      p_category: "food",
+      p_urgency: "critical",
+      p_fulfilled: false,
+    });
+  });
+
+  it("throws InternalError when the public needs rpc fails", async () => {
+    const service = new NeedsService(
+      buildPublicNeedsRpcMock({
+        error: { message: "permission denied" },
+      })
+    );
+
+    await expect(service.getNeeds({ limit: 20, offset: 0 })).rejects.toThrow(InternalError);
+  });
+
+  it("preserves total count when a paginated rpc page is empty", async () => {
+    const rpc = vi
+      .fn()
+      .mockResolvedValueOnce({ data: [], error: null })
+      .mockResolvedValueOnce({
+        data: [
+          {
+            id: "need-count-only",
+            category: "food",
+            title: "Karma",
+            description: null,
+            urgency: "normal",
+            target_quantity: 10,
+            current_quantity: 0,
+            unit: "kg",
+            is_fulfilled: false,
+            created_at: "2026-03-10T10:00:00Z",
+            shelter_id: SHELTER_ID,
+            shelter_name: "Azyl Testowy",
+            shelter_city: "Warszawa",
+            total_count: 5,
+          },
+        ],
+        error: null,
+      });
+
+    const service = new NeedsService({ rpc } as unknown as import("@/db/supabase.client").SupabaseClient);
+
+    const result = await service.getNeeds({ limit: 20, offset: 40 });
+
+    expect(result).toEqual({
+      data: [],
+      pagination: {
+        total: 5,
+        limit: 20,
+        offset: 40,
+      },
+    });
+  });
+});
+
+describe("NeedsService.getNeedById()", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("maps public need detail rpc rows to NeedDetailDTO", async () => {
+    const service = new NeedsService(
+      buildPublicNeedsRpcMock({
+        rows: [
+          {
+            id: "need-1",
+            category: "medical",
+            title: "Leki",
+            description: "Pilnie potrzebne",
+            shopping_url: "https://example.org/need",
+            urgency: "critical",
+            target_quantity: 10,
+            current_quantity: 4,
+            unit: "pcs",
+            is_fulfilled: false,
+            created_at: "2026-03-10T10:00:00Z",
+            updated_at: "2026-03-10T12:00:00Z",
+            shelter_id: SHELTER_ID,
+            shelter_name: "Azyl Testowy",
+            shelter_city: "Warszawa",
+            shelter_phone_number: "+48123123123",
+          },
+        ],
+      })
+    );
+
+    const result = await service.getNeedById("need-1");
+
+    expect(result).toEqual({
+      id: "need-1",
+      shelter: {
+        id: SHELTER_ID,
+        name: "Azyl Testowy",
+        city: "Warszawa",
+        phone_number: "+48123123123",
+      },
+      category: "medical",
+      title: "Leki",
+      description: "Pilnie potrzebne",
+      shopping_url: "https://example.org/need",
+      urgency: "critical",
+      target_quantity: 10,
+      current_quantity: 4,
+      unit: "pcs",
+      progress_percentage: 40,
+      is_fulfilled: false,
+      created_at: "2026-03-10T10:00:00Z",
+      updated_at: "2026-03-10T12:00:00Z",
+    });
+  });
+
+  it("throws NotFoundError when the public need detail rpc returns no rows", async () => {
+    const service = new NeedsService(buildPublicNeedsRpcMock());
+
+    await expect(service.getNeedById("missing-need")).rejects.toThrow(NotFoundError);
+  });
+
+  it("throws InternalError when the public need detail rpc fails", async () => {
+    const service = new NeedsService(
+      buildPublicNeedsRpcMock({
+        error: { message: "db unavailable" },
+      })
+    );
+
+    await expect(service.getNeedById("need-1")).rejects.toThrow(InternalError);
+  });
+});
 
 describe("NeedsService.createNeed()", () => {
   let service: NeedsService;
