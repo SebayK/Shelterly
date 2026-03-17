@@ -1,11 +1,11 @@
 import type { SupabaseClient } from "../../db/supabase.client";
+import type { Database } from "../../db/database.types";
 import type {
   ProfileListItemDTO,
   ProfileDetailDTO,
   ProfileMeDTO,
   ProfileUpdateResponseDTO,
   ProfileListResponseDTO,
-  NeedsSummary,
   Location,
 } from "../../types";
 import {
@@ -31,6 +31,10 @@ const VERIFICATION_DOCUMENT_EXTENSIONS = {
 // - with SRID present add 4 bytes => 25 bytes => 50 hex chars
 const EWKB_MIN_HEX_LENGTH_NO_SRID = 42;
 
+type PublicVerifiedProfileRow = Database["public"]["Functions"]["get_public_verified_profiles"]["Returns"][number];
+type PublicVerifiedProfileDetailRow =
+  Database["public"]["Functions"]["get_public_verified_profile_detail"]["Returns"][number];
+
 /**
  * Profile Service
  * Handles all business logic related to shelter profiles
@@ -38,66 +42,9 @@ const EWKB_MIN_HEX_LENGTH_NO_SRID = 42;
 export class ProfileService {
   constructor(private supabase: SupabaseClient) {}
 
-  private buildVerifiedProfilesQuery() {
-    return this.supabase
-      .from("profiles")
-      .select(
-        `
-        id,
-        name,
-        city,
-        location,
-        created_at,
-        needs:needs!shelter_id(urgency, is_fulfilled)
-      `
-      )
-      .eq("status", "verified")
-      .eq("role", "shelter")
-      .not("location", "is", null)
-      .not("name", "is", null)
-      .not("city", "is", null)
-      .order("created_at", { ascending: false })
-      .order("id", { ascending: true });
-  }
-
-  private async countVerifiedProfiles(urgentOnly?: boolean): Promise<number> {
-    let countQuery = urgentOnly
-      ? this.supabase
-          .from("profiles")
-          .select("id, needs!inner(id)", { count: "exact", head: true })
-          .eq("status", "verified")
-          .eq("role", "shelter")
-          .not("location", "is", null)
-          .not("name", "is", null)
-          .not("city", "is", null)
-      : this.supabase
-          .from("profiles")
-          .select("id", { count: "exact", head: true })
-          .eq("status", "verified")
-          .eq("role", "shelter")
-          .not("location", "is", null)
-          .not("name", "is", null)
-          .not("city", "is", null);
-
-    if (urgentOnly) {
-      countQuery = countQuery.filter("needs.urgency", "in", "(high,critical)").filter("needs.deleted_at", "is", null);
-    }
-
-    const { count, error } = await countQuery;
-
-    if (error) {
-      logError("[ProfileService.countVerifiedProfiles]", error);
-      throw new InternalError("Unable to retrieve shelter profiles count");
-    }
-
-    return count ?? 0;
-  }
-
   /**
    * Get list of verified shelters with optional geolocation filtering
-   * Uses aggregated query to avoid N+1 problem
-   * Filters urgent_only at query level for accurate pagination
-   * Sorts by distance when coordinates provided (requires loading all results)
+   * Uses a SECURITY DEFINER RPC that exposes only safe public fields.
    */
   async getVerifiedProfiles(params: {
     lat?: number;
@@ -107,27 +54,13 @@ export class ProfileService {
     offset: number;
   }): Promise<ProfileListResponseDTO> {
     const { lat, lon, urgent_only, limit, offset } = params;
-    const shouldSortByDistance = lat !== undefined && lon !== undefined;
-
-    // Build aggregated query using LEFT JOIN to get needs counts in one query
-    // This avoids N+1 problem where we'd query needs for each profile separately
-    let query = this.buildVerifiedProfilesQuery();
-
-    // If urgent_only filter is requested, we need to filter profiles that have urgent needs
-    // This must be done at query level to get correct total count for pagination
-    if (urgent_only) {
-      // Use EXISTS subquery to filter only profiles with urgent needs
-      query = query.filter("needs.urgency", "in", "(high,critical)").filter("needs.deleted_at", "is", null);
-    }
-
-    const total = shouldSortByDistance ? undefined : await this.countVerifiedProfiles(urgent_only);
-
-    if (!shouldSortByDistance) {
-      query = query.range(offset, offset + limit - 1);
-    }
-
-    // Execute query
-    const { data: profiles, error } = await query;
+    const { data: profiles, error } = await this.supabase.rpc("get_public_verified_profiles", {
+      p_limit: limit,
+      p_offset: offset,
+      p_lat: lat ?? null,
+      p_lon: lon ?? null,
+      p_urgent_only: urgent_only ?? false,
+    });
 
     if (error) {
       logError("[ProfileService.getVerifiedProfiles]", error);
@@ -138,25 +71,19 @@ export class ProfileService {
       return {
         data: [],
         pagination: {
-          total: total ?? 0,
+          total: await this.getVerifiedProfilesTotal({
+            lat,
+            lon,
+            urgent_only,
+          }),
           limit,
           offset,
         },
       };
     }
 
-    // Transform profiles to DTOs
     const profilesWithStats = profiles
-      .map((profile) => {
-        // Filter out deleted needs (needs table doesn't include deleted_at in select)
-        // Supabase should only return non-deleted needs based on query
-        const activeNeeds = profile.needs || [];
-
-        const needsCount = activeNeeds.length;
-        const urgentNeedsCount = activeNeeds.filter((n) => n.urgency === "high" || n.urgency === "critical").length;
-        const hasUrgentNeeds = urgentNeedsCount > 0;
-
-        // Parse location from PostGIS geography
+      .map((profile: PublicVerifiedProfileRow) => {
         const location = this.parseLocation(profile.location);
 
         if (!location) {
@@ -167,13 +94,6 @@ export class ProfileService {
           return null;
         }
 
-        // Calculate distance if both coordinates and location exist
-        let distance_km: number | undefined;
-        if (lat !== undefined && lon !== undefined) {
-          distance_km = this.calculateDistance(lat, lon, location.lat, location.lon);
-        }
-
-        // Verify required fields exist
         if (!profile.name || !profile.city) {
           logWarningWithContext(
             { endpoint: "ProfileService.getVerifiedProfiles", shelter_id: profile.id },
@@ -187,71 +107,66 @@ export class ProfileService {
           name: profile.name,
           city: profile.city,
           location,
-          distance_km,
-          has_urgent_needs: hasUrgentNeeds,
-          needs_count: needsCount,
-          urgent_needs_count: urgentNeedsCount,
+          distance_km: this.toKilometers(profile.distance_meters),
+          has_urgent_needs: profile.urgent_needs_count > 0,
+          needs_count: profile.needs_count,
+          urgent_needs_count: profile.urgent_needs_count,
         };
 
         return dto;
       })
       .filter((p): p is ProfileListItemDTO => p !== null);
+    const total = Number(profiles[0]?.total_count ?? 0);
 
-    const filteredTotal = profilesWithStats.length;
-
-    // Sort by distance if coordinates provided
-    // Note: When using distance sorting, we need to sort ALL results before pagination
-    // This means we fetch all profiles and paginate in-memory
-    if (shouldSortByDistance) {
-      profilesWithStats.sort((a, b) => {
-        const distA = a.distance_km ?? Infinity;
-        const distB = b.distance_km ?? Infinity;
-        return distA - distB;
-      });
-
-      // Apply pagination after sorting
-      const paginatedProfiles = profilesWithStats.slice(offset, offset + limit);
-
-      return {
-        data: paginatedProfiles,
-        pagination: {
-          total: filteredTotal,
-          limit,
-          offset,
-        },
-      };
-    }
-
-    // Without distance sorting, we can paginate at database level
     return {
       data: profilesWithStats,
       pagination: {
-        total: total ?? filteredTotal,
+        total,
         limit,
         offset,
       },
     };
   }
 
+  private async getVerifiedProfilesTotal(params: {
+    lat?: number;
+    lon?: number;
+    urgent_only?: boolean;
+  }): Promise<number> {
+    const { data, error } = await this.supabase.rpc("get_public_verified_profiles", {
+      p_limit: 1,
+      p_offset: 0,
+      p_lat: params.lat ?? null,
+      p_lon: params.lon ?? null,
+      p_urgent_only: params.urgent_only ?? false,
+    });
+
+    if (error) {
+      logError("[ProfileService.getVerifiedProfilesTotal]", error);
+      throw new InternalError("Unable to retrieve shelter profiles");
+    }
+
+    return Number(data?.[0]?.total_count ?? 0);
+  }
+
   /**
    * Get detailed information about a specific verified shelter
    */
   async getProfileById(id: string): Promise<ProfileDetailDTO> {
-    // Fetch profile
-    const { data: profile, error } = await this.supabase
-      .from("profiles")
-      .select("*")
-      .eq("id", id)
-      .eq("status", "verified")
-      .eq("role", "shelter") // Only show shelters, not admins
-      .single();
+    const { data, error } = await this.supabase.rpc("get_public_verified_profile_detail", {
+      p_profile_id: id,
+    });
 
-    if (error || !profile) {
-      throw new NotFoundError("Shelter not found or not verified");
+    if (error) {
+      logError("[ProfileService.getProfileById]", error);
+      throw new InternalError("Unable to retrieve shelter profile");
     }
 
-    // Get needs summary
-    const needsSummary = await this.getNeedsSummary(id);
+    const profile = data?.[0] as PublicVerifiedProfileDetailRow | undefined;
+
+    if (!profile) {
+      throw new NotFoundError("Shelter not found or not verified");
+    }
 
     // Verify shelter has required fields (for verified shelters, these should never be null)
     if (!profile.name || !profile.city) {
@@ -291,7 +206,11 @@ export class ProfileService {
       phone_number: profile.phone_number,
       website_url: profile.website_url,
       created_at: profile.created_at,
-      needs_summary: needsSummary,
+      needs_summary: {
+        total: profile.needs_total,
+        urgent: profile.needs_urgent,
+        fulfilled: profile.needs_fulfilled,
+      },
     };
 
     return dto;
@@ -540,27 +459,6 @@ export class ProfileService {
   }
 
   /**
-   * Helper: Get needs summary for a shelter
-   */
-  private async getNeedsSummary(shelterId: string): Promise<NeedsSummary> {
-    const { data: needs, error } = await this.supabase
-      .from("needs")
-      .select("urgency, is_fulfilled")
-      .eq("shelter_id", shelterId)
-      .is("deleted_at", null);
-
-    if (error) {
-      return { total: 0, urgent: 0, fulfilled: 0 };
-    }
-
-    const total = needs?.length || 0;
-    const urgent = needs?.filter((n) => n.urgency === "high" || n.urgency === "critical").length || 0;
-    const fulfilled = needs?.filter((n) => n.is_fulfilled).length || 0;
-
-    return { total, urgent, fulfilled };
-  }
-
-  /**
    * Helper: Parse PostGIS geography to Location object
    * PostGIS stores as WKT: POINT(lon lat) or GeoJSON format
    * Returns null if location cannot be parsed (caller must handle)
@@ -674,30 +572,12 @@ export class ProfileService {
     }
   }
 
-  /**
-   * Helper: Calculate distance between two coordinates using Haversine formula
-   * Returns distance in kilometers
-   */
-  private calculateDistance(lat1: number, lon1: number, lat2: number, lon2: number): number {
-    const R = 6371; // Earth's radius in km
-    const dLat = this.toRad(lat2 - lat1);
-    const dLon = this.toRad(lon2 - lon1);
+  private toKilometers(distanceMeters: number | null): number | undefined {
+    if (distanceMeters === null) {
+      return undefined;
+    }
 
-    const a =
-      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.cos(this.toRad(lat1)) * Math.cos(this.toRad(lat2)) * Math.sin(dLon / 2) * Math.sin(dLon / 2);
-
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    const distance = R * c;
-
-    return Math.round(distance * 100) / 100; // Round to 2 decimal places
-  }
-
-  /**
-   * Helper: Convert degrees to radians
-   */
-  private toRad(degrees: number): number {
-    return degrees * (Math.PI / 180);
+    return Math.round((distanceMeters / 1000) * 100) / 100;
   }
 
   private sanitizeFileBaseName(fileName: string): string {

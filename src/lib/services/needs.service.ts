@@ -4,6 +4,7 @@
  */
 
 import type { SupabaseClient } from "@/db/supabase.client";
+import type { Database } from "@/db/database.types";
 import type {
   NeedListResponseDTO,
   NeedListItemDTO,
@@ -29,6 +30,9 @@ import {
   logSuccess,
 } from "@/lib/errors";
 
+type PublicNeedRow = Database["public"]["Functions"]["get_public_needs"]["Returns"][number];
+type PublicNeedDetailRow = Database["public"]["Functions"]["get_public_need_detail"]["Returns"][number];
+
 export class NeedsService {
   constructor(private supabase: SupabaseClient) {}
 
@@ -38,85 +42,53 @@ export class NeedsService {
    */
   async getNeeds(params: NeedsQueryParams): Promise<NeedListResponseDTO> {
     const { shelter_id, category, urgency, fulfilled, limit = 20, offset = 0 } = params;
-
-    // Build base query - join with profiles to get shelter info and filter by status
-    let query = this.supabase
-      .from("needs")
-      .select(
-        `
-        id,
-        category,
-        title,
-        description,
-        urgency,
-        target_quantity,
-        current_quantity,
-        unit,
-        is_fulfilled,
-        created_at,
-        profiles!inner (
-          id,
-          name,
-          city,
-          status
-        )
-      `,
-        { count: "exact" }
-      )
-      .is("deleted_at", null) // Exclude soft-deleted needs
-      .filter("profiles.status", "eq", "verified"); // Only verified shelters
-
-    // Apply optional filters
-    if (shelter_id) {
-      query = query.eq("shelter_id", shelter_id);
-    }
-
-    if (category) {
-      query = query.eq("category", category);
-    }
-
-    if (urgency) {
-      query = query.eq("urgency", urgency);
-    }
-
-    if (fulfilled !== undefined) {
-      query = query.eq("is_fulfilled", fulfilled);
-    }
-
-    // Apply ordering and pagination
-    query = query.order("created_at", { ascending: false }).range(offset, offset + limit - 1);
-
-    // Execute query
-    const { data, error, count } = await query;
+    const { data, error } = await this.supabase.rpc("get_public_needs", {
+      p_limit: limit,
+      p_offset: offset,
+      p_shelter_id: shelter_id ?? null,
+      p_category: category ?? null,
+      p_urgency: urgency ?? null,
+      p_fulfilled: fulfilled ?? null,
+    });
 
     if (error) {
       logError("[NeedsService.getNeeds]", error);
       throw new InternalError("Unable to retrieve shelter needs");
     }
 
-    // Transform database results to DTO format
-    const needs: NeedListItemDTO[] = (data ?? []).flatMap((need) => {
-      // Calculate progress percentage with safety check for division by zero
+    if (!data || data.length === 0) {
+      return {
+        data: [],
+        pagination: {
+          total: await this.getNeedsTotal({
+            shelter_id,
+            category,
+            urgency,
+            fulfilled,
+          }),
+          limit,
+          offset,
+        },
+      };
+    }
+
+    const needs: NeedListItemDTO[] = (data ?? []).flatMap((need: PublicNeedRow) => {
       const progress_percentage =
         need.target_quantity > 0 ? Math.round((need.current_quantity / need.target_quantity) * 100) : 0;
 
-      // Extract shelter info (Supabase returns nested object or array)
-      const shelterData = Array.isArray(need.profiles) ? need.profiles[0] : need.profiles;
-
-      // Skip records with missing shelter data instead of failing the whole request
-      if (!shelterData || !shelterData.id || !shelterData.name || !shelterData.city) {
+      if (!need.shelter_id || !need.shelter_name || !need.shelter_city) {
         logError("[NeedsService.getNeeds] Inconsistent data", {
           message: "Missing or incomplete shelter profile for need — skipping record",
           needId: need.id,
-          profiles: need.profiles,
+          shelter_id: need.shelter_id,
         });
         return [];
       }
 
       const shelter: ShelterInfo = {
-        id: shelterData.id,
-        name: shelterData.name,
-        city: shelterData.city,
+        id: need.shelter_id,
+        name: need.shelter_name,
+        city: need.shelter_city,
       };
 
       return [
@@ -137,9 +109,8 @@ export class NeedsService {
       ];
     });
 
-    // Construct pagination metadata
     const pagination: Pagination = {
-      total: count ?? 0,
+      total: Number(data?.[0]?.total_count ?? 0),
       limit,
       offset,
     };
@@ -157,83 +128,79 @@ export class NeedsService {
    * @throws InternalError on database errors or inconsistent relational data
    */
   async getNeedById(id: string): Promise<NeedDetailDTO> {
-    const { data, error } = await this.supabase
-      .from("needs")
-      .select(
-        `
-        id,
-        category,
-        title,
-        description,
-        shopping_url,
-        urgency,
-        target_quantity,
-        current_quantity,
-        unit,
-        is_fulfilled,
-        created_at,
-        updated_at,
-        profiles!inner (
-          id,
-          name,
-          city,
-          phone_number,
-          status
-        )
-      `
-      )
-      .eq("id", id)
-      .is("deleted_at", null)
-      .filter("profiles.status", "eq", "verified")
-      .maybeSingle();
+    const { data, error } = await this.supabase.rpc("get_public_need_detail", {
+      p_need_id: id,
+    });
 
     if (error) {
       logError("[NeedsService.getNeedById]", error);
       throw new InternalError("Unable to retrieve need details");
     }
 
-    if (!data) {
+    const need = data?.[0] as PublicNeedDetailRow | undefined;
+
+    if (!need) {
       throw new NotFoundError("Need not found or deleted");
     }
 
-    // Extract shelter info from potentially nested Supabase response
-    const shelterData = Array.isArray(data.profiles) ? data.profiles[0] : data.profiles;
-
-    if (!shelterData || !shelterData.id || !shelterData.name || !shelterData.city) {
+    if (!need.shelter_id || !need.shelter_name || !need.shelter_city) {
       logError("[NeedsService.getNeedById] Inconsistent data", {
         message: "Missing or incomplete shelter profile for need",
-        needId: data.id,
-        profiles: data.profiles,
+        needId: need.id,
+        shelter_id: need.shelter_id,
       });
       throw new InternalError("Failed to fetch need: missing shelter profile data");
     }
 
     const shelter: ShelterDetailInfo = {
-      id: shelterData.id,
-      name: shelterData.name,
-      city: shelterData.city,
-      phone_number: shelterData.phone_number ?? null,
+      id: need.shelter_id,
+      name: need.shelter_name,
+      city: need.shelter_city,
+      phone_number: need.shelter_phone_number ?? null,
     };
 
     const progress_percentage =
-      data.target_quantity > 0 ? Math.round((data.current_quantity / data.target_quantity) * 100) : 0;
+      need.target_quantity > 0 ? Math.round((need.current_quantity / need.target_quantity) * 100) : 0;
 
     return {
-      id: data.id,
+      id: need.id,
       shelter,
-      category: data.category,
-      title: data.title,
-      description: data.description,
-      shopping_url: data.shopping_url ?? null,
-      urgency: data.urgency,
-      target_quantity: data.target_quantity,
-      current_quantity: data.current_quantity,
-      unit: data.unit,
+      category: need.category,
+      title: need.title,
+      description: need.description,
+      shopping_url: need.shopping_url ?? null,
+      urgency: need.urgency,
+      target_quantity: need.target_quantity,
+      current_quantity: need.current_quantity,
+      unit: need.unit,
       progress_percentage,
-      is_fulfilled: data.is_fulfilled,
-      created_at: data.created_at,
-      updated_at: data.updated_at ?? null,
+      is_fulfilled: need.is_fulfilled,
+      created_at: need.created_at,
+      updated_at: need.updated_at ?? null,
     };
+  }
+
+  private async getNeedsTotal(params: {
+    shelter_id?: string;
+    category?: NeedsQueryParams["category"];
+    urgency?: NeedsQueryParams["urgency"];
+    fulfilled?: boolean;
+  }): Promise<number> {
+    const { data, error } = await this.supabase.rpc("get_public_needs", {
+      p_limit: 1,
+      p_offset: 0,
+      p_shelter_id: params.shelter_id ?? null,
+      p_category: params.category ?? null,
+      p_urgency: params.urgency ?? null,
+      p_fulfilled: params.fulfilled ?? null,
+    });
+
+    if (error) {
+      logError("[NeedsService.getNeedsTotal]", error);
+      throw new InternalError("Unable to retrieve shelter needs");
+    }
+
+    return Number(data?.[0]?.total_count ?? 0);
   }
 
   /**
